@@ -135,7 +135,7 @@ def test_preview_photo_and_text_fallback():
         assert "in_stock" not in text
         assert "Disponivel segundo a pagina" in text
         assert (
-            "Condicao: Nao declarada" in text and "Alertas de preco suspensos" in text
+            "Condicao: ❓ Nao declarada" in text and "Alertas de preco suspensos" in text
         )
         bot = SimpleNamespace(send_photo=AsyncMock(), send_message=AsyncMock())
         await send_offer(bot, -1, r, "https://www.kabum.com.br/produto/42", "KaBuM")

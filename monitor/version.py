@@ -1,1 +1,1 @@
-VERSION = "2026.10.15-marketplace.2"
+VERSION = "2026.10.15-visual.1"

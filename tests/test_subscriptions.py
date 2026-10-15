@@ -39,7 +39,7 @@ def test_id_stable_search_is_not_monitoring_and_restart(data):
     assert ad["id"] == again["id"]
     assert not db.rows("SELECT * FROM products")
     assert offer_text(r, "KaBuM", ad_id=ad["id"]).startswith(
-        f"Anuncio ID: {ad['id']}\n"
+        f"🆔 Anuncio ID: {ad['id']}\n"
     )
     token = db.request_scope(ad["id"])
     other = DB(path)
