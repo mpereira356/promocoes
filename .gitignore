@@ -1,0 +1,40 @@
+# Credenciais: somente o modelo vazio pode ser versionado.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Ambiente local e caches.
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.pytest_tmp/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Dados pessoais e estado persistente.
+/data/
+/backups/
+*.sqlite*
+*.db
+*.db-wal
+*.db-shm
+*.log
+
+# Pacotes gerados e copias extraidas.
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.sha256
+/monitor-precos-kali/
+
+# Arquivos do sistema/editor.
+.DS_Store
+Thumbs.db
+.idea/

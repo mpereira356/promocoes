@@ -1,0 +1,24 @@
+[Unit]
+Description=Monitor pessoal de precos via Telegram
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pricebot
+Group=pricebot
+WorkingDirectory=/opt/price-monitor
+EnvironmentFile=/opt/price-monitor/.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/price-monitor/.venv/bin/python -m monitor
+Restart=on-failure
+RestartSec=15
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/price-monitor/data
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
