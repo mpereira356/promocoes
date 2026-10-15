@@ -15,6 +15,7 @@ def build_package(output=None):
     names = [
         "README.md",
         "LEIA-ME-KALI.md",
+        "MERCADO-LIVRE.md",
         "VALIDACAO.md",
         ".env.example",
         "requirements.txt",

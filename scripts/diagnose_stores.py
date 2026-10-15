@@ -63,6 +63,7 @@ def main():
         "--browser", action=argparse.BooleanOptionalAction, default=None
     )
     parser.add_argument("--query", default="Gigabyte B550 Aorus Elite V2")
+    parser.add_argument('--store', help='Dominio para diagnosticar isoladamente, ex.: mercadolivre.com.br')
     args = parser.parse_args()
     browser = (
         args.browser
@@ -73,8 +74,9 @@ def main():
         browser=browser,
         delay=max(1, float(os.getenv("REQUEST_DELAY", "3"))),
         domains=normalize_domains(
-            os.getenv("ALLOWED_DOMAINS", "pichau.com.br,terabyteshop.com.br")
+            args.store or os.getenv("ALLOWED_DOMAINS", "pichau.com.br,terabyteshop.com.br,mercadolivre.com.br")
         ),
+        mercadolivre_token=os.getenv('MERCADOLIVRE_ACCESS_TOKEN', '').strip(),
     )
     print(
         json.dumps(asyncio.run(diagnose(c, args.query)), ensure_ascii=False, indent=2)

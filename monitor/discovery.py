@@ -89,6 +89,10 @@ def form_search_url(html, base, query, fields=None):
 
 
 REASONS = {
+    'mercadolivre_api_token_missing': 'API oficial exige MERCADOLIVRE_ACCESS_TOKEN no .env',
+    'mercadolivre_api_token_expired': 'token da API invalido ou expirado; atualize MERCADOLIVRE_ACCESS_TOKEN',
+    'mercadolivre_api_access_denied': 'API oficial recusou acesso (403); verifique permissoes do aplicativo, token pode nao ser suficiente',
+    'mercadolivre_api_failed': 'API oficial indisponivel ou resposta invalida',
     "marketplace_individual_listing_required": "exige link de anuncio individual; catalogo pode trocar de vendedor",
     "browser_not_installed": "Chromium indisponivel; execute o instalador com --with-browser",
     "browser_navigation_failed_TimeoutError": "tempo limite ao carregar a pagina no Chromium",
@@ -125,7 +129,10 @@ class DirectSearch:
                 continue
             store = factory()
             try:
-                if store.sitemap_urls:
+                if domain == 'mercadolivre.com.br' and getattr(self.config, 'mercadolivre_token', ''):
+                    from .mercadolivre_api import discover
+                    candidates = await discover(query, self.config.mercadolivre_token, self.fetcher)
+                elif store.sitemap_urls:
                     from .sitemaps import sitemap_candidates
 
                     candidates = await sitemap_candidates(store, domain, self.fetcher)
@@ -175,6 +182,8 @@ class DirectSearch:
                     else "falha ao ler a busca"
                 )
                 notices.append(f"{store.name}: {reason}.")
+                if domain == 'mercadolivre.com.br' and not getattr(self.config, 'mercadolivre_token', ''):
+                    notices.append('Mercado Livre: descoberta sem autenticacao falhou. A alternativa oficial exige aplicativo e token; nao ha busca real validada neste ambiente.')
         # Distribuir o limite entre lojas; a ultima loja nao deve desaparecer.
         for index in range(6):
             for group in groups:

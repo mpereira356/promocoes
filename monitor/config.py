@@ -38,6 +38,7 @@ class Config:
     percent: Decimal
     target: int | None
     browser: bool
+    mercadolivre_token: str = ''
 
     @classmethod
     def load(cls):
@@ -67,6 +68,7 @@ class Config:
             Decimal(os.getenv("MIN_DROP_PERCENT", "0")),
             cents("TARGET_PRICE") if os.getenv("TARGET_PRICE") else None,
             os.getenv("PLAYWRIGHT_ENABLED", "false").lower() == "true",
+            os.getenv('MERCADOLIVRE_ACCESS_TOKEN', '').strip(),
         )
         if (
             c.user <= 0

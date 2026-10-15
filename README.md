@@ -1,5 +1,7 @@
 Para publicar no GitHub e atualizar o servidor com Git, veja [GITHUB.md](GITHUB.md).
 
+Para os bloqueios atuais do Mercado Livre, alternativa autenticada e diagnostico na VPS, veja [MERCADO-LIVRE.md](MERCADO-LIVRE.md). O conector da API descobre somente links; ainda exige acesso permitido a pagina para confirmar preco e estoque.
+
 **Mercado Livre: suporte experimental, sem validacao de ofertas reais.** O adaptador aceita anuncios individuais `produto.mercadolivre.com.br/MLB-...`, descobre links somente a partir de formulario GET declarado pela pagina e le dados Schema.org. Nao compara catalogos que podem alternar de vendedor, nem presume Pix, vendedor ou condicao ausentes. Ha suporte aos hosts explicitos `www`, `lista` e `produto`, sem liberar subdominios arbitrarios.
 
 Os acessos reais por HTTP e Chromium em 15/10/2026 retornaram 403 inclusive para robots.txt; nesse ambiente nao foi possivel pesquisar ou monitorar anuncios reais. Nao ha contorno de CAPTCHA, login ou bloqueio, nem fallback de preco extraido dos resultados de busca. Os testes deste adaptador sao simulados, sem seletores especificos validados. O formulario ou JSON-LD real pode exigir adaptacao adicional quando houver acesso permitido.
