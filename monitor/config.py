@@ -55,7 +55,7 @@ class Config:
             int(os.environ["TELEGRAM_USER_ID"]),
             normalize_domains(
                 os.getenv(
-                    "ALLOWED_DOMAINS", "kabum.com.br,pichau.com.br,terabyteshop.com.br"
+                    "ALLOWED_DOMAINS", "kabum.com.br,pichau.com.br,terabyteshop.com.br,mercadolivre.com.br"
                 )
             ),
             os.getenv("DATABASE_PATH", "data/monitor.sqlite3"),

@@ -59,12 +59,28 @@ if [[ ! -f "$install_dir/.env" ]]; then
         printf 'TELEGRAM_CHAT_ID=%s\n' "$telegram_chat"
         printf 'TELEGRAM_USER_ID=%s\n' "$telegram_user"
         printf 'SEARCH_PROVIDER=direct\nSEARCH_API_KEY=\n'
-        printf 'ALLOWED_DOMAINS=kabum.com.br,pichau.com.br,terabyteshop.com.br\n'
+        printf 'ALLOWED_DOMAINS=kabum.com.br,pichau.com.br,terabyteshop.com.br,mercadolivre.com.br\n'
         printf 'DATABASE_PATH=data/monitor.sqlite3\nINTERVAL_HOURS=5\nREQUEST_DELAY=3\n'
         printf 'MIN_DROP_BRL=0\nMIN_DROP_PERCENT=0\nTARGET_PRICE=\nPLAYWRIGHT_ENABLED=false\n'
     } > "$install_dir/.env"
     unset telegram_token telegram_chat telegram_user
 fi
+python3 - "$install_dir/.env" <<'PY'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+text = p.read_text(encoding='utf-8')
+old = 'ALLOWED_DOMAINS=kabum.com.br,pichau.com.br,terabyteshop.com.br'
+lines = text.splitlines()
+changed = False
+for index, line in enumerate(lines):
+    if line.strip() == old:
+        lines[index] = old + ',mercadolivre.com.br'
+        changed = True
+if changed:
+    p.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+    print('Mercado Livre adicionado a lista padrao de dominios; acesso depende da loja.')
+PY
 chown root:pricebot "$install_dir/.env"
 chmod 0640 "$install_dir/.env"
 

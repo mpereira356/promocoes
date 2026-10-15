@@ -1,5 +1,11 @@
 Para publicar no GitHub e atualizar o servidor com Git, veja [GITHUB.md](GITHUB.md).
 
+**Mercado Livre: suporte experimental, sem validacao de ofertas reais.** O adaptador aceita anuncios individuais `produto.mercadolivre.com.br/MLB-...`, descobre links somente a partir de formulario GET declarado pela pagina e le dados Schema.org. Nao compara catalogos que podem alternar de vendedor, nem presume Pix, vendedor ou condicao ausentes. Ha suporte aos hosts explicitos `www`, `lista` e `produto`, sem liberar subdominios arbitrarios.
+
+Os acessos reais por HTTP e Chromium em 15/10/2026 retornaram 403 inclusive para robots.txt; nesse ambiente nao foi possivel pesquisar ou monitorar anuncios reais. Nao ha contorno de CAPTCHA, login ou bloqueio, nem fallback de preco extraido dos resultados de busca. Os testes deste adaptador sao simulados, sem seletores especificos validados. O formulario ou JSON-LD real pode exigir adaptacao adicional quando houver acesso permitido.
+
+Ao executar `bash deploy/update.sh`, o instalador acrescenta `mercadolivre.com.br` se o `.env` ainda contiver exatamente a lista padrao das tres lojas. Listas personalizadas devem receber esse dominio manualmente em `/opt/price-monitor/.env`; depois reinicie o servico. Chromium deve estar ativado. O acesso efetivo continua dependendo da resposta do site na VPS.
+
 # Monitor de preços pelo Telegram
 
 Python 3.11+, SQLite e comandos assíncronos. Busca direta nas lojas, sem API paga por padrão. Verifica a cada **5 horas**, avisa aumentos e quedas e continua até você pausar ou remover. Não existe prazo de encerramento após o primeiro alerta.

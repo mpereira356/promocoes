@@ -27,6 +27,7 @@ class Fetcher:
         return getattr(self.config, "browser", False) and domain in (
             "pichau.com.br",
             "terabyteshop.com.br",
+            "mercadolivre.com.br",
         )
 
     def chromium(self):
@@ -40,13 +41,18 @@ class Fetcher:
         p = urlsplit(url)
         host = (p.hostname or "").lower()
         domain = host.removeprefix("www.")
+        marketplace_host = host in (
+            'lista.mercadolivre.com.br', 'produto.mercadolivre.com.br'
+        )
+        if marketplace_host:
+            domain = 'mercadolivre.com.br'
         if (
             p.scheme != "https"
             or p.username
             or p.password
             or p.port not in (None, 443)
             or domain not in self.config.domains
-            or host not in (domain, "www." + domain)
+            or (host not in (domain, "www." + domain) and not marketplace_host)
         ):
             raise ReadError("url_not_allowed")
         query = urlencode(

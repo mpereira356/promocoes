@@ -64,7 +64,7 @@ def structured_links(soup, base):
     return result
 
 
-def form_search_url(html, base, query):
+def form_search_url(html, base, query, fields=None):
     """Usar apenas formulario GET realmente declarado pela loja."""
     soup = BeautifulSoup(html, "html.parser")
     for form in soup.find_all("form"):
@@ -72,7 +72,7 @@ def form_search_url(html, base, query):
             continue
         for field in form.find_all("input"):
             name = field.get("name", "")
-            if name.lower() not in ("q", "query", "search", "str", "searchterm"):
+            if name.lower() not in (fields or ("q", "query", "search", "str", "searchterm")):
                 continue
             action = form.get("action")
             if not action:
@@ -89,6 +89,7 @@ def form_search_url(html, base, query):
 
 
 REASONS = {
+    "marketplace_individual_listing_required": "exige link de anuncio individual; catalogo pode trocar de vendedor",
     "browser_not_installed": "Chromium indisponivel; execute o instalador com --with-browser",
     "browser_navigation_failed_TimeoutError": "tempo limite ao carregar a pagina no Chromium",
     "browser_connection_failed": "conexao com a loja interrompida",
@@ -114,7 +115,7 @@ class DirectSearch:
     async def links(self, query):
         from .adapters import ADAPTERS
 
-        links, notices = [], []
+        links, notices, groups = [], [], []
         for domain in self.config.domains:
             factory = ADAPTERS.get(domain)
             if not factory:
@@ -133,7 +134,7 @@ class DirectSearch:
                     if url is None:
                         home = "https://www." + domain + "/"
                         html, final = await self.fetcher.html(home)
-                        url = form_search_url(html, final, query)
+                        url = form_search_url(html, final, query, getattr(store, 'search_fields', None))
                     url, search_domain = self.fetcher.canonical(url)
                     if search_domain != domain:
                         raise ReadError("url_not_allowed")
@@ -162,7 +163,7 @@ class DirectSearch:
                         continue
                     if link_domain == domain and link not in accepted:
                         accepted.append(link)
-                links.extend(link for link in accepted[:6] if link not in links)
+                groups.append(accepted[:6])
                 if not accepted:
                     notices.append(
                         f"{store.name}: nenhum candidato compativel na fonte consultada (HTML ou sitemap limitado). Isso nao prova ausencia do produto."
@@ -174,4 +175,9 @@ class DirectSearch:
                     else "falha ao ler a busca"
                 )
                 notices.append(f"{store.name}: {reason}.")
+        # Distribuir o limite entre lojas; a ultima loja nao deve desaparecer.
+        for index in range(6):
+            for group in groups:
+                if index < len(group) and group[index] not in links:
+                    links.append(group[index])
         return SearchLinks(links[:15], notices)
