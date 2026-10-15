@@ -11,7 +11,7 @@ from .adapters.base import ReadError
 from .service import Monitor
 from .instance import InstanceLock
 from .selection import authorized, send_card, handle_choice
-from .presentation import send_offer, rank_offers
+from .search_results import deliver_search
 from .adapters import adapter
 from .subscriptions import ask_scope, handle_subscription
 from .version import VERSION
@@ -160,47 +160,9 @@ def main():
                         )
 
                 async def search_send():
-                    try:
-                        urls = (
-                            [query]
-                            if query.startswith("https://")
-                            else await monitor.search.links(query)
-                        )
-                        notices = getattr(urls, "notices", [])
-                        if not urls:
-                            await send("Nenhuma oferta descoberta.")
-                        offers = []
-                        for url in urls:
-                            try:
-                                readings = await monitor.read(url)
-                                for r in readings:
-                                    _, domain = fetcher.canonical(url)
-                                    offers.append((r, url, adapter(domain).name))
-                            except Exception:
-                                await send("Nao foi possivel ler esta oferta: " + url)
-                        for r, url, store, rank, provisional in rank_offers(offers):
-                            ad = db.save_ad(url, store, r)
-                            await send_offer(
-                                app.bot,
-                                config.chat,
-                                r,
-                                url,
-                                store,
-                                rank,
-                                provisional,
-                                ad["id"],
-                            )
-                        if notices:
-                            await send(
-                                "Resumo das lojas sem resultados nesta consulta:\n"
-                                + "\n".join(notices)
-                            )
-                    except ReadError as exc:
-                        await send(search_error_message(str(exc)))
-                    except Exception:
-                        await send(
-                            "Busca indisponivel. Confira os avisos das lojas e tente novamente mais tarde."
-                        )
+                    await deliver_search(
+                        monitor, fetcher, db, app.bot, config.chat, query, send
+                    )
 
                 await reply("Consultando paginas das ofertas...")
                 background(search_send())

@@ -124,9 +124,17 @@ class ChromiumTransport:
             except ReadError:
                 raise
             except Exception as exc:
+                connection_error = any(
+                    marker in str(exc)
+                    for marker in (
+                        "net::ERR_CONNECTION_RESET", "net::ERR_CONNECTION_CLOSED",
+                        "net::ERR_CONNECTION_TIMED_OUT", "net::ERR_TIMED_OUT",
+                    )
+                )
                 raise ReadError(
                     failure[0]
                     if failure
+                    else "browser_connection_failed" if connection_error
                     else "browser_navigation_failed_" + type(exc).__name__
                 ) from None
             finally:

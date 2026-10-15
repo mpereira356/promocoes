@@ -89,6 +89,13 @@ def form_search_url(html, base, query):
 
 
 REASONS = {
+    "browser_not_installed": "Chromium indisponivel; execute o instalador com --with-browser",
+    "browser_navigation_failed_TimeoutError": "tempo limite ao carregar a pagina no Chromium",
+    "browser_connection_failed": "conexao com a loja interrompida",
+    "browser_navigation_failed_Error": "falha de navegacao no Chromium",
+    "browser_resource_refused": "recurso da pagina recusado por seguranca ou falha de rede",
+    "structured_product_missing_or_ambiguous": "pagina sem dados estruturados de um produto unico",
+    "redirect_changed_store": "redirecionamento para outra loja recusado",
     "blocked_no_bypass": "acesso bloqueado pela loja; sem tentativa de contorno",
     "captcha_no_bypass": "CAPTCHA detectado; consulta interrompida",
     "robots_unavailable": "nao foi possivel obter robots.txt; acesso suspenso",

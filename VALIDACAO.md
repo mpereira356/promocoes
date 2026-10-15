@@ -132,3 +132,11 @@ Dois snapshots HTML reais reduzidos foram adicionados em `tests/fixtures/pichau_
 O instalador Kali aceita `--with-browser`, preserva credenciais/dados, configura pastas graváveis e verifica se o navegador inicia como usuário do serviço. Foi verificada a sintaxe Bash, mas não foram executados APT, systemd ou Chromium no Kali real. O `/status` informa versão e configuração; `scripts.diagnose_stores` permite verificar acesso a partir do próprio servidor sem expor tokens e sem enviar Telegram. Não houve alerta real enviado durante a validação.
 
 Suíte final da versão 2026.10.15-browser.1: **117 testes passaram** em 5,29 segundos. Inclui testes com os dois novos recortes reais de produto e testes simulados de compressão, CAPTCHA bloqueante versus widget opcional, separadores monetários, roteamento Chromium por loja, fechamento do contexto e recusa por robots. A sintaxe Bash do instalador com `--with-browser` passou em `bash -n`. A sondagem final foi novamente executada contra as URLs exatas de Elite V2 da Pichau/Terabyte com o transporte de produção, sem erros de acesso e sem avisos da descoberta por sitemap; estoque indisponível na Terabyte foi preservado. Nenhum alerta Telegram foi enviado; nenhuma instalação Kali remota foi executada.
+# Atualizacao 2026.10.15-browser.2
+
+126 testes locais passaram. Os novos testes simulam timeout e interrupcao de conexao do Chromium, verificam retentativas e garantem que CAPTCHA/bloqueio nao sejam repetidos como erro temporario. Tambem verificam o resumo final de pesquisas com sucesso, erro de leitura ou falha de descoberta.
+
+Em 15/10/2026, os tres links Pichau relatados (B550 Aorus Elite AX V2, Aorus Elite V2 e Gaming X V2) foram lidos pelo Fetcher real com Chromium no Windows. Foram extraidos titulo, modalidade Pix e disponibilidade declarada. A Aorus Elite V2 redirecionou para seu endereco atual. Nao houve envio real ao Telegram nesse teste.
+
+Nao foi reproduzido o acesso pela VPS Kali do usuario: disponibilidade local nao comprova acesso a partir do IP da VPS. As mensagens agora exibem motivos conhecidos sem detalhes internos ou credenciais; timeouts e conexoes interrompidas recebem ate tres tentativas. Bloqueios e CAPTCHA continuam interrompendo a leitura. Sem o motivo produzido na VPS nao e possivel afirmar a causa original.
+

@@ -89,6 +89,13 @@ class Fetcher:
                             response = await self.chromium().get(url)
                         else:
                             response = await self.client.get(url)
+                    except ReadError as exc:
+                        if str(exc) not in (
+                            "browser_navigation_failed_TimeoutError",
+                            "browser_connection_failed",
+                        ):
+                            raise
+                        response = None
                     except httpx.RequestError:
                         response = None
                     finally:
