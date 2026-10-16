@@ -9,7 +9,7 @@ from .search import search_error_message
 
 
 async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketplace_only=False):
-    sent = failed = unverified = priced = 0
+    sent = failed = unverified = priced = rejected = 0
     notices = []
     unverified_links, failures = [], []
     interrupted = False
@@ -40,6 +40,9 @@ async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketpla
                 _, domain = fetcher.canonical(url)
                 offers.extend((r, url, adapter(domain).name) for r in readings)
             except Exception as exc:
+                if isinstance(exc, ReadError) and str(exc) == 'different_model':
+                    rejected += 1
+                    continue
                 failed += 1
                 if isinstance(exc, ReadError):
                     reason = REASONS.get(str(exc), 'A página não possui uma oferta que o leitor consiga validar')
@@ -74,7 +77,7 @@ async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketpla
     finally:
         status = ('⚠️ Pesquisa encerrada com falha' if interrupted else
             '⚠️ Pesquisa concluída com limitações' if failed or unverified or notices or (sent and not priced) else '✅ Pesquisa concluída')
-        await send(f'{status}\n\nOfertas enviadas: {sent}\nLinks com falha de leitura: {failed}\nAvisos das lojas: {len(notices)}\nLinks para conferência: {unverified}\nPreços lidos nas ofertas enviadas: {priced}')
+        await send(f'{status}\n\nOfertas enviadas: {sent}\nLinks com falha de leitura: {failed}\nAvisos das lojas: {len(notices)}\nLinks para conferência: {unverified}\nPreços lidos nas ofertas enviadas: {priced}\nCandidatos descartados por incompatibilidade: {rejected}')
 
 
 def grouped_unverified(entries):

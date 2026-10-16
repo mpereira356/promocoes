@@ -3,6 +3,14 @@
 from .models import normalize
 import re
 
+BRANDS = frozenset({'logitech', 'corsair', 'superframe', 'ajazz', 'razer', 'redragon',
+    'hyperx', 'havit', 'asus', 'gigabyte', 'msi', 'asrock', 'kingston', 'crucial', 'samsung'})
+
+
+def brand_conflict(left, right):
+    a, b = set(normalize(left).split()) & BRANDS, set(normalize(right).split()) & BRANDS
+    return bool(a and b and a.isdisjoint(b))
+
 
 def logitech_part_number(text):
     if 'logitech' not in normalize(text).split():
@@ -29,6 +37,12 @@ def search_terms(title, identifiers=None):
 def model_conflict(left, right):
     """Conflitos explicitos de familias conhecidas, sem adivinhar sinonimos."""
     a, b = normalize(left), normalize(right)
+    if brand_conflict(left, right):
+        return True
+    if 'logitech' in a.split() and 'logitech' in b.split():
+        ma, mb = re.search(r'\bg pro( x)?\b', a), re.search(r'\bg pro( x)?\b', b)
+        if ma and mb and bool(ma[1]) != bool(mb[1]):
+            return True
     chip_a = set(re.findall(r'\b[bxyz]\d{3}[a-z]?\b', a))
     chip_b = set(re.findall(r'\b[bxyz]\d{3}[a-z]?\b', b))
     if chip_a and chip_b and chip_a != chip_b:

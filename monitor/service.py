@@ -5,7 +5,7 @@ from .adapters.base import ReadError
 from .search import search_error_message
 from .models import Reading
 from .identity import same_product, search_terms
-from .discovery import REASONS
+from .discovery import REASONS, relevance
 import json
 
 
@@ -146,6 +146,8 @@ class Monitor:
                 for candidate in candidates:
                     try:
                         readings = await self.read(candidate["url"])
+                        if not readings:
+                            raise ReadError('structured_product_missing_or_ambiguous')
                         # Produto pode ter sido removido enquanto aguardava a rede.
                         current = self.db.rows(
                             "SELECT * FROM candidates WHERE id=?", (candidate["id"],)
@@ -153,6 +155,10 @@ class Monitor:
                         if not current:
                             continue
                         for reading in readings:
+                            if not seed_reading and not p['query'].startswith('https://') and not relevance(p['query'], reading.title):
+                                self.db.failure(candidate['id'], 'different_model')
+                                notes.append(f"🔎 Oferta {candidate['id']} descartada: produto incompatível com o monitoramento.")
+                                continue
                             relation = (
                                 same_product(seed_reading, reading)
                                 if seed_reading
@@ -160,6 +166,7 @@ class Monitor:
                             )
                             if relation is False:
                                 self.db.failure(candidate["id"], "different_model")
+                                notes.append(f"🔎 Oferta {candidate['id']} descartada: produto incompatível com o monitoramento.")
                                 continue
                             ad = self.db.save_ad(
                                 candidate["url"], candidate["store"], reading

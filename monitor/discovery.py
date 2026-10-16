@@ -24,7 +24,7 @@ class SearchLinks(list):
 
 
 def relevance(query, title):
-    from .identity import model_conflict, logitech_part_number
+    from .identity import model_conflict, logitech_part_number, BRANDS
     stop = {"de", "da", "do", "das", "dos", "com", "para", "e", "a", "o"}
     def terms(text):
         text = re.sub(r'(\d+)\s*[ªº°]', r'\1', text)
@@ -33,6 +33,10 @@ def relevance(query, title):
         return set(text.split())
     wanted = terms(query) - stop
     found = terms(title)
+    if not (wanted & BRANDS) <= found:
+        return 0
+    if re.search(r'\bg pro\b', normalize(query)) and not re.search(r'\bg pro\b', normalize(title)):
+        return 0
     accessories = {'arquivo', 'bios', 'manual', 'guia', 'guide', 'ebook', 'suporte', 'capa', 'pelicula'}
     if (found & accessories) - wanted:
         return 0

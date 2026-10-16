@@ -13,6 +13,24 @@ from monitor.models import Reading
 from monitor.network import Fetcher
 
 
+@pytest.mark.parametrize('candidate', [
+    'Teclado Mecânico Corsair K65 Pro Mini RGB Switch OPX',
+    'Teclado Mecânico SuperFrame Player Pro RGB 60 Red',
+    'Teclado Mecânico Fallen Pantera Pro TKL RGB',
+    'Teclado Logitech G PRO X 60 LIGHTSPEED RGB',
+    'Teclado Sem Fio Mecânico Gamer Logitech G515 RGB Bluetooth Lightspeed',
+    'Teclado Mecânico Gamer Logitech G915 X Lightspeed RGB USB Bluetooth',
+])
+def test_logitech_g_pro_rejects_reported_wrong_brands_and_x_variant(candidate):
+    assert relevance('Teclado Mecanico Logitech G PRO RGB', candidate) == 0
+
+
+def test_logitech_g_pro_accepts_actual_model_and_generic_g_keeps_variants():
+    correct = 'Teclado Mecânico Gamer Logitech G PRO Layout US RGB LIGHTSYNC Switch GX Blue 920-009388'
+    assert relevance('Teclado Mecanico Logitech G PRO RGB', correct)
+    assert relevance('Teclado Gamer Logitech G', 'Teclado Logitech G PRO X 60 RGB')
+
+
 def test_exact_logitech_code_overrides_different_marketing_titles():
     kabum = 'Teclado Sem Fio Mecânico Gamer Logitech G PRO X 60 Lightspeed RGB Bluetooth Compatível com Windows Preto - 920-011902'
     pichau = 'Teclado Mecanico Logitech G Pro X Lightspeed RGB 60% Switch Optico GX Tactile Tri-Mode Preto 920-011902'

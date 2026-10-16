@@ -237,6 +237,21 @@ def test_missing_comparison_fields_are_identified(data):
     assert not db.rows('SELECT * FROM alerts')
 
 
+def test_monitor_rejects_changed_brand_without_updating_last_price(data):
+    async def run():
+        db, config, reading, ad, _ = data
+        pid = db.add('Teclado Mecânico Logitech G PRO RGB', config)
+        candidate = db.candidate(pid, 'https://www.pichau.com.br/keyboard', 'Pichau')
+        fetcher = SimpleNamespace(canonical=lambda url: (url, 'pichau.com.br'))
+        monitor = Monitor(db, config, fetcher, SimpleNamespace(links=AsyncMock(return_value=[])), AsyncMock())
+        monitor.read = AsyncMock(return_value=[replace(reading, title='Teclado Corsair K65 Pro Mini RGB')])
+        message = await monitor.check(pid)
+        assert 'produto incompatível' in message
+        assert not db.rows('SELECT * FROM series')
+        assert db.rows('SELECT status FROM checks WHERE candidate=?', (candidate['id'],))[0]['status'] == 'different_model'
+    asyncio.run(run())
+
+
 def test_scope_buttons_and_callback_authorization(data):
     async def run():
         db, c, r, ad, _ = data

@@ -28,7 +28,7 @@ O resumo identifica páginas lógicas tentadas, produtos descobertos, leituras d
 |---|---|---|---|
 | KaBuM | NEXT_DATA, incluindo JSON serializado duas vezes; paginação da categoria | `product.prices.oldPrice` vinculado a ID e título | Caminhos e estrutura observados em páginas reais |
 | Pichau | Cards `data-cy=list-product` e próximo link da própria categoria | Bloco principal `price_from`, associado ao preço Pix lido | Estruturas observadas em páginas reais; depende de acesso da loja |
-| Terabyte | Links de produto reconhecidos pelo adaptador existente e paginação declarada | Somente StrikethroughPrice estruturado da mesma oferta | Referência por HTML ainda não validada; categoria pode falhar |
+| Terabyte | Links de produto reconhecidos pelo adaptador existente e paginação declarada | StrikethroughPrice estruturado ou bloco principal de/por à vista, com produto e preço vinculados | Bloco HTML validado em captura real do Corsair K65; outros layouts e categorias podem falhar |
 | Amazon | URL mapeada/livre: ItemList/Product estruturados; sem mapa: descoberta por termo | Somente StrikethroughPrice estruturado da mesma oferta | Menu automático, HTML de categoria e referência por vendedor não validados; pode não produzir resultados |
 | Mercado Livre | URL mapeada/livre: ItemList/Product estruturados e anúncios individuais; sem mapa: descoberta por termo | Somente StrikethroughPrice estruturado da mesma oferta | Menu automático não validado; acesso bloqueado nas verificações anteriores |
 

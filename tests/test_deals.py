@@ -379,3 +379,16 @@ def test_delivery_failure_does_not_report_search_failure():
         assert 'Telegram não recebeu 1' in send.await_args_list[-1].args[0]
         assert not any('falha inesperada' in call.args[0] for call in send.await_args_list)
     asyncio.run(scenario())
+
+
+def test_terabyte_real_cash_reference_ignores_recommendations():
+    from monitor.adapters.terabyte import TerabyteAdapter
+    html = Path('tests/fixtures/terabyte_cash_block_real.html').read_text(encoding='utf-8')
+    url = 'https://www.terabyteshop.com.br/produto/36231/teclado-gamer-mecanico-corsair-k65-pro-mini-rgb-switch-corsair-opx-preto-ch-91a401a-na'
+    reading = TerabyteAdapter().parse(html, url)[0]
+    deal = ADAPTERS['terabyteshop.com.br'].offer(html, url, reading)
+    assert deal.previous == 96590 and deal.reading.price == 64999
+    assert DiscountFilter.parse('>=30').accepts(deal.previous, reading.price)
+    # Um preço riscado de recomendação fora do bloco principal não substitui a referência.
+    html = html.replace('<del>R$ 965,90</del>', '') + '<aside><p class="precode"><del>R$ 9.999,99</del></p></aside>'
+    assert ADAPTERS['terabyteshop.com.br'].offer(html, url, reading).previous is None

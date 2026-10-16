@@ -244,3 +244,17 @@ def test_real_reported_keyboard_pages_keep_price_and_unavailable(fixture, parser
     reading = parser().parse(html, 'https://www.pichau.com.br/keyboard')[0]
     assert reading.price == price
     assert reading.stock == 'out_of_stock'
+
+
+def test_real_terabyte_seo_title_and_cash_block_have_pix_and_boleto():
+    html = Path('tests/fixtures/terabyte_cash_block_real.html').read_text(encoding='utf-8')
+    url = 'https://www.terabyteshop.com.br/produto/36231/teclado-gamer-mecanico-corsair-k65-pro-mini-rgb-switch-corsair-opx-preto-ch-91a401a-na'
+    readings = TerabyteAdapter().parse(html, url)
+    assert {r.payment for r in readings} == {'Pix', 'Boleto'}
+    assert all(r.price == 64999 and r.stock == 'in_stock' for r in readings)
+    # MPN divergente no título ou URL de outra oferta impede vincular a modalidade.
+    broken = html.replace('CH-91A401A-NA</h1>', 'OTHER-CODE</h1>')
+    assert all(not r.payment for r in TerabyteAdapter().parse(broken, url))
+    assert all(not r.payment for r in TerabyteAdapter().parse(html, url.replace('/36231/', '/99999/')))
+    # Um segundo preço fora do modal torna a vinculação ambígua e é recusado.
+    assert all(not r.payment for r in TerabyteAdapter().parse(html + '<p id="valVista">R$ 5,00</p>', url))

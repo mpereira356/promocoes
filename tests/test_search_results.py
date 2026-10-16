@@ -153,3 +153,17 @@ def test_catalogs_are_grouped_and_never_reported_as_verified_offers():
         assert summary.startswith('⚠️ Pesquisa concluída com limitações')
         assert 'Ofertas enviadas: 0' in summary and 'Links para conferência: 6' in summary
     asyncio.run(run())
+
+
+def test_redirected_wrong_brand_is_discarded_without_save_or_read_error():
+    async def run():
+        monitor = SimpleNamespace(search=SimpleNamespace(links=AsyncMock(return_value=['https://www.terabyteshop.com.br/produto/1/keyboard'])),
+            read=AsyncMock(return_value=[SimpleNamespace(title='Teclado Mecânico Corsair K65 Pro Mini RGB')]))
+        send = AsyncMock()
+        await deliver_search(monitor, None, None, None, 1, 'Teclado Mecanico Logitech G PRO RGB', send)
+        assert send.await_count == 1
+        summary = send.await_args.args[0]
+        assert 'Ofertas enviadas: 0' in summary
+        assert 'Links com falha de leitura: 0' in summary
+        assert 'Candidatos descartados por incompatibilidade: 1' in summary
+    asyncio.run(run())

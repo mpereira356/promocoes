@@ -1,4 +1,18 @@
-# Precos Amazon ? atualizacao 2026.10.15-amazon-offers.1
+# Estado observado — 2026.10.16-review.1
+
+As observações abaixo são consultas locais limitadas, sem envio real ao Telegram ou acesso à VPS. Os registros antigos permanecem após esta tabela como histórico.
+
+| Loja | Validação nesta revisão | Limitação restante |
+| --- | --- | --- |
+| KaBuM | G PRO 920-009388: R$ 699,99 Pix, disponível | Condição ausente; comparação e alertas dessa leitura continuam suspensos |
+| Pichau | G PRO 920-009388: R$ 639,99 Pix, novo, disponível | O bloqueio relatado na VPS não foi reproduzido localmente |
+| Terabyte | Corsair K65 Pro Mini: R$ 649,99 Pix/Boleto, novo, disponível; bloco de/por validado | Descoberta limitada não encontrou Logitech G PRO; outros layouts podem exigir adaptação |
+| Mercado Livre | Links externos foram encontrados | Robots indisponível; sem preço validado nesta revisão |
+| Amazon Brasil | Links externos foram encontrados | Preço oculto com exigência de carrinho; sem preço validado nesta revisão |
+
+Consulte VALIDACAO.md para separar testes simulados, capturas e consultas reais. Nenhuma afirmação de cobertura integral ou disponibilidade futura é feita.
+
+# Precos Amazon ? registro 2026.10.15-amazon-offers.1
 
 O leitor agora tenta o painel publico de opcoes de compra quando a pagina Amazon nao fornece preco e nao declara indisponibilidade. Usa o link publicado pela loja ou o painel AOD observado no redirecionamento real, sempre para o mesmo ASIN e com robots.txt conferido antes. Selenium normal, sem stealth, login ou interacao com CAPTCHA; nenhum botao de carrinho/compra e acionado. O navegador roda em uma thread com fila, sem bloquear comandos Telegram, e e encerrado ao final de cada leitura.
 

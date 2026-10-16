@@ -3,7 +3,6 @@ import re
 from urllib.parse import urlsplit
 from bs4 import BeautifulSoup
 from .base import StructuredAdapter, ReadError
-from ..discovery import LinkCandidate, structured_links
 
 
 class MercadoLivreAdapter(StructuredAdapter):
@@ -19,6 +18,7 @@ class MercadoLivreAdapter(StructuredAdapter):
         )
 
     def search_links(self, html, url):
+        from ..discovery import LinkCandidate, structured_links
         soup = BeautifulSoup(html, 'html.parser')
         candidates = structured_links(soup, url)
         for a in soup.find_all('a', href=True):
