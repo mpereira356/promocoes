@@ -212,3 +212,9 @@ Em 15/10/2026, os tres links Pichau relatados (B550 Aorus Elite AX V2, Aorus Eli
 
 Nao foi reproduzido o acesso pela VPS Kali do usuario: disponibilidade local nao comprova acesso a partir do IP da VPS. As mensagens agora exibem motivos conhecidos sem detalhes internos ou credenciais; timeouts e conexoes interrompidas recebem ate tres tentativas. Bloqueios e CAPTCHA continuam interrompendo a leitura. Sem o motivo produzido na VPS nao e possivel afirmar a causa original.
 
+# Correções do relatório de promoções — 15/10/2026
+
+Resumo de cobertura separado dos avisos por loja, sem duplicação de ícones ou do rótulo de comparação. Links de catálogo do Mercado Livre são descartados antes de consultar uma oferta individual. Referências com desconto anunciado de 70% ou mais continuam sinalizadas como suspeitas; não representam queda histórica comprovada.
+
+Novos testes simulam o relatório com avisos repetidos e a descoberta de links de catálogo junto de anúncios individuais. Não houve validação adicional em lojas reais nem envio ao Telegram nesta alteração. Bloqueios e restrições das lojas permanecem limitações explícitas.
+

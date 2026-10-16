@@ -76,6 +76,11 @@ class Deals:
                     return cache[url]
                 cache[url] = []
                 cov = coverage[domain]
+                if domain == 'mercadolivre.com.br':
+                    from ..adapters.mercadolivre import MercadoLivreAdapter
+                    if not MercadoLivreAdapter().is_product_url(url):
+                        cov.notices.append('Links de catálogo com vários vendedores foram descartados; não identificam uma oferta individual comparável.')
+                        return []
                 if comparison:
                     cov.comparison_pages += 1
                 else:
@@ -87,7 +92,7 @@ class Deals:
                 cache[url] = offers
                 return offers
             except (ReadError, ValueError, TypeError, KeyError):
-                coverage[domain].notices.append('⚠️ Falha na leitura da oferta: ' + url)
+                coverage[domain].notices.append('Falha na leitura da oferta: ' + url)
                 return []
 
         for domain in domains:

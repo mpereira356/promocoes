@@ -12,13 +12,16 @@ def messages(report):
         offer, r = result.offer, result.offer.reading
         condition = {'NewCondition': 'Novo', 'UsedCondition': 'Usado',
                      'RefurbishedCondition': 'Recondicionado', 'DamagedCondition': 'Danificado'}.get(r.condition, 'não declarada')
+        comparison = result.comparison
+        if comparison.casefold().startswith('comparação '):
+            comparison = comparison[len('Comparação '):]
         text = (f'🏆 {r.title}\n\n🏪 Loja: {offer.store}\n'
                 f'De: {reais(offer.previous)}\nPor: {reais(r.price)}\n'
                 f'📣 Desconto anunciado: {offer.percent:.2f}%\n'
                 f'💳 Pagamento: {r.payment or "não declarado para este preço"}\n'
                 f'👤 Vendedor: {r.seller or "não declarado"}\n'
                 f'📦 Condição: {condition}\n'
-                f'📊 Estoque: disponível segundo a página\n🔎 Comparação: {result.comparison}.\n\n')
+                f'📊 Estoque: disponível segundo a página\n🔎 Comparação: {comparison}.\n\n')
         if offer.model:
             text += f'Modelo declarado: {offer.model}\n'
         if r.identifiers:
@@ -50,6 +53,11 @@ def messages(report):
                  f'{cov.discovery_pages} documento(s) de descoberta ({cov.discovery_loaded} lidos); '
                  f'{cov.discovered} links descobertos, {cov.excluded} produtos sem oferta apta.\n')
         if cov.notices:
-            text += '\n'.join('  ⚠️ ' + n for n in dict.fromkeys(cov.notices)) + '\n'
+            text += f'  ⚠️ {len(set(cov.notices))} aviso(s); detalhes nas mensagens por loja.\n'
     text += '\nA contagem considera páginas lógicas; não soma robots.txt, recursos do navegador, redirecionamentos ou novas tentativas. A descoberta pode usar cache ou índice externo; os preços são lidos na página da oferta. As comparações complementares são limitadas e não cobrem todos os anúncios.\n\n⏸️ Esta consulta não cadastra monitoramento nem alertas futuros.'
     yield text
+    # Cada loja recebe seu bloco; send_text preserva as linhas ao dividir mensagens.
+    for cov in report.coverage:
+        notices = list(dict.fromkeys(n.removeprefix('⚠️').strip() for n in cov.notices))
+        if notices:
+            yield f'⚠️ Avisos da pesquisa — {cov.store}\n\n' + '\n\n'.join('⚠️ ' + n for n in notices)

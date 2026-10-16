@@ -1,1 +1,1 @@
-VERSION = "2026.10.15-menu.1"
+VERSION = "2026.10.15-report.1"

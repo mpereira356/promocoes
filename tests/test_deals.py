@@ -174,7 +174,7 @@ def test_manual_run_partial_failure_no_database_and_no_future_jobs():
         output = '\n'.join(messages(report))
         assert '🏆' in output and 'concluída' in output and '01001000' in output
         assert 'não comprova uma queda histórica' in output
-        assert 'Comparação não confirmada' in output
+        assert 'Comparação: não confirmada' in output
         assert monitor.read_snapshot.await_count == 1
         await fetcher.close()
     asyncio.run(scenario())
@@ -324,4 +324,37 @@ def test_page_audit_does_not_count_other_async_tasks():
             assert PAGE_AUDIT.get() == []
         finally:
             PAGE_AUDIT.reset(token)
+    asyncio.run(scenario())
+
+
+def test_report_separates_store_notices_without_duplicate_labels():
+    from monitor.deals.models import Coverage, DealReport
+    a = offer()
+    cov = Coverage(a.domain, 'KaBuM', notices=['⚠️ Falha na leitura da oferta: ' + a.url] * 2)
+    report = DealReport([compare_offer(a, [a])], [cov], DiscountFilter.parse('>=30'), 'hardware/placas-mae')
+    output = list(messages(report))
+    assert len(output) == 3
+    assert 'Comparação: não confirmada' in output[0]
+    assert 'Falha na leitura' not in output[1]
+    assert output[2].count(a.url) == 1
+    assert '⚠️ ⚠️' not in '\n'.join(output)
+
+
+def test_marketplace_catalog_discarded_before_product_request(monkeypatch):
+    async def scenario():
+        config = SimpleNamespace(domains=('mercadolivre.com.br',), browser=False, provider='direct')
+        fetcher = Fetcher(config)
+        catalog = 'https://www.mercadolivre.com.br/board/p/MLB123456'
+        individual = 'https://produto.mercadolivre.com.br/MLB-123456-board-_JM'
+        async def search(self, query):
+            return [catalog, individual]
+        monkeypatch.setattr('monitor.deals.service.Search.links', search)
+        snapshot = AsyncMock(side_effect=ReadError('blocked_no_bypass'))
+        monitor = SimpleNamespace(config=config, fetcher=fetcher, read_snapshot=snapshot)
+        category = Deals(monitor).catalog.request('produto de teste', fetcher)
+        report = await Deals(monitor).run(category, DiscountFilter.parse('>30'), config.domains)
+        snapshot.assert_awaited_once_with(individual)
+        assert report.coverage[0].product_pages == 1
+        assert any('catálogo' in n for n in report.coverage[0].notices)
+        await fetcher.close()
     asyncio.run(scenario())
