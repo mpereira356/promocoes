@@ -12,7 +12,7 @@ def test_successful_search_sends_offers_before_completion(monkeypatch):
     async def run():
         send = AsyncMock()
         url = 'https://www.pichau.com.br/product'
-        reading = object()
+        reading = SimpleNamespace(title='B550')
         monitor = SimpleNamespace(search=SimpleNamespace(links=AsyncMock(return_value=[url])), read=AsyncMock(return_value=[reading]))
         fetcher = SimpleNamespace(canonical=lambda u: (u, 'pichau.com.br'))
         db = SimpleNamespace(save_ad=lambda *a: {'id': 7})

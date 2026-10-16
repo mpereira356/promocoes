@@ -1,5 +1,7 @@
 Para publicar no GitHub e atualizar o servidor com Git, veja [GITHUB.md](GITHUB.md).
 
+**Leia [STATUS-LOJAS.md](STATUS-LOJAS.md) para o estado real de cada integracao.** Amazon Brasil foi adicionada a descoberta e ao leitor de paginas; precos ocultos ou dados ausentes permanecem desconhecidos. Pichau/Terabyte usam descoberta externa quando o sitemap limitado nao encontra candidatos. Nem todas as lojas possuem todos os campos validados; nao ha promessa de cobertura universal.
+
 **Mercado Livre: descoberta de links pelo indice externo Tavily sem chave.** Use `/buscarml nome` para pesquisar somente no Mercado Livre, ou `/buscar nome` com `SEARCH_PROVIDER=direct` para incluir a loja nas pesquisas gerais. Nao exige aplicativo Mercado Livre, dominio, redirect ou token. O modo publico e limitado e pode ficar temporariamente indisponivel. Veja [MERCADO-LIVRE.md](MERCADO-LIVRE.md).
 
 A descoberta foi testada com resultados reais para Gigabyte B550 Aorus Elite V2 em 15/10/2026. Links de catalogo sao exibidos para conferencia, sem preco, ID de anuncio monitoravel, medalhas ou alertas. O titulo vem do indice e pode estar desatualizado. A leitura de paginas Mercado Livre continua bloqueada com 403 no ambiente testado; monitoramento de precos dessa loja ainda nao foi validado. Nenhum preco do indice e usado como preco de oferta.

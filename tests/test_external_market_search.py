@@ -46,7 +46,7 @@ def test_keyless_rate_limit_waits_without_repeated_requests(monkeypatch):
     async def run():
         post = AsyncMock(return_value=httpx.Response(429, headers={'Retry-After': '600'}))
         monkeypatch.setattr(httpx.AsyncClient, 'post', post)
-        search = ExternalMarketSearch(None)
+        search = ExternalMarketSearch(SimpleNamespace(config=SimpleNamespace(domains=('mercadolivre.com.br',))))
         for _ in range(2):
             with pytest.raises(ReadError, match='external_search_limited'):
                 await search.links('B550')

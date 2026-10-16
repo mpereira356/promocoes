@@ -8,6 +8,14 @@ MARKERS = ("cf-chl-", "g-recaptcha", "hcaptcha", "verify you are human")
 
 def is_access_challenge(html):
     lower = html.lower()
+    if any(marker in lower for marker in (
+        "we need to verify that you're not a robot",
+        'enter the characters you see below',
+        'digite os caracteres que voce ve abaixo',
+        'digite os caracteres que você vê abaixo',
+        '/errors/validatecaptcha',
+    )):
+        return True
     if not any(marker in lower for marker in MARKERS):
         return False
     soup = BeautifulSoup(html, "html.parser")

@@ -59,7 +59,7 @@ if [[ ! -f "$install_dir/.env" ]]; then
         printf 'TELEGRAM_CHAT_ID=%s\n' "$telegram_chat"
         printf 'TELEGRAM_USER_ID=%s\n' "$telegram_user"
         printf 'SEARCH_PROVIDER=direct\nSEARCH_API_KEY=\n'
-        printf 'ALLOWED_DOMAINS=kabum.com.br,pichau.com.br,terabyteshop.com.br,mercadolivre.com.br\n'
+        printf 'ALLOWED_DOMAINS=kabum.com.br,pichau.com.br,terabyteshop.com.br,mercadolivre.com.br,amazon.com.br\n'
         printf 'DATABASE_PATH=data/monitor.sqlite3\nINTERVAL_HOURS=5\nREQUEST_DELAY=3\n'
         printf 'MIN_DROP_BRL=0\nMIN_DROP_PERCENT=0\nTARGET_PRICE=\nPLAYWRIGHT_ENABLED=false\n'
     } > "$install_dir/.env"
@@ -74,12 +74,12 @@ old = 'ALLOWED_DOMAINS=kabum.com.br,pichau.com.br,terabyteshop.com.br'
 lines = text.splitlines()
 changed = False
 for index, line in enumerate(lines):
-    if line.strip() == old:
-        lines[index] = old + ',mercadolivre.com.br'
+    if line.strip() in (old, old + ',mercadolivre.com.br'):
+        lines[index] = old + ',mercadolivre.com.br,amazon.com.br'
         changed = True
 if changed:
     p.write_text('\n'.join(lines) + '\n', encoding='utf-8')
-    print('Mercado Livre adicionado a lista padrao de dominios; acesso depende da loja.')
+    print('Mercado Livre e Amazon adicionados a lista padrao; acesso depende das lojas.')
 PY
 chown root:pricebot "$install_dir/.env"
 chmod 0640 "$install_dir/.env"
@@ -111,7 +111,7 @@ if [[ "$source_dir" != "$install_dir" ]]; then
         find "$install_dir/$folder" -type d -exec chmod 0750 {} +
         find "$install_dir/$folder" -type f -exec chmod 0640 {} +
     done
-    for filename in requirements-server.txt requirements-browser.txt .env.example README.md LEIA-ME-KALI.md MERCADO-LIVRE.md VALIDACAO.md; do
+    for filename in requirements-server.txt requirements-browser.txt .env.example README.md LEIA-ME-KALI.md MERCADO-LIVRE.md STATUS-LOJAS.md VALIDACAO.md; do
         install -m 0640 -o root -g pricebot "$source_dir/$filename" "$install_dir/$filename"
     done
 fi

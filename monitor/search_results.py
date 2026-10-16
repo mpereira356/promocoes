@@ -1,7 +1,7 @@
 """Entrega de buscas com resumo final, sem transformar erros em ofertas."""
 from .adapters import adapter
 from .adapters.base import ReadError
-from .discovery import REASONS
+from .discovery import REASONS, relevance
 from .presentation import rank_offers, send_offer
 from .search import search_error_message
 
@@ -32,6 +32,8 @@ async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketpla
                 readings = await monitor.read(url)
                 if not readings:
                     raise ReadError('structured_product_missing_or_ambiguous')
+                if not query.startswith('https://') and any(not relevance(query, r.title) for r in readings):
+                    raise ReadError('different_model')
                 _, domain = fetcher.canonical(url)
                 offers.extend((r, url, adapter(domain).name) for r in readings)
             except Exception as exc:
@@ -47,7 +49,7 @@ async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketpla
             await send_offer(bot, chat, r, url, store, rank, provisional, ad['id'])
             sent += 1
         if notices:
-            await send('Resumo das lojas sem resultados nesta consulta:\n' + '\n'.join(notices))
+            await send('Avisos da pesquisa:\n' + '\n'.join(notices))
     except ReadError as exc:
         interrupted = True
         await send(search_error_message(str(exc)))
@@ -60,12 +62,15 @@ async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketpla
 
 
 def discovered_text(candidate):
+    from urllib.parse import urlsplit
+    domain = urlsplit(candidate.url).hostname.removeprefix('www.')
+    store = adapter('mercadolivre.com.br' if domain == 'produto.mercadolivre.com.br' else domain).name
     return (
-        '🔎 Mercado Livre — link encontrado\n\n'
+        '🔎 ' + store + ' — link encontrado\n\n'
         + candidate.title[:350] + '\n\n'
         + '📌 Fonte: indice externo Tavily Search; titulo ainda nao conferido na pagina.\n'
         + '❓ Preco, estoque, vendedor, condicao e pagamento nao verificados.\n'
-        + '⚠️ Pode ser uma pagina de catalogo com varios vendedores. Confira o modelo e a oferta ao abrir.\n'
+        + '⚠️ Confira o modelo, a oferta e o vendedor ao abrir. Catalogos podem alternar vendedores.\n'
         + '⏸️ Este resultado nao ativa monitoramento nem alertas.\n\n'
         + '🔗 ' + candidate.url
     )

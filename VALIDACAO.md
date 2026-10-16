@@ -1,3 +1,11 @@
+# Atualizacao 2026.10.15-stores.1
+
+157 testes locais passaram. Novos testes simulados cobrem fallback de sitemap incompleto, separacao de Aorus Elite/Elite AX/Gaming X, titulo real divergente da pesquisa, ordinais/capacidades e bloqueios Amazon. Duas fixtures reduzidas foram obtidas de paginas Amazon reais, sem dados de sessao: B550 indisponivel e Echo Dot com preco oculto.
+
+Validacao ao vivo separada: Pichau leu o link fornecido pelo usuario com titulo, vendedor Pichau, NewCondition, Pix, preco e disponibilidade. KaBuM leu preco/Pix/vendedor/estoque mas nao condicao. Terabyte leu a oferta regular B550 como indisponivel, sem pagamento confirmado. Mercado Livre encontrou links, mas continua bloqueando a pagina. Amazon encontrou e leu paginas reais, mas o preco nao foi fornecido; B550 indisponivel e Echo com vendedor Amazon.com.br/estoque nao confirmado. Nao houve envio Telegram ou alteracao do banco do usuario.
+
+Nao foi atingida a coleta completa de todos os campos em todas as lojas. Consulte STATUS-LOJAS.md para resultados e limites. Os registros abaixo descrevem versoes anteriores.
+
 # Atualizacao 2026.10.15-ml-search.1
 
 143 testes locais passaram. Os testes novos usam respostas simuladas da busca externa, verificando cache, limites, dominios permitidos, descarte de categorias/arquivos e de titulos incompatveis com o endereco, e entrega de links nao verificados sem criar ofertas ou monitoramentos.

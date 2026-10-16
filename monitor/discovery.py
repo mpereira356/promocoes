@@ -24,9 +24,23 @@ class SearchLinks(list):
 
 
 def relevance(query, title):
+    from .identity import model_conflict
     stop = {"de", "da", "do", "das", "dos", "com", "para", "e", "a", "o"}
-    wanted = set(normalize(query).split()) - stop
-    found = set(normalize(title).split())
+    def terms(text):
+        text = re.sub(r'(\d+)\s*[ªº°]', r'\1', text)
+        text = normalize(text)
+        text = re.sub(r'\b(\d+)\s+(gb|tb|mhz|hz|w)\b', r'\1\2', text)
+        return set(text.split())
+    wanted = terms(query) - stop
+    found = terms(title)
+    accessories = {'arquivo', 'bios', 'manual', 'guia', 'guide', 'ebook', 'suporte', 'capa', 'pelicula'}
+    if (found & accessories) - wanted:
+        return 0
+    for family in ({'aorus', 'elite'}, {'rog', 'strix'}):
+        if family <= wanted and not family <= found:
+            return 0
+    if model_conflict(query, title) or not (wanted & {'wifi', 'ii', 'ax'}) <= found:
+        return 0
     if not wanted or not found:
         return 0
     # Nunca sugerir B650/X870 quando foi pedido B550, ou RTX 4060 para RTX 4070.
@@ -91,6 +105,7 @@ def form_search_url(html, base, query, fields=None):
 
 
 REASONS = {
+    'different_model': 'titulo real da pagina nao corresponde ao produto pesquisado',
     'external_search_limited': 'limite da busca externa sem chave atingido; aguarde antes de tentar novamente',
     'external_search_unavailable': 'indice externo indisponivel; nenhum resultado foi inventado',
     'mercadolivre_api_token_missing': 'API oficial exige MERCADOLIVRE_ACCESS_TOKEN no .env',
@@ -120,6 +135,12 @@ class DirectSearch:
     def __init__(self, config, fetcher):
         self.config, self.fetcher = config, fetcher
 
+    async def external_candidates(self, query, domain):
+        from .external_market_search import ExternalMarketSearch
+        if not getattr(self.fetcher, 'external_market_search', None):
+            self.fetcher.external_market_search = ExternalMarketSearch(self.fetcher)
+        return await self.fetcher.external_market_search.links(query, domain)
+
     async def links(self, query):
         from .adapters import ADAPTERS
 
@@ -137,14 +158,20 @@ class DirectSearch:
                     from .mercadolivre_api import discover
                     candidates = await discover(query, self.config.mercadolivre_token, self.fetcher)
                 elif domain == 'mercadolivre.com.br' and getattr(self.config, 'mercadolivre_discovery', 'external') == 'external':
-                    from .external_market_search import ExternalMarketSearch
-                    if not getattr(self.fetcher, 'external_market_search', None):
-                        self.fetcher.external_market_search = ExternalMarketSearch(self.fetcher)
-                    candidates = await self.fetcher.external_market_search.links(query)
+                    candidates = await self.external_candidates(query, domain)
+                elif getattr(store, 'external_discovery', False):
+                    candidates = await self.external_candidates(query, domain)
                 elif store.sitemap_urls:
                     from .sitemaps import sitemap_candidates
 
-                    candidates = await sitemap_candidates(store, domain, self.fetcher)
+                    try:
+                        candidates = await sitemap_candidates(store, domain, self.fetcher)
+                    except ReadError as exc:
+                        if str(exc) in ('robots_disallowed', 'robots_unavailable', 'blocked_no_bypass', 'captcha_no_bypass'):
+                            raise
+                        candidates = []
+                    if not any(relevance(query, c.title) for c in candidates):
+                        candidates = await self.external_candidates(query, domain)
                 else:
                     url = store.search_url(query)
                     if url is None:

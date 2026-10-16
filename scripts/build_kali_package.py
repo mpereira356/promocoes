@@ -16,6 +16,7 @@ def build_package(output=None):
         "README.md",
         "LEIA-ME-KALI.md",
         "MERCADO-LIVRE.md",
+        "STATUS-LOJAS.md",
         "VALIDACAO.md",
         ".env.example",
         "requirements.txt",

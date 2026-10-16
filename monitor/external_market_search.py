@@ -8,6 +8,7 @@ import httpx
 from .adapters.base import ReadError
 from .discovery import LinkCandidate, relevance
 from .models import normalize
+from .identity import model_conflict
 
 
 class ExternalMarketSearch:
@@ -17,8 +18,10 @@ class ExternalMarketSearch:
         self.cache = OrderedDict()
         self.cooldown = 0
 
-    async def links(self, query):
-        key = query.strip().casefold()
+    async def links(self, query, domain='mercadolivre.com.br'):
+        if domain not in self.fetcher.config.domains:
+            raise ReadError('url_not_allowed')
+        key = (domain, query.strip().casefold())
         async with self.lock:
             cached = self.cache.get(key)
             if cached and cached[0] > time.monotonic():
@@ -31,8 +34,8 @@ class ExternalMarketSearch:
                         response = await client.post(
                             'https://api.tavily.com/search',
                             headers={'X-Tavily-Access-Mode': 'keyless', 'X-Client-Source': 'price-monitor'},
-                            json={'query': query + ' site:mercadolivre.com.br',
-                                  'include_domains': ['mercadolivre.com.br'],
+                            json={'query': query + ' site:' + domain,
+                                  'include_domains': [domain],
                                   'include_domains_mode': 'restrict', 'search_depth': 'basic',
                                   'auto_parameters': False, 'max_results': 10,
                                   'include_answer': False, 'include_raw_content': False,
@@ -66,20 +69,25 @@ class ExternalMarketSearch:
                 if not isinstance(url, str) or not isinstance(title, str) or not title.strip():
                     continue
                 try:
-                    url, domain = self.fetcher.canonical(url)
+                    url, result_domain = self.fetcher.canonical(url)
                 except (ReadError, ValueError):
                     continue
                 p = urlsplit(url)
                 # O indice pode apresentar titulo antigo para URL de outro modelo.
                 # Sem poder conferir a pagina, rejeitar conflito com o proprio slug.
-                if not relevance(query, unquote(p.path).replace('-', ' ')):
+                if model_conflict(query, unquote(p.path).replace('-', ' ')):
                     continue
                 unwanted = {'arquivo', 'bios', 'manual', 'reparo'}
                 if (set(normalize(title).split()) & unwanted) - set(normalize(query).split()):
                     continue
-                individual = p.hostname == 'produto.mercadolivre.com.br' and re.match(r'^/MLB-\d+(?:-|$)', p.path)
-                catalog = p.hostname in ('www.mercadolivre.com.br', 'mercadolivre.com.br') and re.search(r'/(?:p/MLB\d+|up/MLBU\d+)(?:/|$)', p.path)
-                if domain == 'mercadolivre.com.br' and (individual or catalog) and url not in seen:
+                if domain == 'mercadolivre.com.br':
+                    individual = p.hostname == 'produto.mercadolivre.com.br' and re.match(r'^/MLB-\d+(?:-|$)', p.path)
+                    catalog = p.hostname in ('www.mercadolivre.com.br', 'mercadolivre.com.br') and re.search(r'/(?:p/MLB\d+|up/MLBU\d+)(?:/|$)', p.path)
+                    product_url = individual or catalog
+                else:
+                    from .adapters import adapter
+                    product_url = getattr(adapter(domain), 'is_product_url', lambda u: False)(url)
+                if result_domain == domain and product_url and url not in seen:
                     seen.add(url)
                     result.append(LinkCandidate(url, title.strip(), 'Tavily Search'))
             self.cache[key] = (time.monotonic() + 5 * 3600, result)

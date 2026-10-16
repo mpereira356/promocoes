@@ -28,6 +28,7 @@ async def diagnose(config, query):
         for domain in config.domains:
             urls = [url for url in links if fetcher.canonical(url)[1] == domain]
             item = {"domain": domain, "discovered_urls": urls}
+            item['discovery_sources'] = {u: links.candidates[u].source or 'pagina ou sitemap da loja' for u in urls if u in links.candidates}
             if urls:
                 try:
                     body, final = await fetcher.html(urls[0])
@@ -36,6 +37,8 @@ async def diagnose(config, query):
                         {
                             "title": r.title,
                             "price_read": r.price is not None,
+                            'price_cents': r.price,
+                            'currency': r.currency,
                             "payment": r.payment,
                             "seller": r.seller,
                             "condition": r.condition,
