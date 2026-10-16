@@ -22,6 +22,7 @@ class Monitor:
         self.alert_lock = asyncio.Lock()
         self.send_candidate = send_candidate
         self.amazon_offers = None
+        self.snapshot_inflight = {}
 
     async def options(self, pid, only_new=False):
         extra = " AND c.notified=0 AND p.active=1" if only_new else ""
@@ -56,6 +57,24 @@ class Monitor:
             self.inflight.pop(url, None)
 
     async def _read(self, url):
+        return (await self.read_snapshot(url))[0]
+
+    async def read_snapshot(self, url):
+        """Leituras e HTML da mesma consulta, sem gravar anuncios ou historico."""
+        url, _ = self.fetcher.canonical(url)
+        task = self.snapshot_inflight.get(url)
+        if task is None:
+            task = asyncio.create_task(self._load_snapshot(url))
+            self.snapshot_inflight[url] = task
+            def done(completed):
+                if self.snapshot_inflight.get(url) is completed:
+                    self.snapshot_inflight.pop(url, None)
+                if not completed.cancelled():
+                    completed.exception()
+            task.add_done_callback(done)
+        return await asyncio.shield(task)
+
+    async def _load_snapshot(self, url):
         url, domain = self.fetcher.canonical(url)
         html, final = await self.fetcher.html(url)
         _, final_domain = self.fetcher.canonical(final)
@@ -72,15 +91,16 @@ class Monitor:
                     from .amazon_offers import AmazonOffersReader
                     if self.amazon_offers is None:
                         self.amazon_offers = AmazonOffersReader(self.fetcher)
-                    return parser.parse(await self.amazon_offers.html(offers_url), final)
-            return readings
+                    html = await self.amazon_offers.html(offers_url)
+                    return parser.parse(html, final), html, final
+            return readings, html, final
         except ReadError as exc:
             if (
                 self.config.browser
                 and str(exc) == "structured_product_missing_or_ambiguous"
             ):
                 html = await self.fetcher.render(final)
-                return parser.parse(html, final)
+                return parser.parse(html, final), html, final
             raise
 
     async def check(self, pid):

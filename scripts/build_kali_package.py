@@ -18,6 +18,7 @@ def build_package(output=None):
         "MERCADO-LIVRE.md",
         "STATUS-LOJAS.md",
         "VALIDACAO.md",
+        "PROMOCOES.md",
         ".env.example",
         "requirements.txt",
         "requirements.lock.txt",

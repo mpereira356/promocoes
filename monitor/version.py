@@ -1,1 +1,1 @@
-VERSION = "2026.10.15-amazon-offers.1"
+VERSION = "2026.10.15-promocoes.1"

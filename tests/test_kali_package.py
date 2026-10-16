@@ -44,6 +44,8 @@ def test_kali_package_excludes_secrets_and_has_unix_installer(tmp_path):
         assert TOP + "/monitor/__main__.py" in names
         assert TOP + "/LEIA-ME-KALI.md" in names
         assert TOP + "/requirements-server.txt" in names
+        assert TOP + "/PROMOCOES.md" in names
+        assert TOP + "/monitor/deals/service.py" in names
         assert TOP + "/.env" not in names
         assert all(
             "/data/" not in n and "/.venv/" not in n and "__pycache__" not in n

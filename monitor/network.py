@@ -2,11 +2,15 @@ import asyncio
 import ipaddress
 import socket
 import time
+from contextvars import ContextVar
 from urllib.parse import urlsplit, urlunsplit, urljoin, parse_qsl, urlencode
 from .robots import RobotsPolicy
 import httpx
 from .adapters.base import ReadError
 from .challenges import is_access_challenge
+
+# Escopo por tarefa: diagnósticos manuais nao contam consultas do agendador.
+PAGE_AUDIT = ContextVar('price_monitor_page_audit', default=None)
 
 
 class Fetcher:
@@ -190,13 +194,18 @@ class Fetcher:
             raise ReadError("robots_disallowed")
 
     async def html(self, url):
-        url, _ = self.canonical(url)
+        url, domain = self.canonical(url)
+        audit = PAGE_AUDIT.get()
+        entry = {'domain': domain, 'url': url, 'ok': False}
+        if audit is not None:
+            audit.append(entry)
         await self.allowed_by_robots(url)
         text, final = await self.request(url, check_robots=True)
         if final != url:
             await self.allowed_by_robots(final)
         if is_access_challenge(text):
             raise ReadError("captcha_no_bypass")
+        entry['ok'] = True
         return text, final
 
     async def render(self, url):

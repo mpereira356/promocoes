@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from html import escape
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler
@@ -15,8 +16,13 @@ from .search_results import deliver_search
 from .adapters import adapter
 from .subscriptions import ask_scope, handle_subscription
 from .version import VERSION
+from .deals.service import Deals
+from .deals.telegram import PromotionsTelegram
 
 HELP = """/buscar nome - encontrar anuncios com ID, fotos e medalhas (sem ativar acompanhamento)
+/promocoes - busca pontual por categoria, desconto e lojas; sem acompanhamento
+/descontopromo >=30 - percentual personalizado na etapa de desconto
+/ceppromo 01001000 - informar CEP da consulta (frete ainda nao cotado)
 /buscarml nome - descobrir links Mercado Livre; dados nao verificados sao identificados
 /monitorar ID_DO_ANUNCIO - escolher so esta oferta ou outras lojas
 /monitorar nome ou https://link - procurar anuncios para escolher
@@ -76,6 +82,10 @@ def main():
         for task in running:
             task.cancel()
         await asyncio.gather(*running, return_exceptions=True)
+        snapshots = list(monitor.snapshot_inflight.values())
+        for task in snapshots:
+            task.cancel()
+        await asyncio.gather(*snapshots, return_exceptions=True)
         await fetcher.close()
         db.conn.close()
 
@@ -98,6 +108,19 @@ def main():
                 completed.exception()  # Consumir falhas sem imprimir objetos que podem conter tokens.
 
         task.add_done_callback(done)
+
+    async def send_promotion(text):
+        async def formatted(part):
+            first, separator, rest = part.partition('\n')
+            rendered = ('<b>' + escape(first) + '</b>' + separator + escape(rest)
+                        if first.startswith('🏆') else escape(part))
+            await app.bot.send_message(config.chat, rendered, parse_mode='HTML')
+        await chunks(formatted, text)
+
+    promotions = PromotionsTelegram(config, Deals(monitor), send_promotion, background)
+    for name in ('promocoes', 'descontopromo', 'ceppromo'):
+        app.add_handler(CommandHandler(name, promotions.command))
+    app.add_handler(CallbackQueryHandler(promotions.callback, pattern=r'^promo:'))
 
     async def check_send(pid):
         try:

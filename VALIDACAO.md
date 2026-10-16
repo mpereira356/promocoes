@@ -1,3 +1,19 @@
+# Atualização 2026.10.15-promocoes.1
+
+224 testes locais passaram. Os testes novos simulam filtros estritos/inclusivos, centavos, referências ausentes/zero/inválidas, parcelas, cupons sem reaplicação, ranking e deduplicação, comparação por identificadores e variantes, condições diferentes, falhas parciais, bloqueio de consultas duplicadas, autorização e callbacks antigos. O serviço manual é exercitado sem banco, agendador ou envio Telegram. Há teste de compartilhamento de uma leitura com o Monitor existente e de empacotamento do módulo/documentação para Kali.
+
+As fixtures `kabum_category_real.html` e `pichau_category_real.html` são recortes de HTML real capturado nesta sessão, com apenas três links e a paginação; os testes que as leem são locais, não consultas de rede. O suporte genérico a StrikethroughPrice é simulado e não foi observado como fonte funcional de desconto nas demais lojas.
+
+Validação ao vivo separada em 15/10/2026, por `scripts.diagnose_deals`, sem banco nem Telegram:
+
+- Uma página de categoria KaBuM retornou 60 links; a Pichau retornou 36. O parâmetro `page_number=2&page_size=60` na categoria KaBuM foi conferido com paginação.current=2. A paginação Pichau veio de link real `?page=2`; não foi varrida toda a categoria.
+- Primeira amostra: duas ofertas lidas por loja, nenhuma apta ao filtro >=30%. O resultado ficou vazio, sem completar com produtos fora do filtro.
+- Segunda amostra: seis ofertas da KaBuM e seis da Pichau; foram lidos preços atuais Pix, disponibilidade e referências de/por, com uma referência ausente na KaBuM. Houve uma leitura complementar nova na KaBuM. A saída apresentou três ofertas ordenadas por desconto anunciado e marcou comparação não confirmada quando faltavam dados de identidade/condição. Exemplos observados nessa leitura: KaBuM TUF Gaming B550M-Plus de 116800 por 78999 centavos; Pichau MSI B550 Gaming WiFi6E de 164705 por 105699 centavos. Estes valores são evidência datada de leitura, não preços garantidos atuais.
+- A Pichau exibiu referência de 1117646 centavos para uma placa com preço Pix de 81999 centavos. O desconto calculado superior a 90% recebeu o aviso de referência suspeita. Não foi apresentado como queda histórica comprovada.
+- Terabyte falhou ao carregar a categoria com `browser_resource_refused`; Amazon falhou com `network_or_rate_limit`; Mercado Livre recusou robots.txt com HTTP 403 e gerou `robots_unavailable`. Nenhuma dessas falhas virou preço zero, desconto inventado ou alegação de consulta completa. O resumo informa as limitações específicas.
+
+A interface Telegram nova foi testada com objetos simulados, sem envio de mensagens reais. Frete por CEP não está implementado, e a categoria inicial é somente Hardware > Placas-mãe. Extração completa de cupons/assinaturas e referências HTML não está validada em todas as lojas. Veja [PROMOCOES.md](PROMOCOES.md).
+
 # Atualizacao 2026.10.15-amazon-offers.1
 
 170 testes locais passaram. Validacao real separada do fluxo completo Monitor.read no ASIN Amazon B08KGVH7YC obteve preco 172711 centavos, vendedor Amazon Global com identificador explicito e condicao Novo no painel publico AOD. Frete separado nao foi usado como preco. Pagamento e estoque nao foram confirmados; a leitura nao e comparavel para alertas. Selenium normal carregou o painel com JavaScript, sem login, CAPTCHA, compras ou modificacao da automacao. A validacao ocorreu no Windows; o novo caminho Selenium Amazon ainda depende de verificacao na VPS.
