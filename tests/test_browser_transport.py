@@ -200,3 +200,35 @@ def test_http_routes_only_enabled_stores_to_chromium():
             await f.close()
 
     asyncio.run(run())
+
+
+def test_optional_resource_dns_failure_does_not_mask_navigation_timeout():
+    async def run():
+        t = transport('<html/>')
+        async def public(url):
+            if url.endswith('.js'):
+                raise OSError('simulated DNS failure')
+        t.fetcher.public = public
+        async def goto(url, **kwargs):
+            resource = Route('https://www.pichau.com.br/optional.js')
+            resource.request.resource_type = 'script'
+            await t.browser.context.callback(resource)
+            assert resource.aborted
+            raise TimeoutError('simulated navigation timeout')
+        t.browser.context.goto = goto
+        with pytest.raises(ReadError, match='browser_navigation_failed_TimeoutError'):
+            await t.get('https://www.pichau.com.br/product')
+        assert t.browser.context.closed
+    asyncio.run(run())
+
+
+def test_browser_headers_with_accents_do_not_fail_response(monkeypatch):
+    async def run():
+        async def headers(self):
+            return {'content-type': 'text/html; charset=utf-8', 'x-store-label': 'ação'}
+        monkeypatch.setattr(Response, 'all_headers', headers)
+        t = transport('<html>Produto</html>')
+        response = await t.get('https://www.pichau.com.br/product')
+        assert response.headers['x-store-label'] == 'ação'
+        assert response.status_code == 200
+    asyncio.run(run())

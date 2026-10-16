@@ -1,5 +1,8 @@
 """HTML restrito gerado a partir de texto simples, com conteudo dinamico escapado."""
 from html import escape
+import asyncio
+from datetime import timedelta
+from telegram.error import RetryAfter
 
 HEADINGS = {
     'BUSCAS', 'MONITORAMENTO', 'Exemplo de filtros', 'Exemplos de uso',
@@ -50,4 +53,14 @@ def parts(text, limit=3800):
 
 async def send_text(send, text, bold_lines=(), **kwargs):
     for part in parts(text):
-        await send(render(part, bold_lines), parse_mode='HTML', **kwargs)
+        for attempt in range(3):
+            try:
+                await send(render(part, bold_lines), parse_mode='HTML', **kwargs)
+                break
+            except RetryAfter as exc:
+                delay = exc.retry_after
+                delay = delay.total_seconds() if isinstance(delay, timedelta) else delay
+                if attempt == 2 or delay > 60:
+                    raise
+                # Reenvia apenas o trecho recusado, nunca resultados já entregues.
+                await asyncio.sleep(delay + 0.2)

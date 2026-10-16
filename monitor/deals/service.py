@@ -1,11 +1,13 @@
 """Consulta manual limitada e sem qualquer dependencia de banco/agendador."""
 import asyncio
+import httpx
 from copy import copy
 from dataclasses import dataclass
 from ..adapters.base import ReadError
 from ..models import normalize
 from ..search import Search
 from ..network import PAGE_AUDIT
+from ..discovery import REASONS
 from .adapters import ADAPTERS
 from .identity import model_relation, comparable
 from .models import Coverage, DealResult, DealReport, valid_price
@@ -58,7 +60,7 @@ class Deals:
                 urls = await Search(config, self.fetcher).links(query)
                 coverage[domain].notices.extend(getattr(urls, 'notices', []))
                 return list(urls)
-            except (ReadError, ValueError):
+            except (ReadError, ValueError, OSError, httpx.RequestError):
                 coverage[domain].notices.append('A busca complementar está indisponível; a comparação será parcial.')
                 return []
             finally:
@@ -91,15 +93,19 @@ class Deals:
                 offers = [ADAPTERS[domain].offer(html, final, r) for r in readings]
                 cache[url] = offers
                 return offers
-            except (ReadError, ValueError, TypeError, KeyError):
-                coverage[domain].notices.append('Falha na leitura da oferta: ' + url)
+            except (ReadError, ValueError, TypeError, KeyError, OSError, httpx.RequestError) as exc:
+                reason = (REASONS.get(str(exc), 'Formato da oferta não reconhecido') if isinstance(exc, ReadError)
+                    else 'Falha de conexão com a loja' if isinstance(exc, (OSError, httpx.RequestError))
+                    else 'Formato da oferta não reconhecido')
+                coverage[domain].notices.append(f'Falha na leitura da oferta: {reason}.\n{url}')
                 return []
 
+        parent_urls = self.catalog.parent_urls(category)
         for domain in domains:
             store, cov = ADAPTERS[domain], coverage[domain]
             cov.notices.extend(store.limitations)
-            if domain not in category.urls:
-                query = category.query or (category.path[-1] if category.path[-1] != 'Todas as subcategorias' else category.path[0])
+            if domain not in category.urls and domain not in parent_urls:
+                query = category.search_query
                 cov.notices.append('Sem página de categoria mapeada nesta loja: busca por termo "' + query + '"; não representa varredura da categoria inteira.')
                 links = list(dict.fromkeys(await discover(domain, query)))
                 cov.discovered = len(links)
@@ -107,11 +113,14 @@ class Deals:
                     cov.notices.append(f'A leitura foi limitada aos primeiros {self.limits.products_per_store} produtos encontrados.')
                 for link in links[:self.limits.products_per_store]:
                     offers = await read(link, domain)
+                    offers = [o for o in offers if category.accepts_title(o.reading.title)]
                     pool.extend(offers)
                     if not any(eligible(o, discount) for o in offers):
                         cov.excluded += 1
                 continue
-            url, visited, links = category.urls[domain], set(), []
+            if domain in parent_urls:
+                cov.notices.append('Consultada a categoria geral de memória RAM; apenas produtos com ' + category.memory_type.upper() + ' explícito no título podem qualificar. Cobertura limitada.')
+            url, visited, links = category.urls.get(domain) or parent_urls[domain], set(), []
             for _ in range(self.limits.category_pages):
                 if not url or url in visited:
                     break
@@ -135,8 +144,10 @@ class Deals:
                             raise ReadError('pagination_outside_category')
                         nxt = canonical
                     url = nxt
-                except (ReadError, ValueError, TypeError, KeyError) as exc:
-                    safe = str(exc) if isinstance(exc, ReadError) else 'formato_nao_suportado'
+                except (ReadError, ValueError, TypeError, KeyError, OSError, httpx.RequestError) as exc:
+                    safe = (REASONS.get(str(exc), 'A página não pôde ser lida com segurança') if isinstance(exc, ReadError)
+                        else 'Falha de conexão com a loja' if isinstance(exc, (OSError, httpx.RequestError))
+                        else 'Formato da categoria não reconhecido')
                     cov.notices.append('A categoria não pôde ser consultada com sucesso: ' + safe)
                     url = None
                     break
@@ -147,6 +158,7 @@ class Deals:
                 cov.notices.append(f'A leitura foi limitada aos primeiros {self.limits.products_per_store} produtos encontrados.')
             for link in links[:self.limits.products_per_store]:
                 offers = await read(link, domain)
+                offers = [o for o in offers if category.accepts_title(o.reading.title)]
                 pool.extend(offers)
                 if not any(eligible(o, discount) for o in offers):
                     cov.excluded += 1

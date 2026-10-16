@@ -3,6 +3,21 @@ from unittest.mock import AsyncMock
 from monitor.telegram_text import render, parts, send_text
 
 
+def test_rate_limit_retries_only_refused_chunk(monkeypatch):
+    from telegram.error import RetryAfter
+    async def scenario():
+        sleep = AsyncMock()
+        monkeypatch.setattr('monitor.telegram_text.asyncio.sleep', sleep)
+        send = AsyncMock(side_effect=[None, RetryAfter(2), None, None])
+        await send_text(send, 'BUSCAS\n' + 'a' * 4000)
+        assert send.await_count == 4
+        calls = send.await_args_list
+        assert calls[1] == calls[2]
+        assert calls[0] != calls[1]
+        sleep.assert_awaited_once_with(2.2)
+    asyncio.run(scenario())
+
+
 def test_dynamic_titles_are_bold_but_cannot_inject_html():
     title = 'Board <b>fake</b> & DDR4'
     result = render(title + '\nBUSCAS\nPayment < 100', (title,))

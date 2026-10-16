@@ -83,8 +83,11 @@ class ChromiumTransport:
                             await r.continue_()
                     else:
                         await r.continue_()
-                except Exception:
-                    failure.append("browser_resource_refused")
+                except Exception as exc:
+                    # Falha de recurso opcional não pode esconder o motivo da navegação.
+                    if req.resource_type == 'document' and req.frame.parent_frame is None:
+                        failure.append(str(exc) if isinstance(exc, ReadError) else
+                            'browser_connection_failed' if isinstance(exc, OSError) else 'browser_resource_refused')
                     await r.abort()
 
             try:
@@ -108,7 +111,7 @@ class ChromiumTransport:
                         raise ReadError("captcha_no_bypass")
                 return httpx.Response(
                     response.status,
-                    headers={
+                    headers=httpx.Headers({
                         k: v
                         for k, v in (await response.all_headers()).items()
                         if k.lower()
@@ -117,7 +120,7 @@ class ChromiumTransport:
                             "content-length",
                             "transfer-encoding",
                         )
-                    },
+                    }, encoding='utf-8'),
                     text=raw,
                     request=httpx.Request("GET", response.url),
                 )

@@ -218,3 +218,15 @@ Resumo de cobertura separado dos avisos por loja, sem duplicação de ícones ou
 
 Novos testes simulam o relatório com avisos repetidos e a descoberta de links de catálogo junto de anúncios individuais. Não houve validação adicional em lojas reais nem envio ao Telegram nesta alteração. Bloqueios e restrições das lojas permanecem limitações explícitas.
 
+# Atualização 2026.10.16-ddr4.1
+
+Corrigida a conversão de cabeçalhos do Chromium para HTTPX: valores com acentos causavam UnicodeEncodeError na Terabyte. Falhas em recursos opcionais não escondem o motivo de uma falha na navegação principal. Restrições de acesso continuam preservadas.
+
+DDR4 usa o contexto de memória RAM nas buscas por termo e a categoria geral de RAM já observada na KaBuM, com filtro explícito de geração no título. DDR5, títulos sem geração declarada e acessórios identificados não qualificam. Não foram inventadas rotas de categoria para outras lojas.
+
+O envio ao Telegram respeita RetryAfter, repetindo apenas o trecho recusado. Falhas de entrega são diferenciadas de falhas da consulta. Erros de DNS/conexão de uma loja são tratados sem interromper as demais. Os avisos de leitura mostram motivos conhecidos, sem incluir mensagens brutas de exceções.
+
+Validação real local em 16/10/2026: consulta limitada a uma página e um produto por loja. KaBuM descobriu 60 links e leu uma memória XPG DDR4, R$ 568,99, referência R$ 682,34, disponível. Pichau leu uma Corsair DDR4, R$ 339,69, indisponível, sem referência anterior válida. Após corrigir os cabeçalhos, Terabyte descobriu 63 links e leu uma Spectrum Blitz DDR4, R$ 399,99, disponível, sem preço anterior válido. Valores são capturas pontuais e podem mudar. O filtro >99 usado nesses diagnósticos evitou qualificar ofertas ou iniciar comparações complementares; não houve envio ao Telegram.
+
+Amazon falhou no painel de opções de compra. Mercado Livre retornou catálogos nos links examinados; não houve validação de preço de anúncio individual. Essas duas integrações permanecem parciais. Não foi testado o acesso pelo IP da VPS Kali. Testes automatizados adicionais simulam limitação de mensagens, falha de entrega, DNS, recursos opcionais e cabeçalhos com acentos.
+

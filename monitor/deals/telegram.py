@@ -1,6 +1,8 @@
 """Navegacao paginada e categorias livres; nenhuma selecao cria acompanhamento."""
 import secrets
 import time
+import logging
+from telegram.error import TelegramError
 from dataclasses import dataclass, field
 from telegram import InlineKeyboardButton as Button, InlineKeyboardMarkup as Keyboard
 from ..selection import authorized
@@ -234,10 +236,24 @@ class PromotionsTelegram:
 
     async def execute(self, session):
         try:
-            report = await self.deals.run(session.category, session.discount, sorted(session.stores), session.cep)
-            for text in messages(report):
-                await self.send(text)
-        except Exception:
-            await self.send('⚠️ A busca de promoções terminou com uma falha inesperada. Nenhum acompanhamento foi criado. Tente novamente com menos lojas.')
+            try:
+                report = await self.deals.run(session.category, session.discount, sorted(session.stores), session.cep)
+                output = list(messages(report))
+            except Exception as exc:
+                logging.getLogger(__name__).critical('promo_search_failed type=%s', type(exc).__name__)
+                await self.send('⚠️ Não foi possível concluir a pesquisa. Nenhum acompanhamento foi criado. Consulte os logs do serviço para identificar a falha.')
+                return
+            failed = 0
+            for text in output:
+                try:
+                    await self.send(text)
+                except TelegramError as exc:
+                    failed += 1
+                    logging.getLogger(__name__).critical('promo_delivery_failed type=%s', type(exc).__name__)
+            if failed:
+                try:
+                    await self.send(f'⚠️ A pesquisa foi concluída, mas o Telegram não recebeu {failed} mensagem(ns). Os resultados entregues continuam válidos. Tente novamente mais tarde.')
+                except TelegramError:
+                    pass
         finally:
             self.running, self.session = False, None

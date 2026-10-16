@@ -42,6 +42,26 @@ class Category:
     def title(self):
         return ' > '.join(self.path)
 
+    @property
+    def memory_type(self):
+        import re
+        match = re.search(r'\bddr[345]\b', normalize(self.title))
+        return match[0] if match and 'memoria' in normalize(self.title) else ''
+
+    @property
+    def search_query(self):
+        return self.query or ('memória RAM ' + self.memory_type.upper() if self.memory_type else
+            (self.path[-1] if self.path[-1] != 'Todas as subcategorias' else self.path[0]))
+
+    def accepts_title(self, title):
+        if not self.memory_type:
+            return True
+        import re
+        text = normalize(title)
+        return (set(re.findall(r'\bddr[345]\b', text)) == {self.memory_type}
+                and not any(word in text.split() for word in
+                    ('adaptador', 'adaptadora', 'testador', 'conversor', 'placa', 'computador')))
+
 
 def category_links(html, base, domain):
     """Links de navegacao observados, nunca anchors de anuncios/recomendacoes."""
@@ -113,6 +133,13 @@ class CategoryCatalog:
             self.items[category.key].urls.update(category.urls)
         else:
             self.items[category.key] = category
+
+    def parent_urls(self, category):
+        """Somente RAM com geração explícita: a leitura filtra o tipo em cada título."""
+        if not category.memory_type:
+            return {}
+        parent = self.items.get(category.key.rsplit('/', 1)[0])
+        return {d: u for d, u in (parent.urls.items() if parent else []) if d not in category.urls}
 
     def available(self, domains):
         return [c for c in self.items.values() if set(c.urls) & set(domains)]

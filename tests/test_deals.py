@@ -153,7 +153,8 @@ def test_pichau_category_card_and_next_only_same_category():
     assert len(page.urls) == 1 and page.next_url == url + '?page=2'
 
 
-def test_manual_run_partial_failure_no_database_and_no_future_jobs():
+@pytest.mark.parametrize('failure,reason', [(ReadError('blocked_no_bypass'), 'bloqueou'), (OSError('simulated DNS failure'), 'conexão')])
+def test_manual_run_partial_failure_no_database_and_no_future_jobs(failure, reason):
     async def scenario():
         config = SimpleNamespace(domains=('kabum.com.br', 'pichau.com.br'), browser=False, provider='disabled')
         fetcher = Fetcher(config)
@@ -162,7 +163,7 @@ def test_manual_run_partial_failure_no_database_and_no_future_jobs():
         product = '<script id="__NEXT_DATA__">' + json.dumps({'props': {'pageProps': {'product': {'id':123, 'title': a.reading.title, 'prices': {'oldPrice': 1000}}}}}) + '</script>'
         async def html(url):
             if 'pichau' in url:
-                raise ReadError('blocked_no_bypass')
+                raise failure
             return category, url
         fetcher.html = html
         monitor = SimpleNamespace(config=config, fetcher=fetcher, read_snapshot=AsyncMock(return_value=([a.reading], product, a.url)))
@@ -170,7 +171,7 @@ def test_manual_run_partial_failure_no_database_and_no_future_jobs():
         report = await Deals(monitor).run('hardware/placas-mae', DiscountFilter.parse('>=30'), config.domains, '01001000')
         assert len(report.results) == 1
         assert report.coverage[1].category_pages == 1
-        assert any('blocked' in n for n in report.coverage[1].notices)
+        assert any(reason in n for n in report.coverage[1].notices)
         output = '\n'.join(messages(report))
         assert '🏆' in output and 'concluída' in output and '01001000' in output
         assert 'não comprova uma queda histórica' in output
@@ -296,7 +297,7 @@ def test_query_all_qualifying_products_but_present_only_three(monkeypatch):
         monitor = SimpleNamespace(config=config, fetcher=fetcher, read_snapshot=read_snapshot)
         report = await Deals(monitor).run('hardware/placas-mae', DiscountFilter.parse('>30'), config.domains)
         assert len(queries) == 4 and len(report.results) == 3
-        assert report.coverage[1].notices == ['A categoria não pôde ser consultada com sucesso: blocked_no_bypass']
+        assert any('A loja bloqueou o acesso' in n for n in report.coverage[1].notices)
         await fetcher.close()
     asyncio.run(scenario())
 
@@ -340,7 +341,8 @@ def test_report_separates_store_notices_without_duplicate_labels():
     assert '⚠️ ⚠️' not in '\n'.join(output)
 
 
-def test_marketplace_catalog_discarded_before_product_request(monkeypatch):
+@pytest.mark.parametrize('failure', [ReadError('blocked_no_bypass'), OSError('simulated DNS failure')])
+def test_marketplace_catalog_discarded_before_product_request(monkeypatch, failure):
     async def scenario():
         config = SimpleNamespace(domains=('mercadolivre.com.br',), browser=False, provider='direct')
         fetcher = Fetcher(config)
@@ -349,7 +351,7 @@ def test_marketplace_catalog_discarded_before_product_request(monkeypatch):
         async def search(self, query):
             return [catalog, individual]
         monkeypatch.setattr('monitor.deals.service.Search.links', search)
-        snapshot = AsyncMock(side_effect=ReadError('blocked_no_bypass'))
+        snapshot = AsyncMock(side_effect=failure)
         monitor = SimpleNamespace(config=config, fetcher=fetcher, read_snapshot=snapshot)
         category = Deals(monitor).catalog.request('produto de teste', fetcher)
         report = await Deals(monitor).run(category, DiscountFilter.parse('>30'), config.domains)
@@ -357,4 +359,23 @@ def test_marketplace_catalog_discarded_before_product_request(monkeypatch):
         assert report.coverage[0].product_pages == 1
         assert any('catálogo' in n for n in report.coverage[0].notices)
         await fetcher.close()
+    asyncio.run(scenario())
+
+
+def test_delivery_failure_does_not_report_search_failure():
+    from telegram.error import TimedOut
+    from monitor.deals.models import DealReport
+    async def scenario():
+        report = DealReport([], [], DiscountFilter.parse('>30'), 'hardware/placas-mae')
+        config = SimpleNamespace(domains=('kabum.com.br',))
+        deals = SimpleNamespace(run=AsyncMock(return_value=report))
+        send = AsyncMock(side_effect=[TimedOut(), None])
+        controller = PromotionsTelegram(config, deals, send, None)
+        controller.running = True
+        session = Session(category=controller.catalog.items['hardware/placas-mae'],
+            discount=report.filter, stores={'kabum.com.br'})
+        await controller.execute(session)
+        assert not controller.running and controller.session is None
+        assert 'Telegram não recebeu 1' in send.await_args_list[-1].args[0]
+        assert not any('falha inesperada' in call.args[0] for call in send.await_args_list)
     asyncio.run(scenario())

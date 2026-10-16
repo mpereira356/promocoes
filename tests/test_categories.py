@@ -11,6 +11,18 @@ from monitor.adapters.base import ReadError
 from monitor.network import Fetcher
 
 
+def test_ddr4_context_parent_category_and_accessories():
+    catalog = CategoryCatalog()
+    category = catalog.items['hardware/memoria-ram/ddr4']
+    assert category.search_query == 'memória RAM DDR4'
+    assert catalog.parent_urls(category)['kabum.com.br'] == 'https://kabum.com.br/hardware/memoria-ram'
+    assert category.accepts_title('Memória RAM Kingston Fury DDR4 16GB')
+    assert category.accepts_title('Memória notebook DDR4 8GB')
+    assert not category.accepts_title('Memória RAM DDR5 16GB')
+    assert not category.accepts_title('Adaptadora DDR4 testador conversor')
+    assert not category.accepts_title('Memória RAM sem geração declarada')
+
+
 def test_catalog_multiple_departments_and_domain_scope():
     catalog = CategoryCatalog()
     available = catalog.available(('pichau.com.br','terabyteshop.com.br','kabum.com.br'))
