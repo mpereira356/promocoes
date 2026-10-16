@@ -1,11 +1,21 @@
 """Entrega de buscas com resumo final, sem transformar erros em ofertas."""
 import logging
+import traceback
+from pathlib import Path
 import httpx
 from .adapters import adapter
 from .adapters.base import ReadError
 from .discovery import REASONS, relevance, SearchLinks
 from .presentation import rank_offers, send_offer
 from .search import search_error_message
+
+
+def log_search_failure(stage, exc):
+    # Nao registrar str(exc), argumentos, variaveis ou URLs que possam conter tokens.
+    frames = ' > '.join(f'{Path(f.filename).name}:{f.lineno}:{f.name}'
+        for f in traceback.extract_tb(exc.__traceback__)[-6:])
+    logging.getLogger(__name__).critical('search_failure stage=%s type=%s frames=%s',
+        stage, type(exc).__name__, frames)
 
 
 async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketplace_only=False):
@@ -15,6 +25,16 @@ async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketpla
     paused = {}
     skipped = 0
     interrupted = False
+    save_failed = delivery_failed = report_failed = 0
+
+    async def report(text):
+        nonlocal report_failed
+        try:
+            await send(text)
+        except Exception as exc:
+            report_failed += 1
+            log_search_failure('report', exc)
+
     try:
         if marketplace_only:
             urls = await monitor.search.marketplace_links(query)
@@ -72,7 +92,7 @@ async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketpla
                     reason = 'A conexão com a loja falhou por rede ou DNS'
                 else:
                     reason = 'O leitor encontrou um erro interno; consulte o tipo registrado nos logs do serviço'
-                logging.getLogger(__name__).critical('search_offer_failed type=%s', type(exc).__name__)
+                log_search_failure('read', exc)
                 if isinstance(exc, ReadError) and str(exc) in ('blocked_no_bypass', 'captcha_no_bypass', 'domain_access_cooldown'):
                     paused[domain_key] = {'reason': reason, 'url': url, 'skipped': 0}
                     continue
@@ -82,39 +102,59 @@ async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketpla
                 else:
                     failures.append((url, reason))
         for r, url, store, rank, provisional in rank_offers(offers):
-            ad = db.save_ad(url, store, r)
-            await send_offer(bot, chat, r, url, store, rank, provisional, ad['id'])
+            try:
+                ad = db.save_ad(url, store, r)
+            except Exception as exc:
+                save_failed += 1
+                log_search_failure('save_ad', exc)
+                continue
+            try:
+                await send_offer(bot, chat, r, url, store, rank, provisional, ad['id'])
+            except Exception as exc:
+                delivery_failed += 1
+                log_search_failure('send_offer', exc)
+                # Um timeout pode ocorrer depois da entrega. Nao reenviar o
+                # cartao inteiro nem os anteriores; seguir para o proximo.
+                continue
             sent += 1
             starting += int(getattr(r, 'price', None) is None and getattr(r, 'starting_price', None) is not None)
             priced += int(getattr(r, 'price', None) is not None and getattr(r, 'price', 0) > 0)
         if failures:
-            await send('⚠️ Ofertas não verificadas\n\n' + '\n\n'.join(
+            await report('⚠️ Ofertas não verificadas\n\n' + '\n\n'.join(
                 reason + '.\n' + url for url, reason in failures))
         for domain, item in paused.items():
             store = adapter(domain).name
-            await send(f'⚠️ {store} — acesso suspenso\n\n{item["reason"]}.\n'
+            await report(f'⚠️ {store} — acesso suspenso\n\n{item["reason"]}.\n'
                 f'Outros links não consultados nesta busca: {item["skipped"]}. As demais lojas continuam.\n{item["url"]}')
         for text in grouped_unverified(unverified_links):
-            await send(text)
+            await report(text)
         if notices:
             limited = [n for n in notices if 'limite da busca externa' in n.casefold()]
             if limited:
                 stores = ', '.join(dict.fromkeys(n.split(':', 1)[0] for n in limited))
                 notices = [n for n in notices if n not in limited and 'Mercado Livre: a descoberta falhou' not in n]
                 notices.append(f'Índice externo temporariamente limitado. Lojas afetadas: {stores}. Consultas à fonte foram suspensas respeitando o limite. Links conhecidos podem ser consultados diretamente; não há descoberta nova garantida durante a pausa.')
-            await send('⚠️ Avisos da pesquisa\n\n' + '\n'.join(notices))
+            await report('⚠️ Avisos da pesquisa\n\n' + '\n'.join(notices))
     except ReadError as exc:
         interrupted = True
-        await send(search_error_message(str(exc)))
-    except Exception:
+        log_search_failure('search', exc)
+        await report(search_error_message(str(exc)))
+    except Exception as exc:
         interrupted = True
-        await send('⚠️ A busca foi interrompida por uma falha. Tente novamente mais tarde.')
+        log_search_failure('search', exc)
+        await report('⚠️ A busca foi interrompida por uma falha. Os resultados já enviados foram preservados.')
     finally:
         if starting:
-            await send(f'Valores publicados como "a partir de": {starting}. São referências de outras ofertas, sem vendedor e condições confirmados; não contam como preços de ofertas individuais.')
+            await report(f'Valores publicados como "a partir de": {starting}. São referências de outras ofertas, sem vendedor e condições confirmados; não contam como preços de ofertas individuais.')
         status = ('⚠️ Pesquisa encerrada com falha' if interrupted else
-            '⚠️ Pesquisa concluída com limitações' if failed or unverified or notices or (sent and not priced) else '✅ Pesquisa concluída')
-        await send(f'{status}\n\nOfertas enviadas: {sent}\nLinks com falha de leitura: {failed}\nAvisos das lojas: {len(notices)}\nLinks para conferência: {unverified}\nPreços lidos nas ofertas enviadas: {priced}\nCandidatos descartados por incompatibilidade: {rejected}\nLinks não consultados por bloqueio da loja: {skipped}')
+            '⚠️ Pesquisa concluída com limitações' if failed or unverified or notices or save_failed or delivery_failed or report_failed or (sent and not priced) else '✅ Pesquisa concluída')
+        extra = ''
+        if save_failed or delivery_failed or report_failed:
+            extra = (f'\nAnúncios não salvos por falha: {save_failed}'
+                f'\nCartões com entrega incompleta ou não confirmada: {delivery_failed}'
+                f'\nAvisos com entrega não confirmada: {report_failed}'
+                '\nOs resultados já entregues foram preservados. Cartões não confirmados não foram reenviados para evitar duplicação.')
+        await report(f'{status}\n\nOfertas enviadas: {sent}\nLinks com falha de leitura: {failed}\nAvisos das lojas: {len(notices)}\nLinks para conferência: {unverified}\nPreços lidos nas ofertas enviadas: {priced}\nCandidatos descartados por incompatibilidade: {rejected}\nLinks não consultados por bloqueio da loja: {skipped}' + extra)
 
 
 def grouped_unverified(entries):

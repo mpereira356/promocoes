@@ -1,1 +1,1 @@
-VERSION = "2026.10.16-amazon-starting.1"
+VERSION = "2026.10.16-search-delivery.1"

@@ -1,3 +1,11 @@
+# Entrega de resultados - 2026.10.16-search-delivery.1
+
+Corrigido o alcance da falha: antes, uma excecao ao salvar ou enviar um unico cartao abortava todos os demais resultados. Agora cada anuncio tem isolamento de persistencia e entrega, com contadores separados e continuidade do processamento. Falhas ao enviar avisos nao impedem tentar enviar o resumo. Nao se reenvia automaticamente o cartao inteiro apos timeout ambiguo, para evitar duplicacao; o resumo informa entrega incompleta ou nao confirmada. Se o Telegram estiver indisponivel para o resumo, a falha e registrada, sem prometer entrega.
+
+336 testes passaram, com tres avisos PTB preexistentes. Nove novos testes simulam falha no quarto de cinco resultados: TimedOut, BadRequest e erro interno, tanto ao salvar quanto ao enviar; verificam entrega do quinto resultado e ausencia de reenvio dos anteriores. Um deles usa SQLite real e o formatador de cartoes, com transporte Telegram simulado. Tambem foram simuladas falhas em avisos e resumo. Logs registram somente etapa, classe de excecao e arquivo/linha/funcao; mensagens de excecao, argumentos e variaveis nao sao expostos.
+
+A excecao especifica ocorrida na VPS apos a oferta MONOZEL nao foi identificada pela mensagem generica enviada pelo usuario. Esta revisao corrige a interrupcao em cascata e torna o erro diagnosticavel. Nao houve acesso SSH nem envio real ao Telegram; leitura de precos e bloqueios das lojas nao foram revalidados nesta revisao.
+
 # Amazon - 2026.10.16-amazon-starting.1
 
 Leitura real local em 16/10/2026 dos tres links informados: B0GQ5145QV esta indisponivel, sem preco; B004PS7O9I (Karcher) e B0BT23S5MF (WAP) ocultam o preco principal com mensagem de carrinho. O widget publico de outras ofertas declara valores a partir de R$ 234,06 e R$ 145,90, respectivamente. O leitor agora coleta essa referencia vinculada ao mesmo ASIN e mostra separadamente, com link para as outras ofertas. Nao atribui o valor ao vendedor principal, nao confirma estoque/pagamento e nao usa esse minimo em ranking, series de precos validos ou alertas. O campo price continua nulo quando a oferta individual nao foi confirmada.

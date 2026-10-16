@@ -223,3 +223,91 @@ def test_quota_reuses_saved_matching_link_but_reads_price_again(monkeypatch):
         assert offer.await_args.args[2].price == 12345
         assert 'SQLite' in '\n'.join(c.args[0] for c in send.await_args_list)
     asyncio.run(run())
+
+
+@pytest.mark.parametrize('stage', ['save', 'send'])
+@pytest.mark.parametrize('failure_kind', ['timeout', 'bad_request', 'internal'])
+def test_failed_fourth_result_does_not_abort_remaining_or_resend_previous(monkeypatch,caplog,stage,failure_kind):
+    from monitor.models import Reading
+    from telegram.error import TimedOut,BadRequest
+    async def run():
+        urls=[f'https://www.amazon.com.br/dp/B0TEST000{i}' for i in range(5)]
+        readings=[Reading(f'Aspirador portatil {i}','','','',10000+i) for i in range(5)]
+        monitor=SimpleNamespace(search=SimpleNamespace(links=AsyncMock(return_value=urls)),read=AsyncMock(side_effect=[[r] for r in readings]))
+        f=SimpleNamespace(canonical=lambda u:(u,'amazon.com.br'))
+        failure={'timeout':TimedOut('SECRET-MARKER'),'bad_request':BadRequest('SECRET-MARKER'),'internal':RuntimeError('SECRET-MARKER')}[failure_kind]
+        saved,attempted,delivered=[],[],[]
+        def save(url,*args):
+            saved.append(url)
+            if stage=='save' and url==urls[3]:raise failure
+            return {'id':urls.index(url)+1}
+        async def offer(bot,chat,r,url,*args):
+            attempted.append(url)
+            if stage=='send' and url==urls[3]:raise failure
+            delivered.append(url)
+        monkeypatch.setattr('monitor.search_results.send_offer',offer)
+        send=AsyncMock()
+        await deliver_search(monitor,f,SimpleNamespace(save_ad=save),None,1,'Aspirador portatil',send)
+        assert saved == urls
+        assert delivered == urls[:3]+urls[4:]
+        assert len(attempted) == (5 if stage=='send' else 4)
+        summary=send.await_args_list[-1].args[0]
+        assert 'Ofertas enviadas: 4' in summary
+        assert 'Pre\u00e7os lidos nas ofertas enviadas: 4' in summary
+        assert 'Pesquisa conclu\u00edda com limita\u00e7\u00f5es' in summary
+        assert 'SECRET-MARKER' not in caplog.text
+        assert 'stage='+('save_ad' if stage=='save' else 'send_offer') in caplog.text
+        assert 'frames=' in caplog.text
+        assert not any('interrompida' in c.args[0] for c in send.await_args_list)
+    asyncio.run(run())
+
+
+def test_failed_warning_does_not_suppress_summary_or_escape(caplog):
+    from monitor.discovery import SearchLinks
+    async def run():
+        m=SimpleNamespace(search=SimpleNamespace(links=AsyncMock(return_value=SearchLinks([],['Aviso teste']))))
+        send=AsyncMock(side_effect=[None,RuntimeError('SECRET-MARKER'),None])
+        await deliver_search(m,None,None,None,1,'Aspirador',send)
+        assert send.await_count==3
+        assert 'Avisos com entrega n\u00e3o confirmada: 1' in send.await_args_list[-1].args[0]
+        assert 'SECRET-MARKER' not in caplog.text
+    asyncio.run(run())
+
+
+def test_unavailable_telegram_summary_failure_is_logged_without_recursive_send(caplog):
+    from monitor.discovery import SearchLinks
+    async def run():
+        m=SimpleNamespace(search=SimpleNamespace(links=AsyncMock(return_value=SearchLinks([]))))
+        send=AsyncMock(side_effect=RuntimeError('SECRET-MARKER'))
+        await deliver_search(m,None,None,None,1,'Aspirador',send)
+        assert send.await_count==3
+        assert 'SECRET-MARKER' not in caplog.text
+        assert 'stage=report' in caplog.text
+    asyncio.run(run())
+
+
+def test_real_formatter_and_sqlite_continue_after_telegram_rejects_one_card(tmp_path):
+    from monitor.db import DB
+    from monitor.models import Reading
+    from telegram.error import BadRequest
+    async def run():
+        urls=[f'https://www.amazon.com.br/dp/B0TEST000{i}' for i in range(5)]
+        values=[Reading(f'Aspirador portatil {i}','','','',10000+i) for i in range(5)]
+        monitor=SimpleNamespace(search=SimpleNamespace(links=AsyncMock(return_value=urls)),read=AsyncMock(side_effect=[[r] for r in values]))
+        f=SimpleNamespace(canonical=lambda u:(u,'amazon.com.br'))
+        attempted=[]
+        async def telegram_send(chat,text,**kwargs):
+            attempted.append(text)
+            if 'Aspirador portatil 3' in text:raise BadRequest('simulated rejection')
+        bot=SimpleNamespace(send_message=AsyncMock(side_effect=telegram_send))
+        send=AsyncMock()
+        db=DB(str(tmp_path/'delivery.sqlite'))
+        try:
+            await deliver_search(monitor,f,db,bot,1,'Aspirador portatil',send)
+            assert len(db.rows('SELECT * FROM ads'))==5
+            assert len(attempted)==5
+            assert all(any(r.title in text for text in attempted) for r in values)
+            assert 'Ofertas enviadas: 4' in send.await_args_list[-1].args[0]
+            assert 'entrega incompleta ou n\u00e3o confirmada: 1' in send.await_args_list[-1].args[0]
+        finally:db.conn.close()
+    asyncio.run(run())
