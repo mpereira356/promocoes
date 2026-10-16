@@ -224,7 +224,13 @@ class PromotionsTelegram:
                 return await reply('Escolha a categoria com /promocoes antes de pesquisar.')
             self.running, session.stage = True, 'running'
             self.background(self.execute(session))
-            await reply(f'🔎 Busca pontual iniciada: {session.category.title}. Até 2 páginas de categoria e 12 produtos por loja, com buscas complementares limitadas. Nenhum monitoramento será criado.')
+            await reply(
+                f'🔎 Pesquisando promoções…\n\n'
+                f'🏷️ {session.category.title}\n'
+                f'📉 Desconto: {session.discount}\n'
+                f'🏪 Lojas selecionadas: {len(session.stores)}\n\n'
+                '⏳ Aguarde enquanto consulto as ofertas. Avisarei quando terminar.'
+            )
 
     async def execute(self, session):
         try:
