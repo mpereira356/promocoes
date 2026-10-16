@@ -23,6 +23,7 @@ def build_package(output=None):
         "requirements.lock.txt",
         "requirements-server.txt",
         "requirements-browser.txt",
+        "requirements-selenium.txt",
         "pytest.ini",
     ]
     files = [ROOT / name for name in names]

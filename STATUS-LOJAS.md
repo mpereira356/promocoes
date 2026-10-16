@@ -1,5 +1,18 @@
 # Estado real das lojas em 15/10/2026
 
+Teste adicional Selenium 4.51.0 + Chrome padrao headless em 15/10/2026: robots.txt Mercado Livre respondeu 403 (text/html). Nenhuma pagina de produto ou preco foi consultada apos essa recusa. Teste local Windows; nao foi testado Selenium com janela visivel nem na VPS. O motor de producao permanece Playwright.
+
+Diagnostico Selenium opcional no Kali, apos atualizar o projeto:
+
+```bash
+sudo apt-get install -y chromium chromium-driver
+sudo /opt/price-monitor/.venv/bin/python -m pip install -r /opt/price-monitor/requirements-selenium.txt
+cd /opt/price-monitor
+sudo -u pricebot .venv/bin/python -m scripts.diagnose_selenium --binary /usr/bin/chromium --driver /usr/bin/chromedriver
+```
+
+Esse teste nao acessa Telegram ou SQLite. `--headed` exige ambiente grafico e pode ser usado em computador com desktop; nao funciona em SSH puro. Usa perfil novo, nao importa cookies do navegador pessoal e nao interage com desafios. A instalacao do driver no Kali ainda depende de validacao no servidor.
+
 Versao: `2026.10.15-stores.1`.
 
 | Loja | Descoberta real | Leitura real validada nesta etapa | Limite atual |
