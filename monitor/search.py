@@ -97,6 +97,10 @@ class Search:
         for item in data.get("web", {}).get("results", []):
             try:
                 url, domain = self.fetcher.canonical(item["url"])
+                from .adapters import adapter
+                checker = getattr(adapter(domain), 'is_product_url', None)
+                if domain != 'mercadolivre.com.br' and checker and not checker(url):
+                    continue
                 if url not in result:
                     result.append(url)
             except (ReadError, KeyError, ValueError):

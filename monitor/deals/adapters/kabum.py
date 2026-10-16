@@ -4,6 +4,7 @@ from urllib.parse import urlsplit, urlencode
 from bs4 import BeautifulSoup
 from .base import CategoryAdapter, CategoryPage
 from ...models import money, normalize
+from ...adapters.kabum import KabumAdapter
 
 
 class KabumCategories(CategoryAdapter):
@@ -11,14 +12,12 @@ class KabumCategories(CategoryAdapter):
     categories = {'hardware/placas-mae': 'https://www.kabum.com.br/hardware/placas-mae'}
 
     def page(self, html, url):
-        script = BeautifulSoup(html, 'html.parser').find('script', id='__NEXT_DATA__')
+        soup = BeautifulSoup(html, 'html.parser')
+        script = soup.find('script', id='__NEXT_DATA__')
         if not script:
             return super().page(html, url)
         try:
-            data = json.loads(script.get_text())['props']['pageProps']['data']
-            if isinstance(data, str):
-                data = json.loads(data)
-            catalog = data['catalogServer']
+            catalog = KabumAdapter.catalog_data(soup)
             urls = []
             for item in catalog['data']:
                 code, slug = str(item.get('code', '')), item.get('friendlyName', '')

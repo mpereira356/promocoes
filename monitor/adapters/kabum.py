@@ -10,7 +10,22 @@ from .base import ReadError
 class KabumAdapter(StructuredAdapter):
     name = "KaBuM"
 
+    def is_product_url(self, url):
+        p = urlsplit(url)
+        return (p.scheme == 'https' and p.hostname in ('kabum.com.br', 'www.kabum.com.br')
+            and bool(re.fullmatch(r'/produto/\d+(?:/[^/]+)?/?', p.path)))
+
+    @staticmethod
+    def catalog_data(soup):
+        script = soup.find('script', id='__NEXT_DATA__')
+        data = json.loads(script.get_text())['props']['pageProps']['data']
+        if isinstance(data, str):
+            data = json.loads(data)
+        return data['catalogServer']
+
     def parse(self, html, url):
+        if not self.is_product_url(url):
+            raise ReadError('individual_listing_required')
         readings = super().parse(html, url)
         soup = BeautifulSoup(html, "html.parser")
         script = soup.find("script", id="__NEXT_DATA__")
@@ -68,8 +83,7 @@ class KabumAdapter(StructuredAdapter):
         script = soup.find("script", id="__NEXT_DATA__")
         if script:
             try:
-                data = json.loads(script.string or script.get_text())
-                items = data["props"]["pageProps"]["data"]["catalogServer"]["data"]
+                items = self.catalog_data(soup)['data']
                 for item in items:
                     code, slug, name = (
                         item.get("code"),
@@ -96,4 +110,4 @@ class KabumAdapter(StructuredAdapter):
                 result.append(
                     LinkCandidate(urljoin(url, a["href"]), a.get_text(" ", strip=True))
                 )
-        return result
+        return [candidate for candidate in result if self.is_product_url(candidate.url)]

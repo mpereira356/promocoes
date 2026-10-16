@@ -294,3 +294,11 @@ Durante limitação do índice externo, links da mesma consulta ainda disponíve
 
 Avisos do mesmo limite externo são agrupados com as lojas afetadas. Os testes simulam 429, cache expirado/indisponível, ausência de repetição durante a pausa, reaproveitamento SQLite sem usar preço antigo, rejeição do mouse e continuidade em outra loja. Não houve nova validação em lojas reais nem na VPS nesta alteração.
 
+# Atualização 2026.10.16-kabum-catalog.1 — aspirador portátil
+
+Defeito reproduzido na busca real por Aspirador de Pó Portátil: o site redireciona a busca para uma categoria; pageProps.data é uma string JSON contendo catalogServer. A descoberta normal não decodificava esse campo e aceitava ListItem dos breadcrumbs como ofertas. Agora usa o catálogo decodificado e retorna apenas URLs individuais /produto/ID. O mesmo decodificador é compartilhado com o adaptador de categorias. KaBuM também recusa interpretar categoria como oferta, inclusive se houver um Product de recomendação no HTML. A busca direta e a busca Brave aplicam a validação de URL dos adaptadores, preservando a exceção já existente para links de catálogo Mercado Livre não verificados.
+
+Validação real local em 16/10/2026: categoria retornou 22 links de produtos; descoberta limitada selecionou seis candidatos e não retornou as URLs de categoria relatadas pelo usuário. Três páginas individuais foram lidas pelo Monitor/Fetcher de produção: Mini Aspirador 2em1 USB portátil, R$ 75,91 Pix; Aspirador portátil Hoto 4in1 15000pa, R$ 466,44 Pix; Aspirador portátil recarregável USB, R$ 275,49 Pix. As três declararam disponibilidade. Preços são capturas pontuais das páginas individuais, não dados usados do índice/catálogo. Não houve envio Telegram nem teste pelo IP da VPS. Não se afirma cobertura completa nem resolução das limitações Amazon/Mercado Livre/Pichau.
+
+304 testes passaram. Novos testes usam recorte do catálogo real com JSON serializado e breadcrumbs, verificam que somente produtos são descobertos e impedem interpretar categoria/recomendação como oferta. Os demais testes simulam URLs e respostas; não consultam lojas durante pytest.
+

@@ -115,6 +115,7 @@ def form_search_url(html, base, query, fields=None):
 
 
 REASONS = {
+    'individual_listing_required': 'É necessário um link de produto individual; categorias não são ofertas com preço validado',
     'conflicting_product_identifiers': 'A página apresenta códigos de produto conflitantes; a comparação foi recusada',
     'domain_access_cooldown': 'A loja recusou acesso recentemente. Novas consultas a ela ficam suspensas por até 15 minutos; as outras lojas continuam',
     'network_dns_failure': 'O servidor não conseguiu resolver o endereço da loja após três tentativas de DNS',
@@ -231,6 +232,9 @@ class DirectSearch:
                     except (ReadError, ValueError):
                         continue
                     if link_domain == domain and link not in accepted:
+                        checker = getattr(store, 'is_product_url', None)
+                        if domain != 'mercadolivre.com.br' and checker and not checker(link):
+                            continue
                         accepted.append(link)
                         details[link] = c
                 groups.append(accepted[:6])

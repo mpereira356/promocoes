@@ -36,6 +36,33 @@ def test_real_reduced_kabum_catalog_snapshot():
     assert not hasattr(found[0], "price")
 
 
+def test_real_serialized_vacuum_catalog_excludes_breadcrumb_categories():
+    html = Path('tests/fixtures/kabum_vacuum_catalog_real.html').read_text(encoding='utf-8')
+    store = KabumAdapter()
+    found = store.search_links(html, 'https://www.kabum.com.br/eletroportateis/aspirador-de-po/aspirador-de-po-portatil')
+    assert len(found) == 3
+    assert all(store.is_product_url(c.url) for c in found)
+    assert not any('/eletroportateis/' in c.url for c in found)
+    assert all(not hasattr(c, 'price') for c in found)
+
+
+@pytest.mark.parametrize('url,valid', [
+    ('https://www.kabum.com.br/produto/625300/aspirador', True),
+    ('https://kabum.com.br/produto/625300', True),
+    ('https://www.kabum.com.br/eletroportateis/aspirador-de-po', False),
+    ('https://www.kabum.com.br/busca/aspirador', False),
+    ('https://evil.example/produto/625300/aspirador', False),
+])
+def test_kabum_individual_product_url_contract(url, valid):
+    assert KabumAdapter().is_product_url(url) is valid
+
+
+def test_kabum_category_cannot_be_parsed_as_individual_offer():
+    html = '<script type="application/ld+json">' + json.dumps({'@type': 'Product', 'name': 'Recomendação', 'offers': {'@type': 'Offer', 'price': 1}}) + '</script>'
+    with pytest.raises(ReadError, match='individual_listing_required'):
+        KabumAdapter().parse(html, 'https://www.kabum.com.br/eletroportateis/aspirador-de-po')
+
+
 @pytest.mark.parametrize(
     "title",
     [

@@ -1,1 +1,1 @@
-VERSION = "2026.10.16-quota.1"
+VERSION = "2026.10.16-kabum-catalog.1"
