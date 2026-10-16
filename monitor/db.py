@@ -244,7 +244,18 @@ class DB:
                     % candidate["id"]
                 )
             if not reading.comparable:
-                return 'Leitura registrada, mas ainda faltam dados explícitos para comparar preços.'
+                missing = []
+                if not reading.seller:
+                    missing.append('vendedor')
+                if not reading.condition:
+                    missing.append('condição')
+                if not reading.payment:
+                    missing.append('forma de pagamento')
+                if not isinstance(reading.price, int) or isinstance(reading.price, bool) or reading.price <= 0:
+                    missing.append('preço válido')
+                if reading.currency != 'BRL':
+                    missing.append('moeda BRL')
+                return 'Leitura registrada; comparação suspensa por falta de: ' + ', '.join(missing) + '.'
             key = (
                 candidate["id"],
                 normalize(reading.title),

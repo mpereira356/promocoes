@@ -186,6 +186,7 @@ def test_single_site_never_searches_and_all_discovers_exact_only(data):
 
         monitor.read = read
         await monitor.check(pid)
+        search.links.assert_awaited_once_with('asus rog strix b550 f gaming wifi ii')
         indexed = {
             x["url"]: x
             for x in db.rows("SELECT * FROM candidates WHERE product=?", (pid,))
@@ -204,6 +205,36 @@ def test_single_site_never_searches_and_all_discovers_exact_only(data):
         )
 
     asyncio.run(run())
+
+
+def test_monitor_failure_is_readable_and_preserves_last_price(data):
+    from monitor.adapters.base import ReadError
+    async def run():
+        db, config, reading, ad, _ = data
+        pid, _ = db.subscribe(db.request_scope(ad['id']), 'site', config)
+        candidate = db.rows('SELECT * FROM candidates WHERE product=?', (pid,))[0]
+        db.record(candidate, reading)
+        before = db.rows('SELECT last FROM series')[0]['last']
+        fetcher = SimpleNamespace(canonical=lambda url: (url, 'kabum.com.br'))
+        monitor = Monitor(db, config, fetcher, None, AsyncMock())
+        monitor.read = AsyncMock(side_effect=ReadError('blocked_no_bypass'))
+        message = await monitor.check(pid)
+        assert 'A loja bloqueou o acesso' in message
+        assert 'blocked_no_bypass' not in message
+        assert ad['url'] in message
+        assert db.rows('SELECT last FROM series')[0]['last'] == before
+        assert db.rows('SELECT status FROM checks ORDER BY id DESC')[0]['status'] == 'blocked_no_bypass'
+    asyncio.run(run())
+
+
+def test_missing_comparison_fields_are_identified(data):
+    db, config, reading, ad, _ = data
+    pid, _ = db.subscribe(db.request_scope(ad['id']), 'site', config)
+    candidate = db.rows('SELECT * FROM candidates WHERE product=?', (pid,))[0]
+    message = db.record(candidate, replace(reading, condition='', seller=''))
+    assert 'vendedor' in message and 'condição' in message
+    assert 'pagamento' not in message
+    assert not db.rows('SELECT * FROM alerts')
 
 
 def test_scope_buttons_and_callback_authorization(data):

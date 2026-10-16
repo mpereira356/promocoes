@@ -4,7 +4,8 @@ from .adapters import adapter
 from .adapters.base import ReadError
 from .search import search_error_message
 from .models import Reading
-from .identity import same_product
+from .identity import same_product, search_terms
+from .discovery import REASONS
 import json
 
 
@@ -124,7 +125,8 @@ class Monitor:
                     urls = [p["query"]]
                 else:
                     try:
-                        urls = await self.search.links(p["query"])
+                        query = search_terms(seed_reading.title, seed_reading.identifiers) if seed_reading else search_terms(p['query'])
+                        urls = await self.search.links(query)
                         notes.extend(getattr(urls, "notices", []))
                     except ReadError as exc:
                         urls = []
@@ -181,12 +183,13 @@ class Monitor:
                             )[0]
                             info = self.db.record(fresh, reading)
                             price = (
-                                f"R$ {reading.price/100:.2f}"
+                                'R$ ' + f'{reading.price // 100:,}'.replace(',', '.') + f',{reading.price % 100:02d}'
                                 if reading.price is not None
                                 else 'Preço não lido'
                             )
+                            stock = {'in_stock': 'Disponível segundo a página', 'out_of_stock': 'Indisponível', 'unknown': 'Não confirmado pela página'}.get(reading.stock, 'Não confirmado pela página')
                             notes.append(
-                                f"🆔 Anúncio: {ad['id']} · Oferta {candidate['id']}\n{reading.title}\n\n💰 Preço: {price}; estoque: {reading.stock}; pagamento: {reading.payment or 'não identificado'}\n{info}\n{candidate['url']}"
+                                f"🆔 Anúncio: {ad['id']} · Oferta {candidate['id']}\n{reading.title}\n\n💰 Preço: {price}\n📦 Estoque: {stock}\n💳 Pagamento: {reading.payment or 'não identificado'}\n{info}\n{candidate['url']}"
                             )
                     except Exception as exc:
                         # Nunca colocar excecoes de bibliotecas/URLs com tokens em logs ou mensagens.
@@ -197,8 +200,9 @@ class Monitor:
                             "SELECT id FROM candidates WHERE id=?", (candidate["id"],)
                         ):
                             self.db.failure(candidate["id"], code)
+                        reason = REASONS.get(code, 'Não foi possível validar a leitura da página')
                         notes.append(
-                            f"⚠️ Oferta {candidate['id']}: {code}. O último preço válido foi preservado."
+                            f"⚠️ Oferta {candidate['id']} — {candidate['store']}: {reason}. O último preço válido foi preservado.\n{candidate['url']}"
                         )
                 await self.options(pid, only_new=True)
                 await self.deliver()

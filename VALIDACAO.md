@@ -252,3 +252,15 @@ Catálogos e links externos sem preço ficam agrupados por loja depois dos anún
 
 268 testes automatizados passaram. Novos testes simulam bloqueio 403, ausência de repetição durante a pausa, continuidade em outra loja, expiração e agrupamento de seis catálogos sem consulta nem gravação de oferta. Nenhuma mensagem real ao Telegram foi enviada.
 
+# Atualização 2026.10.16-mpn.1 — descoberta pelo código do fabricante
+
+273 testes automatizados passaram; envio Telegram foi simulado.
+
+O acompanhamento em outras lojas passa a pesquisar marca e MPN declarados quando disponíveis. Como auxílio de descoberta, títulos Logitech com o padrão 920-NNNNNN geram uma consulta curta pelo código, preservando o título e os identificadores originais. A seleção de candidatos reconhece o mesmo código explícito apesar de descrições comerciais diferentes e rejeita códigos diferentes e acessórios. Um código extraído apenas do título não é inserido como MPN verificado nem confirma automaticamente anúncios entre lojas.
+
+Validação real local em 16/10/2026: o título longo da KaBuM fornecido pelo usuário encontrou via busca direta de produção o link exato da Pichau 920-011902; a página foi lida, R$ 1.129,99 Pix, novo, disponível, vendido pela Pichau. O anúncio KaBuM 585201 foi lido a R$ 999,99 Pix, disponível, com marca Logitech G; essa leitura não declarou MPN/condição suficientes para uma comparação automática. Não houve envio Telegram nem acesso SSH à VPS. O bloqueio relatado da VPS continua dependente de validação naquele IP, e a alteração não elimina recusas HTTP da loja.
+
+O acompanhamento agora traduz motivos de falha, inclui loja e link, apresenta estoque em português e formata reais com vírgula. Leituras incompletas identificam os campos ausentes. Códigos técnicos continuam gravados no SQLite para diagnóstico, sem substituir o último preço válido.
+
+Os testes simulam consulta por MPN, títulos diferentes com o mesmo código, código divergente, acessórios, ausência de confirmação automática, preservação de preço após bloqueio e indicação dos dados faltantes. As consultas reais acima são separadas desses testes sem rede.
+

@@ -24,7 +24,7 @@ class SearchLinks(list):
 
 
 def relevance(query, title):
-    from .identity import model_conflict
+    from .identity import model_conflict, logitech_part_number
     stop = {"de", "da", "do", "das", "dos", "com", "para", "e", "a", "o"}
     def terms(text):
         text = re.sub(r'(\d+)\s*[ªº°]', r'\1', text)
@@ -41,6 +41,9 @@ def relevance(query, title):
             return 0
     if model_conflict(query, title) or not (wanted & {'wifi', 'ii', 'ax'}) <= found:
         return 0
+    part, candidate_part = logitech_part_number(query), logitech_part_number(title)
+    if part and candidate_part:
+        return 1 if part == candidate_part else 0
     if not wanted or not found:
         return 0
     # Nunca sugerir B650/X870 quando foi pedido B550, ou RTX 4060 para RTX 4070.
@@ -154,6 +157,9 @@ class DirectSearch:
 
     async def links(self, query):
         from .adapters import ADAPTERS
+        from .identity import search_terms
+
+        query = search_terms(query)
 
         links, notices, groups, details = [], [], [], {}
         for domain in self.config.domains:

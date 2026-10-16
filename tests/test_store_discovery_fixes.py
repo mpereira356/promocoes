@@ -8,8 +8,45 @@ from monitor.challenges import is_access_challenge
 from monitor.discovery import DirectSearch, LinkCandidate, relevance
 from monitor.external_market_search import ExternalMarketSearch
 from monitor.identity import same_product
+from monitor.identity import search_terms
 from monitor.models import Reading
 from monitor.network import Fetcher
+
+
+def test_exact_logitech_code_overrides_different_marketing_titles():
+    kabum = 'Teclado Sem Fio Mecânico Gamer Logitech G PRO X 60 Lightspeed RGB Bluetooth Compatível com Windows Preto - 920-011902'
+    pichau = 'Teclado Mecanico Logitech G Pro X Lightspeed RGB 60% Switch Optico GX Tactile Tri-Mode Preto 920-011902'
+    assert search_terms(kabum) == 'Logitech 920-011902'
+    assert relevance(kabum, pichau) == 1
+    assert relevance(kabum, pichau.replace('920-011902', '920-011903')) == 0
+    assert relevance(kabum, 'Capa para ' + pichau) == 0
+    # O código descoberto no título auxilia a busca, sem confirmar identidade sozinho.
+    a = Reading(kabum, '', '', '', None, identifiers={'brand': 'logitech g'})
+    b = Reading(pichau, '', '', '', None, identifiers={'brand': 'logitech', 'mpn': '920 011902'})
+    assert same_product(a, b) is None
+
+
+def test_declared_mpn_is_preferred_over_marketing_title():
+    ids = {'brand': 'logitech g', 'mpn': '920 011902'}
+    assert search_terms('Descrição comprida', ids) == 'logitech 920-011902'
+    assert ids == {'brand': 'logitech g', 'mpn': '920 011902'}
+
+
+def test_direct_discovery_uses_part_code_for_external_lookup(monkeypatch):
+    async def run():
+        c = SimpleNamespace(domains=('pichau.com.br',), browser=False, delay=0)
+        f = Fetcher(c)
+        f.html = AsyncMock(return_value=('<urlset/>', 'https://www.pichau.com.br/media/sitemap.xml'))
+        url = 'https://www.pichau.com.br/teclado-logitech-920-011902'
+        lookup = AsyncMock(return_value=[LinkCandidate(url, 'Teclado Logitech GX Tactile 920-011902', 'Tavily Search')])
+        monkeypatch.setattr(ExternalMarketSearch, 'links', lookup)
+        try:
+            links = await DirectSearch(c, f).links('Teclado Logitech G PRO X 60 sem fio Bluetooth Windows Preto 920-011902')
+            assert links == [url]
+            lookup.assert_awaited_once_with('Logitech 920-011902', 'pichau.com.br')
+        finally:
+            await f.close()
+    asyncio.run(run())
 
 
 @pytest.mark.parametrize('candidate', [

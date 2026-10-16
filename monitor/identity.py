@@ -4,6 +4,28 @@ from .models import normalize
 import re
 
 
+def logitech_part_number(text):
+    if 'logitech' not in normalize(text).split():
+        return ''
+    match = re.search(r'\b920[\s-]+(\d{6})\b', text, re.I)
+    return '920-' + match[1] if match else ''
+
+
+def search_terms(title, identifiers=None):
+    """Consulta curta para descoberta; nunca transforma título em identidade verificada."""
+    identifiers = identifiers or {}
+    brand, mpn = identifiers.get('brand', ''), identifiers.get('mpn', '')
+    if mpn:
+        if normalize(brand) == 'logitech g':
+            brand = 'logitech'
+        match = re.fullmatch(r'920[\s-]+(\d{6})', mpn)
+        if match:
+            mpn = '920-' + match[1]
+        return ' '.join(filter(None, [brand, mpn]))
+    part = logitech_part_number(title)
+    return 'Logitech ' + part if part else title
+
+
 def model_conflict(left, right):
     """Conflitos explicitos de familias conhecidas, sem adivinhar sinonimos."""
     a, b = normalize(left), normalize(right)

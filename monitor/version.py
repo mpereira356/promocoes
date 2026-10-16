@@ -1,1 +1,1 @@
-VERSION = "2026.10.16-access.1"
+VERSION = "2026.10.16-mpn.1"
