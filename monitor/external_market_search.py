@@ -42,7 +42,7 @@ class ExternalMarketSearch:
                         response = await client.post(
                             'https://api.tavily.com/search',
                             headers={'X-Tavily-Access-Mode': 'keyless', 'X-Client-Source': 'price-monitor'},
-                            json={'query': query + ' site:' + domain,
+                            json={'query': query + ' site:' + domain + (' inurl:dp' if domain == 'amazon.com.br' else ''),
                                   'include_domains': [domain],
                                   'include_domains_mode': 'restrict', 'search_depth': 'basic',
                                   'auto_parameters': False, 'max_results': 10,

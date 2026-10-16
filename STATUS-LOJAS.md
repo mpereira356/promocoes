@@ -1,3 +1,9 @@
+# Amazon — 2026.10.16-amazon-main.1
+
+Consulta real local: descoberta e leitura de páginas individuais de aspiradores passaram a obter preços no bloco principal. MONOZEL B0F53JGRLS: R$ 242,96, Amazon Global, disponível. WAP B0BT23S5MF: R$ 149,00, disponível. Esses valores são capturas pontuais, sem validação pelo IP da VPS. Condição/pagamento ausentes continuam impedindo alertas comparáveis. Preço oculto com exigência de carrinho continua sem confirmação. Não se garante leitura de todo anúncio Amazon.
+
+315 testes passaram; detalhes e limitações em VALIDACAO.md. Os registros anteriores abaixo permanecem como histórico.
+
 # Estado observado — 2026.10.16-review.1
 
 As observações abaixo são consultas locais limitadas, sem envio real ao Telegram ou acesso à VPS. Os registros antigos permanecem após esta tabela como histórico.

@@ -75,6 +75,23 @@ def test_expired_link_cache_survives_quota_without_caching_prices(monkeypatch, a
     asyncio.run(run())
 
 
+def test_amazon_query_targets_individual_pages_and_rejects_categories(monkeypatch):
+    async def run():
+        category = 'https://www.amazon.com.br/s?k=aspirador'
+        product = 'https://www.amazon.com.br/aspirador/dp/B0F53JGRLS'
+        post = AsyncMock(return_value=httpx.Response(200, json={'results':[
+            {'url': category, 'title': 'Aspirador portátil'},
+            {'url': product, 'title': 'Aspirador portátil MONOZEL'},
+        ]}))
+        monkeypatch.setattr(httpx.AsyncClient, 'post', post)
+        search = ExternalMarketSearch(SimpleNamespace(config=SimpleNamespace(domains=('amazon.com.br',)), canonical=lambda u: (u,'amazon.com.br')))
+        result = await search.links('aspirador portátil','amazon.com.br')
+        assert [c.url for c in result] == [product]
+        assert 'inurl:dp' in post.await_args.kwargs['json']['query']
+        assert post.await_count == 1
+    asyncio.run(run())
+
+
 def test_unverified_catalog_is_sent_without_reading_or_saving_offer():
     async def run():
         links = SearchLinks([URL], candidates={URL: LinkCandidate(URL, 'Placa B550', 'Tavily Search')})

@@ -32,6 +32,12 @@ def test_logitech_g_pro_accepts_actual_model_and_generic_g_keeps_variants():
     assert relevance('Teclado Gamer Logitech G', 'Teclado Logitech G PRO X 60 RGB')
 
 
+def test_vacuum_search_rejects_replacement_cup_but_accepts_vacuum_with_filter():
+    assert not relevance('Aspirador de Pó Portátil', 'Copo de pó de substituição para aspirador de pó portátil sem fio')
+    assert relevance('Aspirador de Pó Portátil', 'Aspirador de Pó Portátil com filtro lavável')
+    assert relevance('Filtro para aspirador', 'Filtro para aspirador portátil')
+
+
 def test_exact_logitech_code_overrides_different_marketing_titles():
     kabum = 'Teclado Sem Fio Mecânico Gamer Logitech G PRO X 60 Lightspeed RGB Bluetooth Compatível com Windows Preto - 920-011902'
     pichau = 'Teclado Mecanico Logitech G Pro X Lightspeed RGB 60% Switch Optico GX Tactile Tri-Mode Preto 920-011902'

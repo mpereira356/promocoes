@@ -42,6 +42,37 @@ class AmazonAdapter(StructuredAdapter):
         return any('adicione este item ao seu carrinho' in normalize(n.get_text(' ', strip=True))
             for n in soup.select('#priceNotAvailable_feature_div'))
 
+    def primary_price(self, soup, url):
+        asin = re.search(r'/(?:dp|gp/product)/([A-Z0-9]{10})(?:/|$)', urlsplit(url).path)
+        if not asin or {n.get('value') for n in soup.select('input#ASIN')} != {asin[1]}:
+            return None
+        blocks = soup.select('#corePriceDisplay_desktop_feature_div .a-price.apex-pricetopay-value, '
+            '#corePrice_feature_div .a-price.apex-pricetopay-value, #buybox .a-price.apex-pricetopay-value')
+        prices = set()
+        for block in blocks:
+            values = set()
+            for label in block.select('.a-offscreen'):
+                text = label.get_text(' ', strip=True)
+                if not text:
+                    continue
+                match = re.fullmatch(r'R\$\s*([\d.,]+)', text)
+                amount = display_money(match[1]) if match else None
+                if amount is None:
+                    return None
+                values.add(amount)
+            symbols, whole, fraction = block.select('.a-price-symbol'), block.select('.a-price-whole'), block.select('.a-price-fraction')
+            if len(symbols) == len(whole) == len(fraction) == 1:
+                if symbols[0].get_text(strip=True) != 'R$' or not re.fullmatch(r'\d{2}', fraction[0].get_text(strip=True)):
+                    return None
+                amount = display_money(whole[0].get_text(strip=True).rstrip(',') + ',' + fraction[0].get_text(strip=True))
+                if amount is None:
+                    return None
+                values.add(amount)
+            if len(values) != 1:
+                return None
+            prices.update(values)
+        return next(iter(prices)) if len(prices) == 1 else None
+
     def is_product_url(self, url):
         p = urlsplit(url)
         return p.hostname in ('amazon.com.br', 'www.amazon.com.br') and bool(
@@ -53,6 +84,10 @@ class AmazonAdapter(StructuredAdapter):
             raise ReadError('individual_listing_required')
         soup = BeautifulSoup(html, 'html.parser')
         details = self.details_identifiers(soup, url)
+        expected_asin = re.search(r'/(?:dp|gp/product)/([A-Z0-9]{10})(?:/|$)', urlsplit(url).path)[1]
+        actual_asins = {n.get('value') for n in soup.select('input#ASIN')}
+        if actual_asins and actual_asins != {expected_asin}:
+            raise ReadError('different_model')
         titles = soup.select('#productTitle')
         rows = soup.select('#aod-offer-list #aod-offer')
         if rows:
@@ -123,12 +158,30 @@ class AmazonAdapter(StructuredAdapter):
             strings = list(boxes[0].stripped_strings)
             sellers = {
                 strings[index + 1] for index, label in enumerate(strings[:-1])
-                if normalize(label) == 'vendido por' and 0 < len(strings[index + 1]) <= 100
+                if normalize(label) in ('vendido por', 'enviado vendido') and 0 < len(strings[index + 1]) <= 100
             }
             if len(sellers) == 1:
                 seller = next(iter(sellers))
-        # Buy Box pode trocar de vendedor. Nao inventar preco, vendedor, condicao ou Pix.
-        return [Reading(titles[0].get_text(' ', strip=True), seller, '', '', None, stock, identifiers=details)]
+        price = None
+        if len(boxes) == 1 and not self.price_requires_cart(html):
+            price = self.primary_price(soup, url)
+            asin = re.search(r'/(?:dp|gp/product)/([A-Z0-9]{10})(?:/|$)', urlsplit(url).path)[1]
+            sellers = set()
+            for link in boxes[0].select('#sellerProfileTriggerId[href]'):
+                params = parse_qs(urlsplit(link['href']).query)
+                sid = params.get('seller', [''])[0]
+                if params.get('asin') == [asin] and re.fullmatch(r'[A-Z0-9]+', sid):
+                    sellers.add((sid, link.get_text(' ', strip=True)))
+            if len(sellers) == 1:
+                sid, name = next(iter(sellers))
+                seller = f'{name} (ID {sid})'
+            elif len(sellers) > 1:
+                seller, price = '', None
+            availability = {normalize(n.get_text(' ', strip=True)) for n in boxes[0].select('#availability')}
+            if availability == {'em estoque'}:
+                stock = 'unknown' if stock == 'out_of_stock' else 'in_stock'
+        # O preço total não identifica sozinho Pix, parcelamento ou condição.
+        return [Reading(titles[0].get_text(' ', strip=True), seller, '', '', price, stock, identifiers=details)]
 
     def buying_options_url(self, html, url):
         if not self.is_product_url(url):

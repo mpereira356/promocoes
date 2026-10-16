@@ -131,3 +131,75 @@ def test_conflicting_schema_and_details_are_not_merged():
     reading = Reading('Logitech', '', '', '', None, identifiers={'mpn': '920 011902'})
     with pytest.raises(ReadError, match='conflicting_product_identifiers'):
         AmazonAdapter().enrich_identifiers([reading], {'mpn': '920 011921'})
+
+
+MAIN_URL = 'https://www.amazon.com.br/dp/B0F53JGRLS'
+
+
+def main_price_fixture():
+    return Path('tests/fixtures/amazon_main_price_real.html').read_text(encoding='utf-8')
+
+
+def test_real_main_price_total_seller_and_explicit_stock():
+    reading = AmazonAdapter().parse(main_price_fixture(), MAIN_URL)[0]
+    assert reading.price == 24296
+    assert reading.seller == 'Amazon Global (ID A2EB9PYM83FCP9)'
+    assert reading.stock == 'in_stock'
+    assert not reading.payment and not reading.condition and not reading.comparable
+
+
+def test_main_offer_ignores_installments_shipping_and_recommendations():
+    html = main_price_fixture() + '<aside><span class="a-price"><span class="a-offscreen">R$ 1,00</span></span></aside>'
+    html += '<div>Frete R$ 8,90. Em 6x de R$ 40,51. Cupom R$ 20,00</div>'
+    assert AmazonAdapter().parse(html, MAIN_URL)[0].price == 24296
+
+
+@pytest.mark.parametrize('replacement', ['R$0,00', 'R$999,99', 'US$242,96'])
+def test_conflicting_zero_or_foreign_main_price_is_refused(replacement):
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(main_price_fixture(), 'html.parser')
+    soup.select_one('.apex-pricetopay-value .a-offscreen').string = replacement
+    assert AmazonAdapter().parse(str(soup), MAIN_URL)[0].price is None
+
+
+def test_wrong_asin_cannot_supply_primary_price():
+    html = main_price_fixture().replace('value="B0F53JGRLS"', 'value="B0BRSQCZLS"')
+    with pytest.raises(ReadError, match='different_model'):
+        AmazonAdapter().parse(html, MAIN_URL)
+
+
+def test_missing_stock_does_not_turn_price_into_stock_confirmation():
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(main_price_fixture(), 'html.parser')
+    for n in soup.select('#availability'):
+        n.decompose()
+    r = AmazonAdapter().parse(str(soup), MAIN_URL)[0]
+    assert r.price == 24296 and r.stock == 'unknown'
+
+
+def test_monitor_reads_main_price_without_starting_selenium():
+    async def run():
+        f = SimpleNamespace(canonical=lambda u: (u, 'amazon.com.br'), html=AsyncMock(return_value=(main_price_fixture(), MAIN_URL)))
+        monitor = Monitor(None, SimpleNamespace(browser=True), f, None, None)
+        monitor.amazon_offers = SimpleNamespace(html=AsyncMock())
+        readings = await monitor.read(MAIN_URL)
+        assert readings[0].price == 24296
+        monitor.amazon_offers.html.assert_not_called()
+    asyncio.run(run())
+
+
+def test_search_delivers_primary_price_through_actual_formatter():
+    from monitor.search_results import deliver_search
+    async def run():
+        fetcher = SimpleNamespace(canonical=lambda u: (u, 'amazon.com.br'), html=AsyncMock(return_value=(main_price_fixture(), MAIN_URL)))
+        db = SimpleNamespace(save_ad=lambda *args: {'id': 77})
+        search = SimpleNamespace(links=AsyncMock(return_value=[MAIN_URL]))
+        monitor = Monitor(db, SimpleNamespace(browser=True), fetcher, search, None)
+        bot = SimpleNamespace(send_message=AsyncMock(), send_photo=AsyncMock())
+        send = AsyncMock()
+        await deliver_search(monitor, fetcher, db, bot, 0, 'Aspirador portátil', send)
+        body = '\n'.join(c.args[1] for c in bot.send_message.await_args_list)
+        assert 'R$ 242,96' in body and 'não lido' not in body
+        assert 'Ofertas enviadas: 1' in send.await_args_list[-1].args[0]
+        assert 'Preços lidos nas ofertas enviadas: 1' in send.await_args_list[-1].args[0]
+    asyncio.run(run())

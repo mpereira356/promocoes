@@ -33,6 +33,10 @@ def relevance(query, title):
         return set(text.split())
     wanted = terms(query) - stop
     found = terms(title)
+    vacuum_parts = {'copo', 'filtro', 'escova', 'bico', 'bateria', 'carregador', 'peca'}
+    if 'aspirador' in wanted and not wanted & vacuum_parts and re.match(
+            r'^(?:copo|filtro|escova|bico|bateria|carregador|peca)s?\b', normalize(title)) and found & {'para', 'substituicao'}:
+        return 0
     for category in ({'teclado', 'keyboard'}, {'mouse', 'mice'}, {'headset', 'headphone', 'fone'}, {'monitor', 'monitores'}):
         if wanted & category and not found & category:
             return 0
