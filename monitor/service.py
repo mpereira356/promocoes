@@ -86,6 +86,8 @@ class Monitor:
             readings = parser.parse(html, final)
             if final_domain == 'amazon.com.br' and self.config.browser and all(r.price is None for r in readings):
                 if parser.price_requires_cart(html):
+                    if any(r.starting_price is not None for r in readings):
+                        return readings, html, final
                     raise ReadError('amazon_price_requires_cart')
                 offers_url = parser.buying_options_url(html, final)
                 if not offers_url and any(r.stock != 'out_of_stock' for r in readings):

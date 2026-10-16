@@ -1,3 +1,11 @@
+# Amazon - 2026.10.16-amazon-starting.1
+
+Leitura real local em 16/10/2026 dos tres links informados: B0GQ5145QV esta indisponivel, sem preco; B004PS7O9I (Karcher) e B0BT23S5MF (WAP) ocultam o preco principal com mensagem de carrinho. O widget publico de outras ofertas declara valores a partir de R$ 234,06 e R$ 145,90, respectivamente. O leitor agora coleta essa referencia vinculada ao mesmo ASIN e mostra separadamente, com link para as outras ofertas. Nao atribui o valor ao vendedor principal, nao confirma estoque/pagamento e nao usa esse minimo em ranking, series de precos validos ou alertas. O campo price continua nulo quando a oferta individual nao foi confirmada.
+
+O caminho completo Monitor -> adaptador -> mensagem foi conferido com HTTP real local para Karcher e WAP, com navegador habilitado na configuracao, sem adicionar itens ao carrinho. Links publicos de outras ofertas tambem foram consultados por HTTP: retornaram pagina do mesmo ASIN sem linhas individuais AOD. Portanto, a coleta completa de vendedor e preco individual continua sem validacao nesses dois anuncios; nao se afirma que essa limitacao foi resolvida. Falhas de rede da VPS nao foram reproduzidas nem eliminadas. Nao houve envio real ao Telegram ou acesso SSH.
+
+327 testes passaram (tres avisos PTB de depreciacao). Simulacoes e recortes reais reduzidos verificam ASIN/origem/escopo, moeda, valores zero e ambiguos, ausencia de ranking, entrega da referencia na mensagem, ausencia de alerta e preservacao do ultimo preco valido. Os valores acima sao capturas pontuais, nao garantias de precos atuais.
+
 # Amazon - 2026.10.16-amazon-query.1
 
 Falha reproduzida ao vivo localmente em 16/10/2026: a consulta "Aspirador de Po Portatil" com acentos retornou somente paginas de busca, mesmo com inurl:dp. A mesma consulta sem diacriticos retornou produtos individuais. A descoberta Amazon agora remove apenas diacriticos, preservando codigos, pontuacao e as regras de conferencia do produto. A chave de cache usa a mesma grafia normalizada, sem consultas duplicadas. Nao houve contorno de bloqueios ou limites.

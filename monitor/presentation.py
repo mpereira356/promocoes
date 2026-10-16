@@ -84,7 +84,7 @@ def offer_text(reading, store="", rank=None, provisional=False, ad_id=None):
     if store:
         parts.append("🏪 Loja: " + store[:80])
     parts += [
-        f"💰 Preço: {price}",
+        ('💰 Preço da oferta principal: não divulgado' if reading.price is None and reading.starting_price is not None else f"💰 Preço: {price}"),
         f'💳 Pagamento: {reading.payment[:100] or "❓ Não declarado para este preço"}',
         f'👤 Vendedor: {reading.seller[:100] or "❓ Não declarado pela página"}',
         f"📦 Condição: {condition}",
@@ -92,6 +92,15 @@ def offer_text(reading, store="", rank=None, provisional=False, ad_id=None):
         "🚚 Frete não incluído.",
         '',
     ]
+    if reading.starting_price is not None and reading.price is None:
+        amount = 'R$ ' + f'{reading.starting_price // 100:,}'.replace(',', '.') + f',{reading.starting_price % 100:02d}'
+        parts += [
+            '\U0001f4b0 Outras ofertas a partir de: ' + amount,
+            'Valor publicado na p\u00e1gina para outras ofertas; vendedor, pagamento e estoque dessa op\u00e7\u00e3o n\u00e3o confirmados.',
+            'O vendedor acima, quando exibido, pertence \u00e0 oferta principal, cujo pre\u00e7o n\u00e3o foi divulgado.',
+            'Essa refer\u00eancia n\u00e3o entra no ranking, no hist\u00f3rico de pre\u00e7os v\u00e1lidos ou nos alertas.',
+            '\U0001f517 Consultar outras ofertas: ' + reading.starting_price_url, '',
+        ]
     if not reading.comparable:
         missing = []
         if not reading.condition:

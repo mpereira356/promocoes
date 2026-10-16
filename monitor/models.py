@@ -32,6 +32,9 @@ class Reading:
     currency: str = "BRL"
     image: str = ""
     identifiers: dict = field(default_factory=dict)
+    # Referencia publica de varias ofertas, sem atribuir preco a um vendedor.
+    starting_price: int | None = None
+    starting_price_url: str = ""
 
     # Somente comparar quando a pagina identifica todos esses campos.
     @property

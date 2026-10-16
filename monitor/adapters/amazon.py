@@ -79,6 +79,29 @@ class AmazonAdapter(StructuredAdapter):
             re.search(r'/(?:dp|gp/product)/[A-Z0-9]{10}(?:/|$)', p.path)
         )
 
+    def starting_offer(self, soup, url):
+        """Minimo publicado no link de outras ofertas do ASIN, nao uma oferta individual."""
+        asin = re.search(r'/(?:dp|gp/product)/([A-Z0-9]{10})(?:/|$)', urlsplit(url).path)
+        if not asin or {n.get('value') for n in soup.select('input#ASIN')} != {asin[1]}:
+            return None, ''
+        offers = set()
+        for link in soup.select('#olpLinkWidget_feature_div #aod-ingress-link[href]'):
+            target = urljoin(url, link['href'])
+            p = urlsplit(target)
+            if (p.scheme != 'https' or p.hostname != urlsplit(url).hostname
+                    or not re.match(r'^/gp/offer-listing/' + asin[1] + r'(?:/|$)', p.path)
+                    or not re.search(r'\bofertas? a partir de\b', normalize(link.get_text(' ', strip=True)))):
+                continue
+            labels = link.select('.a-price .a-offscreen')
+            if len(labels) != 1:
+                return None, ''
+            match = re.fullmatch(r'R\$\s*([\d.,]+)', labels[0].get_text(' ', strip=True))
+            price = display_money(match[1]) if match else None
+            if price is None:
+                return None, ''
+            offers.add((price, target))
+        return next(iter(offers)) if len(offers) == 1 else (None, '')
+
     def parse(self, html, url):
         if not self.is_product_url(url):
             raise ReadError('individual_listing_required')
@@ -181,7 +204,9 @@ class AmazonAdapter(StructuredAdapter):
             if availability == {'em estoque'}:
                 stock = 'unknown' if stock == 'out_of_stock' else 'in_stock'
         # O preço total não identifica sozinho Pix, parcelamento ou condição.
-        return [Reading(titles[0].get_text(' ', strip=True), seller, '', '', price, stock, identifiers=details)]
+        starting_price, starting_url = self.starting_offer(soup, url)
+        return [Reading(titles[0].get_text(' ', strip=True), seller, '', '', price, stock,
+            identifiers=details, starting_price=starting_price, starting_price_url=starting_url)]
 
     def buying_options_url(self, html, url):
         if not self.is_product_url(url):

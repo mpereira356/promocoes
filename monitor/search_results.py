@@ -9,7 +9,7 @@ from .search import search_error_message
 
 
 async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketplace_only=False):
-    sent = failed = unverified = priced = rejected = 0
+    sent = failed = unverified = priced = rejected = starting = 0
     notices = []
     unverified_links, failures = [], []
     paused = {}
@@ -85,6 +85,7 @@ async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketpla
             ad = db.save_ad(url, store, r)
             await send_offer(bot, chat, r, url, store, rank, provisional, ad['id'])
             sent += 1
+            starting += int(getattr(r, 'price', None) is None and getattr(r, 'starting_price', None) is not None)
             priced += int(getattr(r, 'price', None) is not None and getattr(r, 'price', 0) > 0)
         if failures:
             await send('⚠️ Ofertas não verificadas\n\n' + '\n\n'.join(
@@ -109,6 +110,8 @@ async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketpla
         interrupted = True
         await send('⚠️ A busca foi interrompida por uma falha. Tente novamente mais tarde.')
     finally:
+        if starting:
+            await send(f'Valores publicados como "a partir de": {starting}. São referências de outras ofertas, sem vendedor e condições confirmados; não contam como preços de ofertas individuais.')
         status = ('⚠️ Pesquisa encerrada com falha' if interrupted else
             '⚠️ Pesquisa concluída com limitações' if failed or unverified or notices or (sent and not priced) else '✅ Pesquisa concluída')
         await send(f'{status}\n\nOfertas enviadas: {sent}\nLinks com falha de leitura: {failed}\nAvisos das lojas: {len(notices)}\nLinks para conferência: {unverified}\nPreços lidos nas ofertas enviadas: {priced}\nCandidatos descartados por incompatibilidade: {rejected}\nLinks não consultados por bloqueio da loja: {skipped}')

@@ -203,3 +203,58 @@ def test_search_delivers_primary_price_through_actual_formatter():
         assert 'Ofertas enviadas: 1' in send.await_args_list[-1].args[0]
         assert 'Preços lidos nas ofertas enviadas: 1' in send.await_args_list[-1].args[0]
     asyncio.run(run())
+
+
+@pytest.mark.parametrize('asin,cents', [('B004PS7O9I',23406), ('B0BT23S5MF',14590)])
+def test_real_other_offers_minimum_is_separate_from_individual_price(asin,cents):
+    from monitor.presentation import offer_text,rank_offers
+    html=Path('tests/fixtures/amazon_starting_'+asin+'.html').read_text(encoding='utf-8')
+    url='https://www.amazon.com.br/dp/'+asin
+    r=AmazonAdapter().parse(html,url)[0]
+    assert r.starting_price == cents and '/gp/offer-listing/'+asin in r.starting_price_url
+    assert r.price is None and not r.comparable and r.stock == 'unknown'
+    assert rank_offers([(r,url,'Amazon')])[0][3] is None
+    text=offer_text(r,'Amazon')
+    assert 'Outras ofertas a partir de: R$ ' in text
+    assert 'vendedor, pagamento e estoque' in text
+    async def run():
+        f=SimpleNamespace(canonical=lambda u:(u,'amazon.com.br'),html=AsyncMock(return_value=(html,url)))
+        m=Monitor(None,SimpleNamespace(browser=True),f,None,None)
+        m.amazon_offers=SimpleNamespace(html=AsyncMock())
+        assert (await m.read(url))[0].starting_price == cents
+        m.amazon_offers.html.assert_not_awaited()
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize('change', ['asin','host','zero','currency','ambiguous','unscoped'])
+def test_other_offers_minimum_rejects_wrong_or_ambiguous_reference(change):
+    from bs4 import BeautifulSoup
+    asin='B0BT23S5MF'
+    url='https://www.amazon.com.br/dp/'+asin
+    soup=BeautifulSoup(Path('tests/fixtures/amazon_starting_'+asin+'.html').read_text(encoding='utf-8'),'html.parser')
+    link=soup.select_one('#aod-ingress-link')
+    if change=='asin':link['href']=link['href'].replace(asin,'B004PS7O9I')
+    elif change=='host':link['href']='https://evil.org'+link['href']
+    elif change=='zero':link.select_one('.a-offscreen').string='R$0,00'
+    elif change=='currency':link.select_one('.a-offscreen').string='US$145,90'
+    elif change=='ambiguous':link.append(BeautifulSoup('<span class="a-price"><span class="a-offscreen">R$10,00</span></span>','html.parser'))
+    elif change=='unscoped':soup.select_one('#olpLinkWidget_feature_div')['id']='recommendations'
+    assert AmazonAdapter().starting_offer(soup,url) == (None,'')
+
+
+def test_search_delivers_real_page_minimum_without_counting_individual_price():
+    from monitor.search_results import deliver_search
+    async def run():
+        asin='B0BT23S5MF'
+        url='https://www.amazon.com.br/dp/'+asin
+        html=Path('tests/fixtures/amazon_starting_'+asin+'.html').read_text(encoding='utf-8')
+        f=SimpleNamespace(canonical=lambda u:(u,'amazon.com.br'),html=AsyncMock(return_value=(html,url)))
+        m=Monitor(None,SimpleNamespace(browser=True),f,None,None)
+        send=AsyncMock()
+        bot=SimpleNamespace(send_message=AsyncMock())
+        db=SimpleNamespace(save_ad=lambda *a:{'id':1})
+        await deliver_search(m,f,db,bot,1,url,send)
+        assert any('145,90' in str(c) and 'Outras ofertas a partir de' in str(c) for c in bot.send_message.await_args_list)
+        assert any('a partir de' in c.args[0] for c in send.await_args_list)
+        assert 'Pre\u00e7os lidos nas ofertas enviadas: 0' in send.await_args_list[-1].args[0]
+    asyncio.run(run())

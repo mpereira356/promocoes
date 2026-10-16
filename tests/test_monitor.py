@@ -409,3 +409,12 @@ async def test_rate_limit_deferred():
             await f.request("https://www.pichau.com.br/rate")
     finally:
         await f.close()
+
+
+def test_other_offers_starting_price_cannot_replace_valid_price_or_alert(setup):
+    db,c,r=setup
+    db.record(c,r)
+    db.record(c,replace(r,price=None,starting_price=100,starting_price_url='https://www.amazon.com.br/gp/offer-listing/B0BT23S5MF'))
+    series=db.rows('SELECT last,lowest FROM series')[0]
+    assert series['last'] == series['lowest'] == 100000
+    assert count(db) == 0
