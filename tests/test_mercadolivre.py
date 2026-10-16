@@ -55,7 +55,7 @@ def test_only_explicit_marketplace_hosts_are_allowed():
 
 def test_discovery_uses_declared_form_and_individual_links_only():
     async def run():
-        c = SimpleNamespace(domains=('mercadolivre.com.br',), browser=False, delay=0)
+        c = SimpleNamespace(domains=('mercadolivre.com.br',), browser=False, delay=0, mercadolivre_discovery='site')
         f = Fetcher(c)
         f.html = AsyncMock(side_effect=[
             ('<form method="GET" action="https://lista.mercadolivre.com.br/pesquisa"><input name="as_word"></form>', 'https://www.mercadolivre.com.br/'),
@@ -85,7 +85,7 @@ def test_search_limit_includes_fourth_store(monkeypatch):
         domains = ('kabum.com.br', 'pichau.com.br', 'terabyteshop.com.br', 'mercadolivre.com.br')
         for domain in domains:
             monkeypatch.setitem(ADAPTERS, domain, FakeStore)
-        c = SimpleNamespace(domains=domains, browser=False, delay=0)
+        c = SimpleNamespace(domains=domains, browser=False, delay=0, mercadolivre_discovery='site')
         f = Fetcher(c)
         async def html(url):
             return '<form action="/search"><input name="q"></form>', url

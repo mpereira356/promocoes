@@ -1,35 +1,42 @@
-# Mercado Livre: situacao real e configuracao
+# Pesquisa de produtos Mercado Livre
 
-**A busca real ainda nao foi validada.** Em 15/10/2026, HTTP e Chromium receberam 403, inclusive ao consultar robots.txt. A API oficial sem autenticacao tambem respondeu 403. Trocar para Selenium nao garante acesso. Nao foi validado nenhum anuncio real do Mercado Livre.
+## Descoberta externa sem chave
 
-Existem dois caminhos implementados:
+Use no Telegram:
 
-1. Sem token: o bot tenta descobrir o formulario GET publico e extrair links individuais. Se robots.txt, bloqueio ou CAPTCHA impedir o acesso, informa a falha.
-2. Com `MERCADOLIVRE_ACCESS_TOKEN`: usa `GET https://api.mercadolibre.com/sites/MLB/search` com autorizacao Bearer somente para descobrir titulo e link. Preco e estoque da API sao ignorados; a oferta continua exigindo leitura permitida da pagina.
-
-O segundo caminho exige um aplicativo cadastrado e autorizado no [Mercado Livre Developers](https://developers.mercadolivre.com.br/), seguindo a documentacao de [autenticacao](https://developers.mercadolivre.com.br/autenticacao-e-autorizacao) e [busca de itens](https://developers.mercadolivre.com.br/pt_br/itens-e-buscas). Cadastro, permissoes e autorizacao da conta dependem do usuario e do Mercado Livre. Um token pode nao ter permissao de busca; 403 com token nao e tratado como sucesso.
-
-Quando tiver um token valido, adicione em `/opt/price-monitor/.env`:
-
-```dotenv
-MERCADOLIVRE_ACCESS_TOKEN=
+```text
+/buscarml Gigabyte B550 Aorus Elite V2
 ```
 
-Preencha o valor apenas no servidor, sem enviar pelo chat ou GitHub. Mantenha `mercadolivre.com.br` em `ALLOWED_DOMAINS` e `PLAYWRIGHT_ENABLED=true`. Reinicie:
+O comando consulta o indice externo Tavily Search no [modo oficial sem chave](https://docs.tavily.com/documentation/keyless). Nao precisa criar aplicativo Mercado Livre, fornecer token, configurar dominio ou redirect. Somente o texto do produto e o filtro de dominio sao enviados a Tavily; nao envia Telegram ID, token Telegram ou banco de dados. Nao usa chave Tavily nem fallback automatico para plano pago.
 
-```bash
-sudo systemctl restart price-monitor
-```
+`/buscar nome`, com `SEARCH_PROVIDER=direct`, tambem inclui essa descoberta junto das outras lojas. `mercadolivre.com.br` precisa estar em `ALLOWED_DOMAINS`. O instalador acrescenta esse dominio a lista padrao antiga, preservando listas personalizadas.
 
-O token expira conforme a autorizacao do aplicativo. Esta implementacao nao inclui fluxo OAuth ou renovacao automatica; o token precisa ser atualizado quando expirar. Alertas Mercado Livre nao foram validados de ponta a ponta.
+O bot aceita apenas links HTTPS em hosts Mercado Livre autorizados e paginas de anuncio/produto. Descarta categorias, dominios externos, arquivos/manual/BIOS nao solicitados e conflitos entre consulta e modelo no slug. Titulo e endereco compativeis nao comprovam modelo exato: o indice pode estar desatualizado.
 
-Para diagnosticar no Kali sem enviar Telegram nem alterar o banco:
+## Resultados nao verificados
+
+A descoberta de links e a leitura de precos sao etapas distintas. Links nao conferidos aparecem com titulo, fonte, link e aviso de que preco, estoque, vendedor, condicao e pagamento nao foram verificados. Nao recebem medalha ou ID de anuncio monitoravel e nao ativam alertas. Catalogos podem alternar vendedores, portanto nao representam uma oferta individual. Se um anuncio individual puder ser lido pela pagina, segue o fluxo normal de ofertas.
+
+HTTP e Chromium receberam 403 ao obter robots.txt do Mercado Livre nos ambientes testados. A descoberta externa nao remove esse bloqueio. Precos, estoque e alertas reais dessa loja continuam sem validacao e nunca sao importados de snippets ou precos da API.
+
+## Limites e configuracao
+
+O modo sem chave tem limites publicos e disponibilidade variavel. O bot guarda ate 32 consultas em memoria por cinco horas, serializa chamadas e aguarda apos limites de requisicao, sem trocar IP/conta. O cache se perde ao reiniciar, sem afetar produtos e historico SQLite. Falhas sao informadas; ausencia de resultados nao comprova ausencia do produto.
+
+`MERCADOLIVRE_DISCOVERY=external` e o padrao. `site` tenta o formulario GET publico, sujeito a robots.txt e bloqueios. Se `MERCADOLIVRE_ACCESS_TOKEN` estiver preenchido, pesquisas gerais usam a API oficial, que pode exigir permissoes adicionais e renovacao manual. `/buscarml` usa sempre o indice externo sem chave. OAuth e renovacao automatica nao estao implementados.
+
+## Validacao
+
+Em 15/10/2026, a chamada real a `https://api.tavily.com/search` em modo keyless respondeu 200 e retornou paginas Mercado Livre para B550 Aorus Elite V2, inclusive `https://www.mercadolivre.com.br/placa-mae-gigabyte-b550-aorus-elite-v2-12-ddr4-am4-atx/p/MLB22450130`. O fluxo real de descoberta e geracao de mensagens foi executado com SQLite em memoria: nenhum monitoramento ou oferta valida foi criado a partir dos links nao conferidos. Nao foram enviados Telegram reais nem confirmados precos atuais.
+
+Os testes simulados cobrem dominio permitido, cache, limites, conflito titulo/endereco, exclusao de categorias/arquivos, ausencia de preco do indice e entrega de links sem criar ofertas. A disponibilidade na VPS deve ser conferida apos atualizar.
+
+Diagnostico opcional, sem Telegram:
 
 ```bash
 cd /opt/price-monitor
 sudo -u pricebot .venv/bin/python -m scripts.diagnose_stores --browser --store mercadolivre.com.br --query "Gigabyte B550 Aorus Elite V2"
 ```
 
-O comando usa o `.env` local e imprime somente o resultado do diagnostico, sem credenciais. Compartilhe a saida se quiser investigar a disponibilidade na VPS. `discovered_urls: []` e aviso de acesso suspenso significam falha de descoberta, nao ausencia de produtos.
-
-136 testes locais passaram: o conector da API foi testado exclusivamente com respostas simuladas (links individuais, exclusao de catalogos/dominios externos, precos ignorados, erros 401/403 sem repeticao ou exposicao de detalhes). Isso nao comprova permissoes da API nem acesso a paginas reais.
+`discovered_urls` mostra os links do indice. Falha ao ler a pagina pode continuar aparecendo separadamente.

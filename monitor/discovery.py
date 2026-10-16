@@ -13,12 +13,14 @@ from .adapters.base import ReadError, nodes
 class LinkCandidate:
     url: str
     title: str
+    source: str = ''
 
 
 class SearchLinks(list):
-    def __init__(self, links=(), notices=()):
+    def __init__(self, links=(), notices=(), candidates=None):
         super().__init__(links)
         self.notices = list(notices)
+        self.candidates = candidates or {}
 
 
 def relevance(query, title):
@@ -89,6 +91,8 @@ def form_search_url(html, base, query, fields=None):
 
 
 REASONS = {
+    'external_search_limited': 'limite da busca externa sem chave atingido; aguarde antes de tentar novamente',
+    'external_search_unavailable': 'indice externo indisponivel; nenhum resultado foi inventado',
     'mercadolivre_api_token_missing': 'API oficial exige MERCADOLIVRE_ACCESS_TOKEN no .env',
     'mercadolivre_api_token_expired': 'token da API invalido ou expirado; atualize MERCADOLIVRE_ACCESS_TOKEN',
     'mercadolivre_api_access_denied': 'API oficial recusou acesso (403); verifique permissoes do aplicativo, token pode nao ser suficiente',
@@ -119,7 +123,7 @@ class DirectSearch:
     async def links(self, query):
         from .adapters import ADAPTERS
 
-        links, notices, groups = [], [], []
+        links, notices, groups, details = [], [], [], {}
         for domain in self.config.domains:
             factory = ADAPTERS.get(domain)
             if not factory:
@@ -132,6 +136,11 @@ class DirectSearch:
                 if domain == 'mercadolivre.com.br' and getattr(self.config, 'mercadolivre_token', ''):
                     from .mercadolivre_api import discover
                     candidates = await discover(query, self.config.mercadolivre_token, self.fetcher)
+                elif domain == 'mercadolivre.com.br' and getattr(self.config, 'mercadolivre_discovery', 'external') == 'external':
+                    from .external_market_search import ExternalMarketSearch
+                    if not getattr(self.fetcher, 'external_market_search', None):
+                        self.fetcher.external_market_search = ExternalMarketSearch(self.fetcher)
+                    candidates = await self.fetcher.external_market_search.links(query)
                 elif store.sitemap_urls:
                     from .sitemaps import sitemap_candidates
 
@@ -170,10 +179,11 @@ class DirectSearch:
                         continue
                     if link_domain == domain and link not in accepted:
                         accepted.append(link)
+                        details[link] = c
                 groups.append(accepted[:6])
                 if not accepted:
                     notices.append(
-                        f"{store.name}: nenhum candidato compativel na fonte consultada (HTML ou sitemap limitado). Isso nao prova ausencia do produto."
+                        f"{store.name}: nenhum candidato compativel na fonte consultada (HTML, sitemap limitado ou indice externo). Isso nao prova ausencia do produto."
                     )
             except Exception as exc:
                 reason = (
@@ -182,11 +192,11 @@ class DirectSearch:
                     else "falha ao ler a busca"
                 )
                 notices.append(f"{store.name}: {reason}.")
-                if domain == 'mercadolivre.com.br' and not getattr(self.config, 'mercadolivre_token', ''):
-                    notices.append('Mercado Livre: descoberta sem autenticacao falhou. A alternativa oficial exige aplicativo e token; nao ha busca real validada neste ambiente.')
+                if domain == 'mercadolivre.com.br':
+                    notices.append('Mercado Livre: descoberta falhou nesta consulta. Isso nao prova ausencia do produto.')
         # Distribuir o limite entre lojas; a ultima loja nao deve desaparecer.
         for index in range(6):
             for group in groups:
                 if index < len(group) and group[index] not in links:
                     links.append(group[index])
-        return SearchLinks(links[:15], notices)
+        return SearchLinks(links[:15], notices, {u: details[u] for u in links[:15]})

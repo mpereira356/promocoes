@@ -1,3 +1,11 @@
+# Atualizacao 2026.10.15-ml-search.1
+
+143 testes locais passaram. Os testes novos usam respostas simuladas da busca externa, verificando cache, limites, dominios permitidos, descarte de categorias/arquivos e de titulos incompatveis com o endereco, e entrega de links nao verificados sem criar ofertas ou monitoramentos.
+
+Validacao real em 15/10/2026: a busca publica Tavily em modo oficial sem chave retornou HTTP 200 e cinco links Mercado Livre compativeis com Gigabyte B550 Aorus Elite V2 (incluindo variantes AX identificadas nos titulos). O fluxo real de geracao de mensagens tambem foi exercitado com SQLite em memoria, sem envio Telegram. Nao foram conferidos precos, vendedores ou estoque das paginas; o bloqueio 403 da loja continua. Esses links sao candidatos de indice externo, nao ofertas verificadas. Ver MERCADO-LIVRE.md.
+
+Os registros abaixo descrevem etapas anteriores e suas respectivas validacoes.
+
 # Validação executada em 15/10/2026
 
 ## Testes simulados

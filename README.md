@@ -1,12 +1,10 @@
 Para publicar no GitHub e atualizar o servidor com Git, veja [GITHUB.md](GITHUB.md).
 
-Para os bloqueios atuais do Mercado Livre, alternativa autenticada e diagnostico na VPS, veja [MERCADO-LIVRE.md](MERCADO-LIVRE.md). O conector da API descobre somente links; ainda exige acesso permitido a pagina para confirmar preco e estoque.
+**Mercado Livre: descoberta de links pelo indice externo Tavily sem chave.** Use `/buscarml nome` para pesquisar somente no Mercado Livre, ou `/buscar nome` com `SEARCH_PROVIDER=direct` para incluir a loja nas pesquisas gerais. Nao exige aplicativo Mercado Livre, dominio, redirect ou token. O modo publico e limitado e pode ficar temporariamente indisponivel. Veja [MERCADO-LIVRE.md](MERCADO-LIVRE.md).
 
-**Mercado Livre: suporte experimental, sem validacao de ofertas reais.** O adaptador aceita anuncios individuais `produto.mercadolivre.com.br/MLB-...`, descobre links somente a partir de formulario GET declarado pela pagina e le dados Schema.org. Nao compara catalogos que podem alternar de vendedor, nem presume Pix, vendedor ou condicao ausentes. Ha suporte aos hosts explicitos `www`, `lista` e `produto`, sem liberar subdominios arbitrarios.
+A descoberta foi testada com resultados reais para Gigabyte B550 Aorus Elite V2 em 15/10/2026. Links de catalogo sao exibidos para conferencia, sem preco, ID de anuncio monitoravel, medalhas ou alertas. O titulo vem do indice e pode estar desatualizado. A leitura de paginas Mercado Livre continua bloqueada com 403 no ambiente testado; monitoramento de precos dessa loja ainda nao foi validado. Nenhum preco do indice e usado como preco de oferta.
 
-Os acessos reais por HTTP e Chromium em 15/10/2026 retornaram 403 inclusive para robots.txt; nesse ambiente nao foi possivel pesquisar ou monitorar anuncios reais. Nao ha contorno de CAPTCHA, login ou bloqueio, nem fallback de preco extraido dos resultados de busca. Os testes deste adaptador sao simulados, sem seletores especificos validados. O formulario ou JSON-LD real pode exigir adaptacao adicional quando houver acesso permitido.
-
-Ao executar `bash deploy/update.sh`, o instalador acrescenta `mercadolivre.com.br` se o `.env` ainda contiver exatamente a lista padrao das tres lojas. Listas personalizadas devem receber esse dominio manualmente em `/opt/price-monitor/.env`; depois reinicie o servico. Chromium deve estar ativado. O acesso efetivo continua dependendo da resposta do site na VPS.
+Ao executar `bash deploy/update.sh`, o instalador acrescenta `mercadolivre.com.br` se o `.env` ainda contiver exatamente a lista padrao das tres lojas. Listas personalizadas devem receber esse dominio manualmente em `/opt/price-monitor/.env`; depois reinicie o servico. A descoberta externa nao precisa de Chromium. A leitura de ofertas ainda depende do acesso permitido a loja.
 
 # Monitor de preços pelo Telegram
 

@@ -1,1 +1,1 @@
-VERSION = "2026.10.15-diagnostic.1"
+VERSION = "2026.10.15-ml-search.1"

@@ -78,6 +78,7 @@ def main():
             args.store or os.getenv("ALLOWED_DOMAINS", "pichau.com.br,terabyteshop.com.br,mercadolivre.com.br")
         ),
         mercadolivre_token=os.getenv('MERCADOLIVRE_ACCESS_TOKEN', '').strip(),
+        mercadolivre_discovery=os.getenv('MERCADOLIVRE_DISCOVERY', 'external'),
     )
     print(
         json.dumps(asyncio.run(diagnose(c, args.query)), ensure_ascii=False, indent=2)

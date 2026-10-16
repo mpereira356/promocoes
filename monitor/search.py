@@ -7,6 +7,7 @@ from .adapters.base import ReadError
 
 def search_error_message(code):
     return {
+        'marketplace_not_authorized': 'Adicione mercadolivre.com.br a ALLOWED_DOMAINS no .env e reinicie o servico.',
         "search_not_configured": (
             "A busca por nome nao esta configurada: falta SEARCH_API_KEY no arquivo .env.\n"
             "Crie uma chave em https://api-dashboard.search.brave.com/ e preencha:\n"
@@ -25,6 +26,19 @@ class Search:
     def __init__(self, config, fetcher):
         self.config, self.fetcher = config, fetcher
         self.lock = asyncio.Lock()
+
+    async def marketplace_links(self, query):
+        from types import SimpleNamespace
+        from .discovery import DirectSearch
+        if 'mercadolivre.com.br' not in self.config.domains:
+            raise ReadError('marketplace_not_authorized')
+        config = SimpleNamespace(
+            domains=('mercadolivre.com.br',), browser=self.config.browser,
+            mercadolivre_token='',
+            mercadolivre_discovery='external',
+        )
+        async with self.lock:
+            return await DirectSearch(config, self.fetcher).links(query)
 
     def configuration_error(self):
         if self.config.provider == "direct":

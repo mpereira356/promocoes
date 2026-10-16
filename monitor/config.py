@@ -39,6 +39,7 @@ class Config:
     target: int | None
     browser: bool
     mercadolivre_token: str = ''
+    mercadolivre_discovery: str = 'external'
 
     @classmethod
     def load(cls):
@@ -69,9 +70,11 @@ class Config:
             cents("TARGET_PRICE") if os.getenv("TARGET_PRICE") else None,
             os.getenv("PLAYWRIGHT_ENABLED", "false").lower() == "true",
             os.getenv('MERCADOLIVRE_ACCESS_TOKEN', '').strip(),
+            os.getenv('MERCADOLIVRE_DISCOVERY', 'external').strip().lower(),
         )
         if (
-            c.user <= 0
+            c.mercadolivre_discovery not in ('external', 'site')
+            or c.user <= 0
             or c.interval <= 0
             or c.delay < 1
             or not c.percent.is_finite()

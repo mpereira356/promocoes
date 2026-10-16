@@ -17,6 +17,7 @@ from .subscriptions import ask_scope, handle_subscription
 from .version import VERSION
 
 HELP = """/buscar nome - encontrar anuncios com ID, fotos e medalhas (sem ativar acompanhamento)
+/buscarml nome - descobrir links Mercado Livre; dados nao verificados sao identificados
 /monitorar ID_DO_ANUNCIO - escolher so esta oferta ou outras lojas
 /monitorar nome ou https://link - procurar anuncios para escolher
 /lista - produtos, status e ofertas pendentes
@@ -143,7 +144,7 @@ def main():
                             f"  Anuncio {c['ad_id'] or 'pendente'} | Oferta {c['id']}: {'confirmada' if c['confirmed'] else 'aguarda confirmacao'} | {c['title']} | ultima leitura: {last[0]['status'] if last else 'pendente'}\n{c['url']}"
                         )
                 return await reply("\n".join(lines) or "Nenhum produto.")
-            if name in ("/monitorar", "/buscar"):
+            if name in ("/monitorar", "/buscar", "/buscarml"):
                 query = " ".join(args).strip()
                 if not query or len(query) > 600:
                     return await reply("Informe um nome ou link (ate 600 caracteres).")
@@ -152,7 +153,7 @@ def main():
                 if "://" in query:
                     query, _ = fetcher.canonical(query)
                 else:
-                    error = monitor.search.configuration_error()
+                    error = monitor.search.configuration_error() if name != '/buscarml' else None
                     if error:
                         return await reply(
                             search_error_message(error)
@@ -161,10 +162,11 @@ def main():
 
                 async def search_send():
                     await deliver_search(
-                        monitor, fetcher, db, app.bot, config.chat, query, send
+                        monitor, fetcher, db, app.bot, config.chat, query, send,
+                        marketplace_only=name == '/buscarml'
                     )
 
-                await reply("Consultando paginas das ofertas...")
+                await reply("🔎 Pesquisando links do Mercado Livre..." if name == '/buscarml' else "Consultando paginas das ofertas...")
                 background(search_send())
                 return
             if not args:
@@ -274,6 +276,7 @@ def main():
         "ajuda",
         "status",
         "buscar",
+        "buscarml",
         "monitorar",
         "lista",
         "opcoes",
