@@ -1,4 +1,4 @@
-**Versão atual: `2026.10.16-ddr4.1`.** Envie **/start** ou **/menu** para usar a central de botões: buscas, promoções, monitoramentos, histórico, pausa e filtros guiados. Após tocar em Buscar, basta digitar o nome do produto. Os filtros são configurados passo a passo e conferidos antes de aplicar. Veja [MENU-TELEGRAM.md](MENU-TELEGRAM.md).
+**Versão atual: `2026.10.16-offers.1`.** Envie **/start** ou **/menu** para usar a central de botões: buscas, promoções, monitoramentos, histórico, pausa e filtros guiados. Após tocar em Buscar, basta digitar o nome do produto. Os filtros são configurados passo a passo e conferidos antes de aplicar. Veja [MENU-TELEGRAM.md](MENU-TELEGRAM.md).
 
 **Títulos e exemplos:** os títulos aparecem em negrito no Telegram, com HTML escapado, inclusive nas legendas de fotos. A ajuda explica os argumentos de `/configurar`, mostra quando os filtros disparam ou impedem um alerta, como remover o alvo e como alternar os modos. A seleção de promoções também traz exemplos de `>30` e `>=30`.
 
@@ -216,3 +216,17 @@ Dois problemas foram corrigidos: cabeçalhos de compressão do texto já decodif
 Pichau agora tem extração de Pix pelo bloco de preço à vista associado ao produto e ao rótulo explícito, mantendo vendedor/condição/estoque do JSON-LD. Terabyte lê o vendedor explícito e não converte preço visual zero em oferta. Na sondagem real da Elite V2, a Pichau estava disponível e comparável; a Terabyte estava indisponível, sem modalidade atual segura para comparação. As regras de não misturar modalidades e não inventar estoque/preço continuam valendo.
 
 A validação real foi executada no Windows com Chromium, sem Telegram, usando o mesmo Fetcher e adaptadores de produção. A instalação APT/systemd no seu Kali ainda precisa ser executada; o instalador verifica a inicialização do navegador como usuário do serviço. Outros produtos e futuras mudanças do site podem exigir novas adaptações. As limitações de transporte HTTP das versões anteriores ficam substituídas por este caminho testado quando o modo navegador estiver ativado.
+
+## Diagnosticar um anúncio que falhou na VPS
+
+Após atualizar o projeto, consulte o mesmo link como usuário do serviço:
+
+```bash
+cd /opt/price-monitor
+sudo -u pricebot .venv/bin/python -m scripts.diagnose_offers --browser \
+  --url 'https://www.pichau.com.br/teclado-mecanico-ajazz-ak820-rgb-switch-vermelho-preto-ak820-bk'
+```
+
+Repita `--url 'LINK'` para testar outros anúncios. O diagnóstico não grava banco nem envia Telegram. Mostra preço quando lido, disponibilidade, motivo de falha e posições do código. Não imprime mensagens brutas de exceções ou credenciais. `price_verified: true` significa que o preço foi lido, inclusive em um produto indisponível; não confirma possibilidade de compra. No Windows, use `.\.venv\Scripts\python.exe` no lugar de `sudo -u pricebot .venv/bin/python`.
+
+Bloqueios por IP, CAPTCHA e exigência de carrinho podem impedir obter preços. Sucesso no Windows não confirma acesso pela VPS. A validação dos links AJAZZ e as limitações restantes estão em [VALIDACAO.md](VALIDACAO.md).

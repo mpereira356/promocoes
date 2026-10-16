@@ -38,6 +38,7 @@ class AmazonOffersReader:
 
     def _load(self, url, policy):
         driver = None
+        phase = 'amazon_browser_start_failed'
         try:
             from selenium import webdriver
             from selenium.webdriver.chrome.service import Service
@@ -47,6 +48,10 @@ class AmazonOffersReader:
             os.environ.setdefault('SE_AVOID_STATS', 'true')
             options = webdriver.ChromeOptions()
             options.add_argument('--headless=new')
+            options.add_argument('--disable-gpu')
+            if os.name == 'posix':
+                # /dev/shm é pequeno em muitas VPS; usa arquivos temporários comuns.
+                options.add_argument('--disable-dev-shm-usage')
             binary = shutil.which('chromium') or shutil.which('chromium-browser')
             if binary:
                 options.binary_location = binary
@@ -54,6 +59,7 @@ class AmazonOffersReader:
             driver_path = shutil.which('chromedriver')
             service = Service(driver_path, log_output=subprocess.DEVNULL) if driver_path else Service(log_output=subprocess.DEVNULL)
             driver = webdriver.Chrome(service=service, options=options)
+            phase = 'amazon_browser_navigation_failed'
             driver.set_page_load_timeout(40)
             driver.get(url)
             final, domain = self.fetcher.canonical(driver.current_url)
@@ -70,17 +76,28 @@ class AmazonOffersReader:
                 if is_access_challenge(d.page_source):
                     raise ReadError('captcha_no_bypass')
                 return bool(d.find_elements('css selector', '#aod-offer-list #aod-offer'))
+            phase = 'amazon_offers_panel_timeout'
             WebDriverWait(driver, 20).until(ready)
             return driver.page_source
         except ReadError:
             raise
         except ImportError:
             raise ReadError('selenium_not_installed') from None
-        except Exception:
-            raise ReadError('amazon_offers_unavailable') from None
+        except Exception as exc:
+            raise ReadError(browser_error(exc, phase)) from None
         finally:
             if driver:
                 try:
                     driver.quit()
                 except Exception:
                     pass
+
+
+def browser_error(exc, phase):
+    """Classifica sem expor mensagem, URL, cookies ou configuração do navegador."""
+    text = str(exc).lower()
+    if 'tab crashed' in text or 'chrome not reachable' in text or 'disconnected' in text:
+        return 'amazon_browser_crashed'
+    if re.search(r'net::err_(?:connection|name_not_resolved|proxy|tunnel|timed_out)', text):
+        return 'amazon_browser_connection_failed'
+    return phase

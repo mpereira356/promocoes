@@ -11,6 +11,11 @@ class AmazonAdapter(StructuredAdapter):
     name = 'Amazon Brasil'
     external_discovery = True
 
+    def price_requires_cart(self, html):
+        soup = BeautifulSoup(html, 'html.parser')
+        return any('adicione este item ao seu carrinho' in normalize(n.get_text(' ', strip=True))
+            for n in soup.select('#priceNotAvailable_feature_div'))
+
     def is_product_url(self, url):
         p = urlsplit(url)
         return p.hostname in ('amazon.com.br', 'www.amazon.com.br') and bool(

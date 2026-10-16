@@ -13,6 +13,7 @@ PREFIXES = (
     '🛍️ Bot de ofertas', 'ℹ️ Status do bot', '🏆 ', '🥇 ', '🥈 ', '🥉 ',
     '🔔 Monitoramento ', '✅ Monitoramento ', '✅ Oferta ', '✅ Modelo confirmado',
     '✅ Pesquisa concluída', '✅ Busca pontual concluída', '⚠️ Pesquisa encerrada',
+    '⚠️ Pesquisa concluída',
     '⚠️ Avisos da pesquisa', '🏷️ Busca pontual de promoções', '🏷️ Oferta ',
     '📉 QUEDA DE PREÇO', '📈 AUMENTO DE PREÇO', '📊 Oferta ',
     'Hardware · escolha a subcategoria:', '🏷️ ', '✅ Catálogo atualizado',

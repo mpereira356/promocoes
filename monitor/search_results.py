@@ -1,4 +1,6 @@
 """Entrega de buscas com resumo final, sem transformar erros em ofertas."""
+import logging
+import httpx
 from .adapters import adapter
 from .adapters.base import ReadError
 from .discovery import REASONS, relevance
@@ -7,7 +9,7 @@ from .search import search_error_message
 
 
 async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketplace_only=False):
-    sent = failed = unverified = 0
+    sent = failed = unverified = priced = 0
     notices = []
     interrupted = False
     try:
@@ -38,7 +40,13 @@ async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketpla
                 offers.extend((r, url, adapter(domain).name) for r in readings)
             except Exception as exc:
                 failed += 1
-                reason = REASONS.get(str(exc), 'falha de leitura nao identificada') if isinstance(exc, ReadError) else 'falha interna de leitura'
+                if isinstance(exc, ReadError):
+                    reason = REASONS.get(str(exc), 'A página não possui uma oferta que o leitor consiga validar')
+                elif isinstance(exc, (OSError, httpx.RequestError)):
+                    reason = 'A conexão com a loja falhou por rede ou DNS'
+                else:
+                    reason = 'O leitor encontrou um erro interno; consulte o tipo registrado nos logs do serviço'
+                logging.getLogger(__name__).critical('search_offer_failed type=%s', type(exc).__name__)
                 if external:
                     await send(discovered_text(candidate) + '\n⚠️ Leitura da página: ' + reason + '.')
                     unverified += 1
@@ -48,6 +56,7 @@ async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketpla
             ad = db.save_ad(url, store, r)
             await send_offer(bot, chat, r, url, store, rank, provisional, ad['id'])
             sent += 1
+            priced += int(getattr(r, 'price', None) is not None and getattr(r, 'price', 0) > 0)
         if notices:
             await send('⚠️ Avisos da pesquisa\n\n' + '\n'.join(notices))
     except ReadError as exc:
@@ -57,8 +66,9 @@ async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketpla
         interrupted = True
         await send('⚠️ A busca foi interrompida por uma falha. Tente novamente mais tarde.')
     finally:
-        status = '⚠️ Pesquisa encerrada com falha' if interrupted else '✅ Pesquisa concluída'
-        await send(f'{status}\n\nOfertas enviadas: {sent}\nLinks com falha de leitura: {failed}\nAvisos das lojas: {len(notices)}\nLinks para conferência: {unverified}')
+        status = ('⚠️ Pesquisa encerrada com falha' if interrupted else
+            '⚠️ Pesquisa concluída com limitações' if failed or (sent and not priced) else '✅ Pesquisa concluída')
+        await send(f'{status}\n\nOfertas enviadas: {sent}\nLinks com falha de leitura: {failed}\nAvisos das lojas: {len(notices)}\nLinks para conferência: {unverified}\nPreços lidos nas ofertas enviadas: {priced}')
 
 
 def discovered_text(candidate):

@@ -36,7 +36,7 @@ def test_search_always_finishes_and_does_not_expose_internal_errors(failure):
         )
         await deliver_search(monitor, None, None, None, 1, 'b550', send)
         messages = [c.args[0] for c in send.await_args_list]
-        assert messages[-1].startswith('✅ Pesquisa concluída')
+        assert messages[-1].startswith('⚠️ Pesquisa concluída com limitações')
         assert 'Links com falha de leitura: 1' in messages[-1]
         assert all('private detail' not in m for m in messages)
         assert monitor.read.await_count == 1
@@ -66,4 +66,40 @@ def test_transient_browser_errors_retry_but_blocks_do_not(reason, retries, monke
             assert transport.get.await_count == retries
         finally:
             await f.close()
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize('recovers', [True, False])
+def test_dns_retries_are_bounded_and_private_addresses_stay_blocked(monkeypatch, recovers):
+    async def run():
+        f = Fetcher(SimpleNamespace(domains=('pichau.com.br',), browser=False))
+        public = [(None, None, None, None, ('8.8.8.8', 443))]
+        dns = AsyncMock(side_effect=[OSError('private detail'), OSError('private detail'), public if recovers else OSError('private detail')])
+        monkeypatch.setattr(asyncio.get_running_loop(), 'getaddrinfo', dns)
+        sleep = AsyncMock()
+        monkeypatch.setattr('monitor.network.asyncio.sleep', sleep)
+        try:
+            if recovers:
+                await f.public('https://www.pichau.com.br/product')
+            else:
+                with pytest.raises(ReadError, match='network_dns_failure'):
+                    await f.public('https://www.pichau.com.br/product')
+            assert dns.await_count == 3 and sleep.await_count == 2
+            dns.side_effect = None
+            dns.return_value = [(None, None, None, None, ('127.0.0.1', 443))]
+            with pytest.raises(ReadError, match='non_public_address'):
+                await f.public('https://www.pichau.com.br/product')
+        finally:
+            await f.close()
+    asyncio.run(run())
+
+
+def test_exact_offer_diagnostic_does_not_echo_rejected_credentials():
+    import json
+    from scripts.diagnose_offers import diagnose
+    async def run():
+        config = SimpleNamespace(domains=('pichau.com.br',), browser=False)
+        report = await diagnose(config, ['https://name:private-secret@www.pichau.com.br/product'])
+        assert 'private-secret' not in json.dumps(report)
+        assert report['offers'][0]['price_verified'] is False
     asyncio.run(run())

@@ -7,6 +7,7 @@ from monitor.adapters.amazon import AmazonAdapter
 from monitor.adapters.base import ReadError
 from monitor.service import Monitor
 from monitor.amazon_offers import AmazonOffersReader
+from monitor.amazon_offers import browser_error
 
 URL = 'https://www.amazon.com.br/Gigabyte-B550-AORUS-ELITE-AX/dp/B08KGVH7YC'
 HTML = Path('tests/fixtures/amazon_aod_real.html').read_text(encoding='utf-8')
@@ -80,4 +81,29 @@ def test_robots_restriction_stops_selenium_before_start(monkeypatch):
         with pytest.raises(ReadError, match='robots_disallowed'):
             await reader.html('https://www.amazon.com.br/gp/offer-listing/B08KGVH7YC/ref=test')
         load.assert_not_called()
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize('message,expected', [
+    ('tab crashed; private details', 'amazon_browser_crashed'),
+    ('net::ERR_NAME_NOT_RESOLVED secret', 'amazon_browser_connection_failed'),
+    ('net::ERR_TUNNEL_CONNECTION_FAILED secret', 'amazon_browser_connection_failed'),
+    ('private unrelated details', 'amazon_browser_start_failed'),
+])
+def test_browser_failure_is_classified_without_private_details(message, expected):
+    assert browser_error(RuntimeError(message), 'amazon_browser_start_failed') == expected
+
+
+def test_real_cart_price_requirement_stops_before_selenium():
+    async def run():
+        html = Path('tests/fixtures/amazon_ak820_cart_price_real.html').read_text(encoding='utf-8')
+        url = 'https://www.amazon.com.br/dp/B0H9BWD7NP'
+        assert AmazonAdapter().price_requires_cart(html)
+        assert not AmazonAdapter().price_requires_cart('<aside>adicione este item ao seu carrinho</aside>')
+        f = SimpleNamespace(canonical=lambda u: (u, 'amazon.com.br'), html=AsyncMock(return_value=(html, url)))
+        monitor = Monitor(None, SimpleNamespace(browser=True), f, None, None)
+        monitor.amazon_offers = SimpleNamespace(html=AsyncMock())
+        with pytest.raises(ReadError, match='amazon_price_requires_cart'):
+            await monitor.read(url)
+        monitor.amazon_offers.html.assert_not_called()
     asyncio.run(run())

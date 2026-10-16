@@ -232,3 +232,15 @@ def test_browser_headers_with_accents_do_not_fail_response(monkeypatch):
         assert response.headers['x-store-label'] == 'ação'
         assert response.status_code == 200
     asyncio.run(run())
+
+
+@pytest.mark.parametrize('fixture,parser,price', [
+    ('pichau_ak820_unavailable_real.html', PichauAdapter, 21999),
+    ('pichau_ak820pro_unavailable_real.html', PichauAdapter, 41999),
+    ('terabyte_ak820pro_unavailable_real.html', TerabyteAdapter, 56990),
+])
+def test_real_reported_keyboard_pages_keep_price_and_unavailable(fixture, parser, price):
+    html = Path('tests/fixtures', fixture).read_text(encoding='utf-8')
+    reading = parser().parse(html, 'https://www.pichau.com.br/keyboard')[0]
+    assert reading.price == price
+    assert reading.stock == 'out_of_stock'

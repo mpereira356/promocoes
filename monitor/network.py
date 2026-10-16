@@ -72,9 +72,16 @@ class Fetcher:
 
     async def public(self, url):
         host = urlsplit(url).hostname
-        infos = await asyncio.get_running_loop().getaddrinfo(
-            host, 443, type=socket.SOCK_STREAM
-        )
+        for attempt in range(3):
+            try:
+                infos = await asyncio.get_running_loop().getaddrinfo(
+                    host, 443, type=socket.SOCK_STREAM
+                )
+                break
+            except OSError:
+                if attempt == 2:
+                    raise ReadError('network_dns_failure') from None
+                await asyncio.sleep(2 ** (attempt + 1))
         if not infos or any(not ipaddress.ip_address(i[4][0]).is_global for i in infos):
             raise ReadError("non_public_address")
 

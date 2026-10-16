@@ -105,6 +105,13 @@ def form_search_url(html, base, query, fields=None):
 
 
 REASONS = {
+    'network_dns_failure': 'O servidor não conseguiu resolver o endereço da loja após três tentativas de DNS',
+    'amazon_price_requires_cart': 'A Amazon ocultou o preço e pede adicionar o item ao carrinho. Nenhuma ação de compra foi feita; preço não confirmado',
+    'amazon_browser_crashed': 'O processo do Chrome encerrou ou a aba falhou. Verifique memória, espaço temporário e os logs do serviço',
+    'amazon_browser_start_failed': 'Não foi possível iniciar Chrome/ChromeDriver. Verifique a instalação e as permissões do usuário pricebot',
+    'amazon_browser_navigation_failed': 'O Chrome não conseguiu abrir a página da Amazon',
+    'amazon_browser_connection_failed': 'A conexão do Chrome com a Amazon falhou por rede, DNS ou proxy',
+    'amazon_offers_panel_timeout': 'A página abriu, mas o painel de ofertas não ficou disponível no tempo limite',
     'selenium_not_installed': 'Selenium não está instalado. Atualize o serviço com deploy/update.sh',
     'amazon_offers_http_error': 'A Amazon recusou a consulta ou não carregou o painel de ofertas',
     'amazon_offers_unavailable': 'Não foi possível carregar as opções de compra da Amazon no navegador',

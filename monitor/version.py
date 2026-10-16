@@ -1,1 +1,1 @@
-VERSION = "2026.10.16-ddr4.1"
+VERSION = "2026.10.16-offers.1"

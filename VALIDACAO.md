@@ -230,3 +230,15 @@ Validação real local em 16/10/2026: consulta limitada a uma página e um produ
 
 Amazon falhou no painel de opções de compra. Mercado Livre retornou catálogos nos links examinados; não houve validação de preço de anúncio individual. Essas duas integrações permanecem parciais. Não foi testado o acesso pelo IP da VPS Kali. Testes automatizados adicionais simulam limitação de mensagens, falha de entrega, DNS, recursos opcionais e cabeçalhos com acentos.
 
+# Atualização 2026.10.16-offers.1 — links AJAZZ informados pelo usuário
+
+266 testes automatizados passaram, incluindo capturas reduzidas e simulações. Os testes de envio ao Telegram usam substitutos locais, sem envio real.
+
+Os cinco links exatos foram consultados localmente, com o mesmo Monitor/Fetcher usado pelo bot, sem Telegram e sem banco. Os dois anúncios da Pichau foram lidos: AK820 preto, R$ 219,99 Pix, e AK820 Pro branco/azul, R$ 419,99 Pix; ambos indisponíveis. O primeiro redirecionou para o endereço atual da loja. A Terabyte retornou AK820 Pro branco/roxo, R$ 569,90, indisponível, sem modalidade explícita. Foram incluídos recortes dessas capturas como testes de regressão. Esses preços são registros pontuais de 16/10/2026 e podem mudar.
+
+O bloqueio Pichau e as falhas internas da VPS não foram reproduzidos localmente. Não há acesso SSH ao servidor nesta sessão, portanto não foi corrigido nem validado o acesso pelo IP da VPS. A resolução DNS agora recebe três tentativas com espera progressiva e falha com motivo específico, sem remover a verificação de endereços públicos.
+
+Nos links Amazon não houve validação de preço. O navegador Selenium local apresentou encerramento de aba (`tab crashed`), agora classificado separadamente de falhas de instalação, conexão e timeout do painel. A execução Linux recebe a opção padrão disable-dev-shm-usage para ambientes com memória compartilhada pequena; isso não foi validado na VPS e não resolve todo tipo de encerramento do Chrome. Uma captura HTTP do AK820 e a consulta final do AK820 Pro mostraram que a loja exige adicionar ao carrinho para revelar detalhes/preço. O leitor reconhece o aviso dentro do bloco principal observado e não inicia ação de compra. Uma consulta final do primeiro link retornou apenas título e campos parciais, sem preço: não equivale a uma oferta com preço validado.
+
+O resumo de buscas diferencia conclusão com limitações e informa quantas ofertas enviadas tiveram preço lido. Exceções internas registram apenas o tipo no log. O novo `scripts.diagnose_offers` consulta links exatos e informa motivos e posições do código sem enviar mensagens nem alterar dados. Os testes adicionais de classificação de erro, DNS e credenciais rejeitadas são simulações; os testes dos recortes reais não executam rede.
+
