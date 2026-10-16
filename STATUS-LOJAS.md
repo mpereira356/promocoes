@@ -1,3 +1,11 @@
+# Amazon - 2026.10.16-amazon-query.1
+
+Falha reproduzida ao vivo localmente em 16/10/2026: a consulta "Aspirador de Po Portatil" com acentos retornou somente paginas de busca, mesmo com inurl:dp. A mesma consulta sem diacriticos retornou produtos individuais. A descoberta Amazon agora remove apenas diacriticos, preservando codigos, pontuacao e as regras de conferencia do produto. A chave de cache usa a mesma grafia normalizada, sem consultas duplicadas. Nao houve contorno de bloqueios ou limites.
+
+Depois da alteracao, a consulta original encontrou candidatos sem o aviso de ausencia. Uma leitura real separada confirmou MONOZEL B0F53JGRLS por R$ 242,96, em estoque, vendedor Amazon Global. Outros candidatos estavam indisponiveis e sem preco. Pecas de reposicao foram excluidas dos resultados de aspiradores completos. Sao capturas locais pontuais; a VPS e o envio real no Telegram nao foram validados. Nao se garante descoberta de qualquer produto ou disponibilidade permanente do indice externo.
+
+317 testes passaram, incluindo simulacoes de normalizacao, cache, preservacao de codigo de modelo e exclusao de motor sobressalente. Tres avisos de depreciacao PTB continuam nos testes de RetryAfter, sem falhas.
+
 # Amazon — 2026.10.16-amazon-main.1
 
 Consulta real local: descoberta e leitura de páginas individuais de aspiradores passaram a obter preços no bloco principal. MONOZEL B0F53JGRLS: R$ 242,96, Amazon Global, disponível. WAP B0BT23S5MF: R$ 149,00, disponível. Esses valores são capturas pontuais, sem validação pelo IP da VPS. Condição/pagamento ausentes continuam impedindo alertas comparáveis. Preço oculto com exigência de carrinho continua sem confirmação. Não se garante leitura de todo anúncio Amazon.

@@ -34,6 +34,10 @@ def relevance(query, title):
     wanted = terms(query) - stop
     found = terms(title)
     vacuum_parts = {'copo', 'filtro', 'escova', 'bico', 'bateria', 'carregador', 'peca'}
+    if ('aspirador' in wanted and not wanted & vacuum_parts
+            and found & {'sobressalente', 'reposicao', 'substituicao'}
+            and found & (vacuum_parts | {'motor', 'tanque'})):
+        return 0
     if 'aspirador' in wanted and not wanted & vacuum_parts and re.match(
             r'^(?:copo|filtro|escova|bico|bateria|carregador|peca)s?\b', normalize(title)) and found & {'para', 'substituicao'}:
         return 0

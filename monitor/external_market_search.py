@@ -1,6 +1,7 @@
 """Descoberta no indice Tavily: modo oficial sem chave, sem extrair paginas."""
 import asyncio
 import time
+import unicodedata
 from collections import OrderedDict
 from urllib.parse import urlsplit, unquote
 import re
@@ -27,7 +28,14 @@ class ExternalMarketSearch:
     async def links(self, query, domain='mercadolivre.com.br'):
         if domain not in self.fetcher.config.domains:
             raise ReadError('url_not_allowed')
-        key = (domain, query.strip().casefold())
+        # O indice pode devolver somente categorias para a grafia acentuada,
+        # mesmo com inurl:dp. Preserve modelos/pontuacao e normalize apenas
+        # diacriticos na descoberta Amazon; a validacao do produto nao muda.
+        lookup = query
+        if domain == 'amazon.com.br':
+            lookup = ''.join(c for c in unicodedata.normalize('NFKD', query)
+                             if not unicodedata.combining(c))
+        key = (domain, lookup.strip().casefold())
         async with self.lock:
             cached = self.cache.get(key)
             if cached and cached[0] > time.monotonic():
@@ -42,7 +50,7 @@ class ExternalMarketSearch:
                         response = await client.post(
                             'https://api.tavily.com/search',
                             headers={'X-Tavily-Access-Mode': 'keyless', 'X-Client-Source': 'price-monitor'},
-                            json={'query': query + ' site:' + domain + (' inurl:dp' if domain == 'amazon.com.br' else ''),
+                            json={'query': lookup + ' site:' + domain + (' inurl:dp' if domain == 'amazon.com.br' else ''),
                                   'include_domains': [domain],
                                   'include_domains_mode': 'restrict', 'search_depth': 'basic',
                                   'auto_parameters': False, 'max_results': 10,

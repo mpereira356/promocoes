@@ -1,3 +1,11 @@
+# Amazon - 2026.10.16-amazon-query.1
+
+Falha reproduzida ao vivo localmente em 16/10/2026: a consulta "Aspirador de Po Portatil" com acentos retornou somente paginas de busca, mesmo com inurl:dp. A mesma consulta sem diacriticos retornou produtos individuais. A descoberta Amazon agora remove apenas diacriticos, preservando codigos, pontuacao e as regras de conferencia do produto. A chave de cache usa a mesma grafia normalizada, sem consultas duplicadas. Nao houve contorno de bloqueios ou limites.
+
+Depois da alteracao, a consulta original encontrou candidatos sem o aviso de ausencia. Uma leitura real separada confirmou MONOZEL B0F53JGRLS por R$ 242,96, em estoque, vendedor Amazon Global. Outros candidatos estavam indisponiveis e sem preco. Pecas de reposicao foram excluidas dos resultados de aspiradores completos. Sao capturas locais pontuais; a VPS e o envio real no Telegram nao foram validados. Nao se garante descoberta de qualquer produto ou disponibilidade permanente do indice externo.
+
+317 testes passaram, incluindo simulacoes de normalizacao, cache, preservacao de codigo de modelo e exclusao de motor sobressalente. Tres avisos de depreciacao PTB continuam nos testes de RetryAfter, sem falhas.
+
 # Atualização 2026.10.15-menu.1
 
 246 testes locais passaram. O menu, atalhos, entradas de busca, listas paginadas, seleção do ID correto, filtros guiados com vírgula decimal, cancelamento, confirmação de remoção, bloqueio de callbacks repetidos e invalidação de cartões após remoção/reutilização do ID foram exercitados com objetos Telegram simulados. Entradas monetárias ambíguas como 1.500 são recusadas, sem virar R$ 1,50. O fluxo de promoções também testa retorno à seleção de lojas após informar CEP e permanência na entrada após percentual inválido. O modo de grupo verifica ForceReply seletivo ligado à mensagem do usuário autorizado e ausência de resposta automática para mensagens comuns sem entrada pendente.

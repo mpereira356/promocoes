@@ -136,3 +136,29 @@ def test_blocked_individual_listing_remains_unverified_without_saving():
         assert 'Ofertas enviadas: 0' in send.await_args_list[-1].args[0]
         assert 'Links para conferência: 1' in send.await_args_list[-1].args[0]
     asyncio.run(run())
+
+
+def test_amazon_diacritics_normalized_without_extra_request_or_model_changes(monkeypatch):
+    async def run():
+        url = 'https://www.amazon.com.br/dp/B0F53JGRLS'
+        post = AsyncMock(return_value=httpx.Response(200, json={'results': [
+            {'url': url, 'title': 'Aspirador portatil'}]}))
+        monkeypatch.setattr(httpx.AsyncClient, 'post', post)
+        f = SimpleNamespace(config=SimpleNamespace(domains=('amazon.com.br',)),
+                            canonical=lambda u: (u, 'amazon.com.br'))
+        search = ExternalMarketSearch(f)
+        original = 'Aspirador de P\u00f3 Port\u00e1til 920-011902 Wi-Fi'
+        result = await search.links(original, 'amazon.com.br')
+        assert result[0].url == url
+        assert post.await_args.kwargs['json']['query'] == (
+            'Aspirador de Po Portatil 920-011902 Wi-Fi site:amazon.com.br inurl:dp')
+        assert result == await search.links('Aspirador de Po Portatil 920-011902 Wi-Fi', 'amazon.com.br')
+        assert post.await_count == 1
+    asyncio.run(run())
+
+
+def test_vacuum_replacement_motor_is_not_complete_appliance():
+    from monitor.discovery import relevance
+    assert not relevance('Aspirador de Po Portatil',
+        'YobiLife Motor de escova central para aspirador de po portatil Dreame peca sobressalente de reposicao')
+    assert relevance('Aspirador de Po Portatil', 'MONOZEL Aspirador de Po Portatil com motor e filtro')
