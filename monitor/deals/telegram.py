@@ -35,6 +35,7 @@ class PromotionsTelegram:
         self.session = None
         self.running = False
         self.refreshing = False
+        self.prompt_input = None
 
     @property
     def domains(self):
@@ -44,15 +45,15 @@ class PromotionsTelegram:
         self.session = Session(stores=set(self.domains))
         return self.session
 
-    async def command(self, update, context):
+    async def command(self, update, context, name=None, args=None):
         if not authorized(update, self.config):
             return
         async def reply(text, **kwargs):
             await send_text(update.effective_message.reply_text, text, **kwargs)
-        name = update.effective_message.text.split()[0].split('@')[0].lower()
+        name = name or update.effective_message.text.split()[0].split('@')[0].lower()
         if self.running or self.refreshing:
             return await reply('Já há uma consulta ou atualização de categorias em andamento. Os demais comandos continuam disponíveis.')
-        args = ' '.join(context.args).strip()
+        args = ' '.join(context.args if args is None else args).strip()
         if name in ('/promocoes', '/categorias', '/categoria'):
             self.new_session()
             if name == '/categorias' and args.lower() == 'atualizar':
@@ -73,7 +74,10 @@ class PromotionsTelegram:
                 if len(cep) != 8 or not cep.isdigit():
                     raise ValueError('Use /ceppromo 01001000. O frete ainda não é cotado; os valores serão apresentados sem frete.')
                 session.cep = cep
-                return await reply('📍 CEP registrado somente para esta pesquisa. Os adaptadores ainda não cotam o frete; os preços serão apresentados sem frete.')
+                await reply('📍 CEP registrado somente para esta pesquisa. Os adaptadores ainda não cotam o frete; os preços serão apresentados sem frete.')
+                if session.stage == 'stores':
+                    return await self.show_stores(reply)
+                return
             return await reply('Escolha a etapa pelos botões. Categoria livre: /categoria notebooks. Percentual personalizado: /descontopromo >=30 na etapa de desconto.')
         except ValueError as exc:
             return await reply(str(exc))
@@ -95,7 +99,9 @@ class PromotionsTelegram:
     def keyboard(self, buttons):
         session = self.session
         session.revision += 1
-        return Keyboard([[Button(label, callback_data=f'promo:{session.nonce}:{session.revision}:{action}')] for label, action in buttons])
+        rows=[[Button(label, callback_data=f'promo:{session.nonce}:{session.revision}:{action}')] for label, action in buttons]
+        rows.append([Button('🏠 Menu principal',callback_data='ui:home')])
+        return Keyboard(rows)
 
     async def show_groups(self, reply, page=0):
         session = self.session
@@ -129,11 +135,11 @@ class PromotionsTelegram:
         session = self.session
         session.category, session.stage = category, 'filter'
         notice = ('\nBusca por termo: esta categoria ainda não tem página mapeada. Serão procuradas ofertas com o termo informado; não é uma varredura completa de categoria.\n' if category.query else '\n')
-        return await reply(f'🏷️ {category.title}\n{notice}\nEscolha o desconto anunciado ou use /descontopromo >25,5.\n\nExemplos de uso\n/descontopromo >30 — 30% não entra; 31% entra.\n/descontopromo >=30 — 30% já entra.\nDe R$ 1.000,00 por R$ 700,00 = 30% de desconto anunciado.\nEsta busca é pontual e não cria alertas.', reply_markup=self.keyboard([('Maior que 30%', 'gt30'), ('Maior ou igual a 30%', 'ge30')]))
+        return await reply(f'🏷️ {category.title}\n{notice}\nEscolha o desconto anunciado ou use /descontopromo >25,5.\n\nExemplos de uso\n/descontopromo >30 — 30% não entra; 31% entra.\n/descontopromo >=30 — 30% já entra.\nDe R$ 1.000,00 por R$ 700,00 = 30% de desconto anunciado.\nEsta busca é pontual e não cria alertas.', reply_markup=self.keyboard([('Maior que 30%', 'gt30'), ('Maior ou igual a 30%', 'ge30'), ('✍️ Outro percentual','discount')]))
 
     async def show_stores(self, reply):
         buttons = [(('✅ ' if d in self.session.stores else '⬜ ') + ADAPTERS[d].store, 'store'+str(i)) for i, d in enumerate(self.domains)]
-        buttons += [('Todas as lojas habilitadas', 'all'), ('🔎 Pesquisar agora', 'run'), ('↩️ Trocar categoria', 'home')]
+        buttons += [('Todas as lojas habilitadas', 'all'), ('📍 Informar CEP','cep'), ('🔎 Pesquisar agora', 'run'), ('↩️ Trocar categoria', 'home')]
         title = self.session.category.title if self.session.category else 'Categoria não selecionada'
         return await reply(f'🏷️ {title}\n\nSelecione as lojas. Toque para marcar ou desmarcar e depois escolha Pesquisar agora.\nLojas sem página mapeada usarão busca por termo, identificada no resumo.\nOpcional: /ceppromo 01001000. A consulta não ativa alertas futuros.', reply_markup=self.keyboard(buttons))
 
@@ -171,7 +177,17 @@ class PromotionsTelegram:
         if action == 'home':
             return await self.show_groups(reply)
         if action == 'custom':
+            if self.prompt_input:
+                return await self.prompt_input(update,'category')
             return await reply('✍️ Digite /categoria seguido do tema ou de um link de categoria.\nExemplos de uso\n/categoria monitores\n/categoria casa e lazer\n/categoria brinquedos\n/categoria https://www.pichau.com.br/pets\nSe não houver categoria mapeada, a pesquisa será por termo e ficará identificada como parcial.')
+        if action == 'discount' and session.stage == 'filter':
+            if self.prompt_input:
+                return await self.prompt_input(update,'discount')
+            return await reply('Use /descontopromo >=30. O filtro aceita >30 e >=30, inclusive outros percentuais.')
+        if action == 'cep' and session.stage == 'stores':
+            if self.prompt_input:
+                return await self.prompt_input(update,'cep')
+            return await reply('Use /ceppromo 01001000. Frete ainda não cotado.')
         if action == 'refresh':
             return await self.start_refresh(reply)
         for prefix, method in (('groups', self.show_groups), ('choices', self.show_choices)):

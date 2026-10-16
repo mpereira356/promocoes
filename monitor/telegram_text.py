@@ -13,7 +13,8 @@ PREFIXES = (
     '⚠️ Avisos da pesquisa', '🏷️ Busca pontual de promoções', '🏷️ Oferta ',
     '📉 QUEDA DE PREÇO', '📈 AUMENTO DE PREÇO', '📊 Oferta ',
     'Hardware · escolha a subcategoria:', '🏷️ ', '✅ Catálogo atualizado',
-    '🔎 ', '🆔 ID do anúncio:', '🆔 Anúncio:', '📦 Produto ',
+    '🔎 ', '🆔 ID do anúncio:', '🆔 Anúncio:', '📦 Produto ', '🛍️ Central de ofertas',
+    '🔔 Meus monitoramentos', '⚙️ ', '✅ Conferir filtros', '🗑️ Remover monitoramento',
 )
 
 

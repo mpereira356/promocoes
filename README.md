@@ -1,4 +1,4 @@
-**Versão atual: `2026.10.15-categorias.1`.** A busca de promoções aceita múltiplos departamentos, subcategorias, temas livres e links de categoria.
+**Versão atual: `2026.10.15-menu.1`.** Envie **/start** ou **/menu** para usar a central de botões: buscas, promoções, monitoramentos, histórico, pausa e filtros guiados. Após tocar em Buscar, basta digitar o nome do produto. Os filtros são configurados passo a passo e conferidos antes de aplicar. Veja [MENU-TELEGRAM.md](MENU-TELEGRAM.md).
 
 **Títulos e exemplos:** os títulos aparecem em negrito no Telegram, com HTML escapado, inclusive nas legendas de fotos. A ajuda explica os argumentos de `/configurar`, mostra quando os filtros disparam ou impedem um alerta, como remover o alvo e como alternar os modos. A seleção de promoções também traz exemplos de `>30` e `>=30`.
 

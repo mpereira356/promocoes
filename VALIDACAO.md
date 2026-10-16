@@ -1,3 +1,9 @@
+# Atualização 2026.10.15-menu.1
+
+246 testes locais passaram. O menu, atalhos, entradas de busca, listas paginadas, seleção do ID correto, filtros guiados com vírgula decimal, cancelamento, confirmação de remoção, bloqueio de callbacks repetidos e invalidação de cartões após remoção/reutilização do ID foram exercitados com objetos Telegram simulados. Entradas monetárias ambíguas como 1.500 são recusadas, sem virar R$ 1,50. O fluxo de promoções também testa retorno à seleção de lojas após informar CEP e permanência na entrada após percentual inválido. O modo de grupo verifica ForceReply seletivo ligado à mensagem do usuário autorizado e ausência de resposta automática para mensagens comuns sem entrada pendente.
+
+Os testes não enviaram mensagens reais nem registraram comandos na API do Telegram. O registro do menu nativo é uma tentativa na inicialização; falha nesse registro mantém os botões inline disponíveis. Busca/preços/estoque das lojas não foram novamente validados nesta revisão. Os comandos existentes e as regras de comparação/agendamento são reutilizados; os estados temporários do menu ficam em memória.
+
 # Atualização 2026.10.15-categorias.1
 
 236 testes locais passaram, incluindo as verificações de seleção livre e navegação paginada.

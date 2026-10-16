@@ -2,7 +2,8 @@ import asyncio
 import logging
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler
+from telegram import BotCommand, BotCommandScopeChat
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters
 from .config import Config
 from .db import DB
 from .network import Fetcher
@@ -18,8 +19,12 @@ from .version import VERSION
 from .deals.service import Deals
 from .deals.telegram import PromotionsTelegram
 from .telegram_text import send_text
+from .menu import BotMenu, navigation
 
 HELP = """🛍️ Bot de ofertas e monitoramento
+
+/menu — abrir o menu de botões e os atalhos.
+/cancelar — sair da entrada atual e voltar ao menu; não interrompe consultas já iniciadas.
 
 BUSCAS
 /buscar nome — buscar ofertas com ID, fotos e medalhas. Não ativa acompanhamento.
@@ -87,7 +92,7 @@ def main():
     tasks = set()
 
     async def send(text):
-        await send_text(lambda t, **kw: app.bot.send_message(config.chat, t, **kw), text)
+        await send_text(lambda t, **kw: app.bot.send_message(config.chat, t, **kw), text, reply_markup=navigation())
 
     async def send_candidate(candidate):
         await send_card(app.bot, config.chat, candidate)
@@ -101,6 +106,14 @@ def main():
 
     async def start(app):
         app.bot_data["scheduler"] = asyncio.create_task(monitor.scheduler())
+        try:
+            await app.bot.set_my_commands([
+                BotCommand('menu','Abrir menu de botões'), BotCommand('promocoes','Promoções por categoria'),
+                BotCommand('buscar','Buscar produto'), BotCommand('lista','Meus monitoramentos'),
+                BotCommand('ajuda','Comandos e exemplos'), BotCommand('cancelar','Sair da entrada atual'),
+            ],scope=BotCommandScopeChat(config.chat))
+        except Exception:
+            pass  # O menu inline continua funcionando sem o atalho nativo.
 
     async def stop(app):
         running = list(tasks) + [app.bot_data["scheduler"]]
@@ -138,9 +151,6 @@ def main():
         await send(text)
 
     promotions = PromotionsTelegram(config, Deals(monitor), send_promotion, background)
-    for name in ('promocoes', 'categoria', 'categorias', 'descontopromo', 'ceppromo'):
-        app.add_handler(CommandHandler(name, promotions.command))
-    app.add_handler(CallbackQueryHandler(promotions.callback, pattern=r'^promo:'))
 
     async def check_send(pid):
         try:
@@ -148,17 +158,21 @@ def main():
         except Exception:
             await send('⚠️ Não foi possível concluir a verificação. Os dados válidos anteriores foram preservados.')
 
-    async def command(update, context):
+    async def command(update, context, name=None, args=None):
         if not authorized(update, config):
             return
+        ui.remember(update)
+        ui.clear()
 
         async def reply(text):
-            await send_text(update.effective_message.reply_text, text)
+            await send_text(update.effective_message.reply_text, text, reply_markup=navigation())
 
-        name = update.effective_message.text.split()[0].split("@")[0].lower()
-        args = context.args
+        name = name or update.effective_message.text.split()[0].split("@")[0].lower()
+        args = context.args if args is None else args
         try:
-            if name in ("/ajuda", "/start"):
+            if name in ('/start','/menu','/cancelar'):
+                return await ui.home(update,context)
+            if name == '/ajuda':
                 error = monitor.search.configuration_error()
                 return await reply(
                     f"Versão: {VERSION}\n"
@@ -170,23 +184,7 @@ def main():
                     f'ℹ️ Status do bot\n\nVersão: {VERSION}\nBusca: {config.provider}\nChromium: {"ativado" if config.browser else "desativado"}\nPichau/Terabyte: descoberta por sitemaps.\nPreço e estoque são conferidos na página da oferta. CAPTCHA e robots.txt continuam sendo respeitados.'
                 )
             if name == "/lista":
-                rows = db.rows("SELECT * FROM products ORDER BY id")
-                lines = []
-                for p in rows:
-                    lines.append(
-                        f"🔔 Monitoramento {p['id']} — {p['query']}\nStatus: {'ativo' if p['active'] else 'pausado'}\nAnúncio de referência: {p['seed_ad'] or 'legado'}\nAbrangência: {p['scope']}\nAlertas: {p['alert_mode']}\nPrazo: sem vencimento\nPróxima consulta: {datetime.fromtimestamp(p['next_due'],ZoneInfo('America/Sao_Paulo')).isoformat(timespec='seconds')}\n"
-                    )
-                    for c in db.rows(
-                        "SELECT * FROM candidates WHERE product=?", (p["id"],)
-                    ):
-                        last = db.rows(
-                            "SELECT status FROM checks WHERE candidate=? ORDER BY id DESC LIMIT 1",
-                            (c["id"],),
-                        )
-                        lines.append(
-                            f"  🏷️ Anúncio {c['ad_id'] or 'pendente'} · Oferta {c['id']}\n  Confirmação: {'confirmada' if c['confirmed'] else 'aguardando confirmação'}\n  Produto: {c['title']}\n  Última leitura: {last[0]['status'] if last else 'pendente'}\n  {c['url']}\n"
-                        )
-                return await reply("\n".join(lines) or 'Sua lista ainda está vazia. Use /buscar nome ou /monitorar nome para começar.')
+                return await ui.listing(update)
             if name in ("/monitorar", "/buscar", "/buscarml"):
                 query = " ".join(args).strip()
                 if not query or len(query) > 600:
@@ -248,6 +246,7 @@ def main():
                 db.run("UPDATE products SET active=1,next_due=0 WHERE id=?", (pid,))
                 await reply('▶️ Monitoramento retomado. Uma consulta foi agendada.')
             elif name == "/remover":
+                ui.forget(pid)
                 db.run("DELETE FROM products WHERE id=?", (pid,))
                 await reply('🗑️ Produto, histórico e alertas associados foram removidos.')
             elif name == "/alertas":
@@ -314,8 +313,31 @@ def main():
                 '⚠️ Comando ou configuração inválida. Consulte /ajuda. Uma falha de leitura nunca é tratada como preço zero.'
             )
 
+    ui = BotMenu(config, db, promotions, command, CONFIGURE_HELP)
+    promotions.prompt_input = ui.prompt_promotion
+
+    async def promotion_command(update, context):
+        if not authorized(update,config):
+            return
+        ui.remember(update)
+        ui.clear()
+        await promotions.command(update,context)
+
+    async def promotion_callback(update, context):
+        if authorized(update,config):
+            ui.clear()
+        await promotions.callback(update,context)
+
+    for name in ('promocoes', 'categoria', 'categorias', 'descontopromo', 'ceppromo'):
+        app.add_handler(CommandHandler(name, promotion_command))
+    app.add_handler(CallbackQueryHandler(promotion_callback, pattern=r'^promo:'))
+    app.add_handler(CallbackQueryHandler(ui.callback, pattern=r'^ui:'))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND,ui.text))
+
     for name in (
         "start",
+        "menu",
+        "cancelar",
         "ajuda",
         "status",
         "buscar",

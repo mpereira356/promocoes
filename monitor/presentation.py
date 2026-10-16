@@ -130,6 +130,7 @@ async def send_offer(
                 [InlineKeyboardButton("🔗 Abrir oferta", url=url)],
             ]
         )
+    keyboard = InlineKeyboardMarkup(list(keyboard.inline_keyboard) + [[InlineKeyboardButton('🏠 Menu principal',callback_data='ui:home')]])
     if reading.image:
         fits_caption = len(text.encode('utf-16-le')) // 2 <= 1024
         try:

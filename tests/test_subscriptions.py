@@ -212,7 +212,8 @@ def test_scope_buttons_and_callback_authorization(data):
         bot = SimpleNamespace(send_message=AsyncMock())
         await ask_scope(bot, c.chat, db, ad["id"])
         markup = bot.send_message.await_args.kwargs["reply_markup"]
-        assert len(markup.inline_keyboard) == 2
+        assert len(markup.inline_keyboard) == 3
+        assert markup.inline_keyboard[-1][0].callback_data == 'ui:home'
         callback = markup.inline_keyboard[0][0].callback_data
         assert len(callback.encode()) <= 64
         q = SimpleNamespace(

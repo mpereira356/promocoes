@@ -20,6 +20,7 @@ def build_package(output=None):
         "VALIDACAO.md",
         "PROMOCOES.md",
         "TEMPLATES-REVISADOS.md",
+        "MENU-TELEGRAM.md",
         ".env.example",
         "requirements.txt",
         "requirements.lock.txt",

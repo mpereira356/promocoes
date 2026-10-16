@@ -33,6 +33,7 @@ async def ask_scope(bot, chat, db, ad_id):
                     'Outras lojas também', callback_data=f"scope:{token}:all"
                 )
             ],
+            [InlineKeyboardButton('🏠 Menu principal',callback_data='ui:home')],
         ]
     )
     await send_text(

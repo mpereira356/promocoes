@@ -29,6 +29,7 @@ async def send_card(bot, chat, candidate):
                 )
             ],
             [InlineKeyboardButton("Abrir na loja", url=candidate["url"])],
+            [InlineKeyboardButton('🏠 Menu principal', callback_data='ui:home')],
         ]
     )
     text = (

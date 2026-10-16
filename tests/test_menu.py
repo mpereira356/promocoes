@@ -1,0 +1,205 @@
+"""Fluxos de UI simulados: autorizacao, filtros guiados e remocao confirmada."""
+import asyncio
+from decimal import Decimal
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
+import pytest
+from monitor.db import DB
+from monitor.menu import BotMenu
+from monitor.deals.telegram import PromotionsTelegram
+from monitor.deals.service import Deals
+from monitor.network import Fetcher
+
+
+@pytest.fixture
+def setup():
+    db=DB(':memory:')
+    config=SimpleNamespace(user=42,chat=-1,minimum=0,percent=Decimal('0'),target=None,interval=18000,domains=('pichau.com.br',))
+    promotions=SimpleNamespace(running=False,refreshing=False,session=None,command=AsyncMock())
+    dispatch=AsyncMock()
+    ui=BotMenu(config,db,promotions,dispatch,'Exemplo de filtros\n/configurar 1 50 5 1500')
+    message=SimpleNamespace(text='/menu',reply_text=AsyncMock())
+    update=SimpleNamespace(effective_user=SimpleNamespace(id=42),effective_chat=SimpleNamespace(id=-1),effective_message=message,callback_query=None)
+    yield db,config,ui,dispatch,update
+    db.conn.close()
+
+
+def click(update,data):
+    update.callback_query=SimpleNamespace(data=data,answer=AsyncMock(),edit_message_text=AsyncMock())
+
+
+def test_start_menu_shortcuts_and_unauthorized_access(setup):
+    db,config,ui,dispatch,update=setup
+    async def scenario():
+        update.effective_message.text='/start'
+        await ui.home(update)
+        calls=update.effective_message.reply_text.await_args_list
+        assert calls[0].kwargs['reply_markup'].is_persistent
+        assert len(calls[1].kwargs['reply_markup'].inline_keyboard)>3
+        update.effective_user.id=99
+        click(update,'ui:monitor')
+        await ui.callback(update,None)
+        assert ui.pending is None and not dispatch.called
+        update.callback_query.answer.assert_awaited_once()
+    asyncio.run(scenario())
+
+
+def test_search_input_dispatches_once_without_registering_monitoring(setup):
+    db,config,ui,dispatch,update=setup
+    async def scenario():
+        click(update,'ui:search')
+        await ui.callback(update,None)
+        assert ui.pending.kind=='search'
+        update.callback_query=None
+        update.effective_message.text='SSD Kingston NV3 1TB'
+        await ui.text(update,None)
+        assert dispatch.await_args.kwargs=={'name':'/buscar','args':['SSD','Kingston','NV3','1TB']}
+        assert not db.rows('SELECT * FROM products')
+        await ui.text(update,None)
+        assert dispatch.await_count==1
+    asyncio.run(scenario())
+
+
+def test_filters_require_confirmation_accept_comma_and_reject_replay(setup):
+    db,config,ui,dispatch,update=setup
+    pid=db.add('Produto teste',config)
+    token=ui.card_token(db.rows('SELECT * FROM products WHERE id=?',(pid,))[0])
+    async def scenario():
+        await ui.wizard(update,token)
+        for value in ('50,90','5','-'):
+            update.effective_message.text=value
+            await ui.text(update,None)
+        assert not dispatch.called and ui.pending.kind=='apply'
+        assert db.rows('SELECT minimum FROM products WHERE id=?',(pid,))[0]['minimum']==0
+        data='ui:apply:'+ui.pending.token
+        click(update,data)
+        await ui.callback(update,None)
+        assert dispatch.await_args.kwargs=={'name':'/configurar','args':[str(pid),'50.90','5','-']}
+        await ui.callback(update,None)
+        assert dispatch.await_count==1
+    asyncio.run(scenario())
+
+
+def test_cancel_filters_and_stale_product_cannot_mutate_other_product(setup):
+    db,config,ui,dispatch,update=setup
+    pid=db.add('Produto original',config)
+    token=ui.card_token(db.rows('SELECT * FROM products WHERE id=?',(pid,))[0])
+    async def scenario():
+        await ui.wizard(update,token)
+        update.effective_message.text='-1'
+        await ui.text(update,None)
+        assert ui.pending.values==[]
+        click(update,'ui:cancel')
+        await ui.callback(update,None)
+        assert ui.pending is None and not dispatch.called
+        db.run('UPDATE products SET query=? WHERE id=?',('Outro produto',pid))
+        click(update,'ui:card:'+token+':pause')
+        await ui.callback(update,None)
+        assert not dispatch.called
+    asyncio.run(scenario())
+
+
+def test_delete_requires_separate_confirmation_bound_to_product(setup):
+    db,config,ui,dispatch,update=setup
+    pid=db.add('Produto para remover',config)
+    token=ui.card_token(db.rows('SELECT * FROM products WHERE id=?',(pid,))[0])
+    async def scenario():
+        click(update,'ui:card:'+token+':delete')
+        await ui.callback(update,None)
+        assert not dispatch.called and db.rows('SELECT id FROM products WHERE id=?',(pid,))
+        confirm='ui:remove:'+ui.pending.token
+        click(update,confirm)
+        await ui.callback(update,None)
+        assert dispatch.await_args.kwargs=={'name':'/remover','args':[str(pid)]}
+        await ui.callback(update,None)
+        assert dispatch.await_count==1
+    asyncio.run(scenario())
+
+
+def test_list_pagination_and_action_uses_clicked_id(setup):
+    db,config,ui,dispatch,update=setup
+    for i in range(8):db.add('Produto '+str(i),config)
+    async def scenario():
+        await ui.listing(update)
+        markup=update.effective_message.reply_text.await_args.kwargs['reply_markup']
+        assert any('Próxima' in b.text for row in markup.inline_keyboard for b in row)
+        data=markup.inline_keyboard[0][0].callback_data
+        token=data.split(':')[2]
+        expected=ui.product(token)['id']
+        click(update,'ui:card:'+token+':check')
+        await ui.callback(update,None)
+        assert dispatch.await_args.kwargs=={'name':'/verificar','args':[str(expected)]}
+    asyncio.run(scenario())
+
+
+def test_deleted_id_reuse_does_not_revive_old_card(setup):
+    db,config,ui,dispatch,update=setup
+    pid=db.add('Mesmo produto',config)
+    token=ui.card_token(db.rows('SELECT * FROM products WHERE id=?',(pid,))[0])
+    ui.forget(pid)
+    db.run('DELETE FROM products WHERE id=?',(pid,))
+    assert db.add('Mesmo produto',config)==pid
+    assert ui.product(token) is None
+
+
+def test_group_input_uses_reply_to_authorized_user_and_ignores_casual_messages(setup):
+    db,config,ui,dispatch,update=setup
+    async def scenario():
+        update.effective_chat.type='group'
+        update.effective_message.message_id=123
+        ui.remember(update)
+        click(update,'ui:search')
+        await ui.callback(update,None)
+        kwargs=update.effective_message.reply_text.await_args.kwargs
+        assert kwargs['reply_markup'].force_reply and kwargs['reply_markup'].selective
+        assert kwargs['reply_parameters'].message_id==123
+        ui.clear()
+        update.callback_query=None
+        update.effective_message.text='Mensagem comum do grupo'
+        before=update.effective_message.reply_text.await_count
+        await ui.text(update,None)
+        assert update.effective_message.reply_text.await_count==before
+        assert not dispatch.called
+    asyncio.run(scenario())
+
+
+def test_ambiguous_thousands_input_does_not_become_one_real_fifty(setup):
+    db,config,ui,dispatch,update=setup
+    pid=db.add('Produto',config)
+    token=ui.card_token(db.rows('SELECT * FROM products WHERE id=?',(pid,))[0])
+    async def scenario():
+        await ui.wizard(update,token)
+        update.effective_message.text='1.500'
+        await ui.text(update,None)
+        assert ui.pending.values==[] and ui.pending.step==0 and not dispatch.called
+        update.effective_message.text='1500'
+        await ui.text(update,None)
+        assert ui.pending.values==['1500.00']
+    asyncio.run(scenario())
+
+
+def test_discount_retry_and_cep_returns_to_stores(setup):
+    db,config,ui,dispatch,update=setup
+    async def scenario():
+        config.browser=False
+        fetcher=Fetcher(config)
+        promotions=PromotionsTelegram(config,SimpleNamespace(fetcher=fetcher),AsyncMock(),lambda c:None)
+        ui.promotions=promotions
+        promotions.new_session()
+        promotions.session.category=promotions.catalog.items['pets']
+        promotions.session.stage='filter'
+        await ui.prompt(update,'discount')
+        update.effective_message.text='abc'
+        await ui.text(update,None)
+        assert ui.pending.kind=='discount'
+        update.effective_message.text='>=30'
+        await ui.text(update,None)
+        assert promotions.session.stage=='stores'
+        await ui.prompt(update,'cep')
+        update.effective_message.text='01001-000'
+        await ui.text(update,None)
+        assert promotions.session.cep=='01001000'
+        markup=update.effective_message.reply_text.await_args.kwargs['reply_markup']
+        assert any(b.callback_data.endswith(':run') for row in markup.inline_keyboard for b in row)
+        await fetcher.close()
+    asyncio.run(scenario())
