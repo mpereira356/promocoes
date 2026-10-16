@@ -49,6 +49,7 @@ async def diagnose(config, query):
                         str(exc) if isinstance(exc, ReadError) else type(exc).__name__
                     )
             report["stores"].append(item)
+        report['robots_diagnostics'] = fetcher.robots_diagnostics
         return report
     finally:
         await fetcher.close()

@@ -20,6 +20,7 @@ class Fetcher:
         self.locks = {}
         self.last = {}
         self.robots = {}
+        self.robots_diagnostics = {}
         self.content_types = {}
         self.browser_transport = None
 
@@ -134,6 +135,9 @@ class Fetcher:
                 if wait > 60:
                     raise ReadError("rate_limit_deferred")
                 await asyncio.sleep(wait)
+            if urlsplit(url).path == '/robots.txt':
+                origin = 'https://' + urlsplit(url).netloc
+                self.robots_diagnostics.setdefault(origin, {})['http_status'] = response.status_code
             if response.status_code in (301, 302, 303, 307, 308):
                 url = urljoin(url, response.headers.get("location", ""))
                 continue
@@ -165,6 +169,7 @@ class Fetcher:
     async def allowed_by_robots(self, url):
         origin = "https://" + urlsplit(url).netloc
         if origin not in self.robots or self.robots[origin][0] < time.time() - 86400:
+            self.robots_diagnostics[origin] = {'http_status': None}
             # Na duvida, recusar. 404 de robots significa ausencia de regras.
             try:
                 text, _ = await self.request(origin + "/robots.txt")
@@ -172,9 +177,11 @@ class Fetcher:
                 if str(exc) == "page_removed":
                     text = ""
                 else:
+                    self.robots_diagnostics[origin]['reason'] = str(exc)
                     raise ReadError("robots_unavailable") from None
             parser = RobotsPolicy(text)
             self.robots[origin] = (time.time(), parser)
+            self.robots_diagnostics[origin]['reason'] = 'rules_loaded'
         parser = self.robots[origin][1]
         delay = parser.crawl_delay("PriceMonitor") or parser.crawl_delay("*")
         if delay:
