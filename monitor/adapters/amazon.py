@@ -11,6 +11,32 @@ class AmazonAdapter(StructuredAdapter):
     name = 'Amazon Brasil'
     external_discovery = True
 
+    def details_identifiers(self, soup, url):
+        asin = re.search(r'/(?:dp|gp/product)/([A-Z0-9]{10})(?:/|$)', urlsplit(url).path)
+        fields = {}
+        for row in soup.select('#productDetails_feature_div table.prodDetTable tr'):
+            labels, values = row.find_all('th', recursive=False), row.find_all('td', recursive=False)
+            if len(labels) == len(values) == 1:
+                key = normalize(labels[0].get_text(' ', strip=True))
+                fields.setdefault(key, set()).add(values[0].get_text(' ', strip=True))
+        if not asin or fields.get('asin') != {asin[1]}:
+            return {}
+        result = {}
+        for key, label in [('brand', 'nome da marca'), ('mpn', 'numero da peca')]:
+            values = fields.get(label, set())
+            if len(values) == 1:
+                value = next(iter(values))
+                if value and len(value) <= 120:
+                    result[key] = normalize(value)
+        return result
+
+    def enrich_identifiers(self, readings, details):
+        for reading in readings:
+            if any(reading.identifiers.get(k) and reading.identifiers[k] != v for k, v in details.items()):
+                raise ReadError('conflicting_product_identifiers')
+            reading.identifiers = details | reading.identifiers
+        return readings
+
     def price_requires_cart(self, html):
         soup = BeautifulSoup(html, 'html.parser')
         return any('adicione este item ao seu carrinho' in normalize(n.get_text(' ', strip=True))
@@ -26,6 +52,7 @@ class AmazonAdapter(StructuredAdapter):
         if not self.is_product_url(url):
             raise ReadError('individual_listing_required')
         soup = BeautifulSoup(html, 'html.parser')
+        details = self.details_identifiers(soup, url)
         titles = soup.select('#productTitle')
         rows = soup.select('#aod-offer-list #aod-offer')
         if rows:
@@ -76,9 +103,9 @@ class AmazonAdapter(StructuredAdapter):
             keys = [(r.seller, r.condition, r.payment) for r in readings]
             if len(keys) != len(set(keys)):
                 raise ReadError('ambiguous_offer_variants')
-            return readings
+            return self.enrich_identifiers(readings, details)
         try:
-            return super().parse(html, url)
+            return self.enrich_identifiers(super().parse(html, url), details)
         except ReadError as exc:
             if str(exc) != 'structured_product_missing_or_ambiguous':
                 raise
@@ -101,7 +128,7 @@ class AmazonAdapter(StructuredAdapter):
             if len(sellers) == 1:
                 seller = next(iter(sellers))
         # Buy Box pode trocar de vendedor. Nao inventar preco, vendedor, condicao ou Pix.
-        return [Reading(titles[0].get_text(' ', strip=True), seller, '', '', None, stock)]
+        return [Reading(titles[0].get_text(' ', strip=True), seller, '', '', None, stock, identifiers=details)]
 
     def buying_options_url(self, html, url):
         if not self.is_product_url(url):

@@ -264,3 +264,9 @@ O acompanhamento agora traduz motivos de falha, inclui loja e link, apresenta es
 
 Os testes simulam consulta por MPN, títulos diferentes com o mesmo código, código divergente, acessórios, ausência de confirmação automática, preservação de preço após bloqueio e indicação dos dados faltantes. As consultas reais acima são separadas desses testes sem rede.
 
+# Atualização 2026.10.16-amazon-variant.1
+
+O link Amazon B0BRSQCZLS enviado pelo usuário abriu localmente a variante branca Logitech G PRO X 60, com número da peça 920-011921, diferente do produto preto 920-011902 acompanhado anteriormente. A tabela principal declarou marca Logitech G, ASIN B0BRSQCZLS e código 920-011921 em Número do modelo/Número da peça. O preço não foi disponibilizado na resposta pública; o bloco principal pediu adicionar o produto ao carrinho. Não foi feita ação de compra. A busca real pelo código 920-011902 no índice consultado não encontrou candidato Amazon compatível nesta execução; isso não prova inexistência.
+
+O adaptador lê marca e MPN da tabela de detalhes observada somente quando o ASIN da tabela corresponde ao URL. Não usa tabelas de recomendações, não transforma o número do modelo em MPN e recusa conflitos com identificadores estruturados. Nenhum preço foi inventado. 275 testes passaram, incluindo recorte dessa captura real e testes simulados de rejeição de ASIN incorreto, tabela fora do bloco principal, MPN divergente e conflito com dados estruturados. Não houve envio real ao Telegram nem teste pela VPS.
+

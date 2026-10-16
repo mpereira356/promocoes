@@ -107,3 +107,27 @@ def test_real_cart_price_requirement_stops_before_selenium():
             await monitor.read(url)
         monitor.amazon_offers.html.assert_not_called()
     asyncio.run(run())
+
+
+def test_real_logitech_white_variant_has_different_declared_part_number():
+    from monitor.identity import same_product
+    from monitor.models import Reading
+    html = Path('tests/fixtures/amazon_logitech_white_real.html').read_text(encoding='utf-8')
+    adapter = AmazonAdapter()
+    white = adapter.parse(html, 'https://www.amazon.com.br/dp/B0BRSQCZLS')[0]
+    assert 'Branco' in white.title
+    assert white.identifiers == {'brand': 'logitech g', 'mpn': '920 011921'}
+    assert white.price is None and adapter.price_requires_cart(html)
+    black = Reading('Logitech G PRO X 60 Preto', '', '', '', None,
+        identifiers={'brand': 'logitech g', 'mpn': '920 011902'})
+    assert same_product(black, white) is False
+    # Tabela de outro ASIN ou fora dos detalhes principais não fornece identidade.
+    assert not adapter.parse(html.replace('B0BRSQCZLS', 'B08KGVH7YC'), 'https://www.amazon.com.br/dp/B0BRSQCZLS')[0].identifiers
+    assert not adapter.parse(html.replace('id="productDetails_feature_div"', 'id="recommendations"'), 'https://www.amazon.com.br/dp/B0BRSQCZLS')[0].identifiers
+
+
+def test_conflicting_schema_and_details_are_not_merged():
+    from monitor.models import Reading
+    reading = Reading('Logitech', '', '', '', None, identifiers={'mpn': '920 011902'})
+    with pytest.raises(ReadError, match='conflicting_product_identifiers'):
+        AmazonAdapter().enrich_identifiers([reading], {'mpn': '920 011921'})

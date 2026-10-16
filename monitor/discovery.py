@@ -108,6 +108,7 @@ def form_search_url(html, base, query, fields=None):
 
 
 REASONS = {
+    'conflicting_product_identifiers': 'A página apresenta códigos de produto conflitantes; a comparação foi recusada',
     'domain_access_cooldown': 'A loja recusou acesso recentemente. Novas consultas a ela ficam suspensas por até 15 minutos; as outras lojas continuam',
     'network_dns_failure': 'O servidor não conseguiu resolver o endereço da loja após três tentativas de DNS',
     'amazon_price_requires_cart': 'A Amazon ocultou o preço e pede adicionar o item ao carrinho. Nenhuma ação de compra foi feita; preço não confirmado',

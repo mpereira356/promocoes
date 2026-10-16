@@ -1,1 +1,1 @@
-VERSION = "2026.10.16-mpn.1"
+VERSION = "2026.10.16-amazon-variant.1"
