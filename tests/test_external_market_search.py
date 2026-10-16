@@ -54,6 +54,27 @@ def test_keyless_rate_limit_waits_without_repeated_requests(monkeypatch):
     asyncio.run(run())
 
 
+@pytest.mark.parametrize('already_limited', [False, True])
+def test_expired_link_cache_survives_quota_without_caching_prices(monkeypatch, already_limited):
+    import time
+    async def run():
+        post = AsyncMock(return_value=httpx.Response(429, headers={'Retry-After': '600'}))
+        monkeypatch.setattr(httpx.AsyncClient, 'post', post)
+        search = ExternalMarketSearch(SimpleNamespace(config=SimpleNamespace(domains=('mercadolivre.com.br',))))
+        search.cache[('mercadolivre.com.br', 'b550')] = (time.monotonic() - 1, [LinkCandidate(URL, 'B550', 'Tavily Search')])
+        if already_limited:
+            search.cooldown = time.monotonic() + 600
+        links = await search.links('B550')
+        assert links[0].url == URL and not hasattr(links[0], 'price')
+        assert 'cache' in links.notices[0]
+        assert post.await_count == (0 if already_limited else 1)
+        # Não reutilizar links indefinidamente após a validade estendida.
+        search.cache[('mercadolivre.com.br', 'b550')] = (time.monotonic() - 8 * 86400, links)
+        with pytest.raises(ReadError, match='external_search_limited'):
+            await search.links('B550')
+    asyncio.run(run())
+
+
 def test_unverified_catalog_is_sent_without_reading_or_saving_offer():
     async def run():
         links = SearchLinks([URL], candidates={URL: LinkCandidate(URL, 'Placa B550', 'Tavily Search')})

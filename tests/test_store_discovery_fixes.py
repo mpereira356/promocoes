@@ -20,6 +20,7 @@ from monitor.network import Fetcher
     'Teclado Logitech G PRO X 60 LIGHTSPEED RGB',
     'Teclado Sem Fio Mecânico Gamer Logitech G515 RGB Bluetooth Lightspeed',
     'Teclado Mecânico Gamer Logitech G915 X Lightspeed RGB USB Bluetooth',
+    'Mouse Gamer Logitech G PRO Wireless 25000DPI RGB 910-005271',
 ])
 def test_logitech_g_pro_rejects_reported_wrong_brands_and_x_variant(candidate):
     assert relevance('Teclado Mecanico Logitech G PRO RGB', candidate) == 0

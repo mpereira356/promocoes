@@ -11,6 +11,12 @@ from .models import normalize
 from .identity import model_conflict
 
 
+class CachedCandidates(list):
+    def __init__(self, values, domain):
+        super().__init__(values)
+        self.notices = [f'{domain}: links recuperados do cache por indisponibilidade do índice externo; preço e estoque serão consultados novamente na loja.']
+
+
 class ExternalMarketSearch:
     def __init__(self, fetcher):
         self.fetcher = fetcher
@@ -27,6 +33,8 @@ class ExternalMarketSearch:
             if cached and cached[0] > time.monotonic():
                 return list(cached[1])
             if self.cooldown > time.monotonic():
+                if cached and cached[0] + 7 * 86400 > time.monotonic():
+                    return CachedCandidates(cached[1], domain)
                 raise ReadError('external_search_limited')
             async with httpx.AsyncClient(timeout=40, follow_redirects=False) as client:
                 for attempt in range(3):
@@ -47,6 +55,8 @@ class ExternalMarketSearch:
                         if response.status_code in (429, 432, 433):
                             retry = response.headers.get('Retry-After', '')
                             self.cooldown = time.monotonic() + max(60, int(retry) if retry.isdigit() else 3600)
+                            if cached and cached[0] + 7 * 86400 > time.monotonic():
+                                return CachedCandidates(cached[1], domain)
                             raise ReadError('external_search_limited')
                         if response.status_code == 200:
                             break

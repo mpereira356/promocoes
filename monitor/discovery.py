@@ -33,6 +33,9 @@ def relevance(query, title):
         return set(text.split())
     wanted = terms(query) - stop
     found = terms(title)
+    for category in ({'teclado', 'keyboard'}, {'mouse', 'mice'}, {'headset', 'headphone', 'fone'}, {'monitor', 'monitores'}):
+        if wanted & category and not found & category:
+            return 0
     if not (wanted & BRANDS) <= found:
         return 0
     if re.search(r'\bg pro\b', normalize(query)) and not re.search(r'\bg pro\b', normalize(title)):
@@ -218,6 +221,7 @@ class DirectSearch:
                     key=lambda x: x[0],
                     reverse=True,
                 )
+                notices.extend(getattr(candidates, 'notices', []))
                 accepted = []
                 for score, c in ranked:
                     if not score:

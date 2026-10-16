@@ -167,3 +167,59 @@ def test_redirected_wrong_brand_is_discarded_without_save_or_read_error():
         assert 'Links com falha de leitura: 0' in summary
         assert 'Candidatos descartados por incompatibilidade: 1' in summary
     asyncio.run(run())
+
+
+def test_refusal_skips_remaining_store_links_but_keeps_other_store(monkeypatch):
+    async def run():
+        urls = [f'https://www.pichau.com.br/keyboard-{i}' for i in range(6)] + ['https://www.kabum.com.br/produto/1/keyboard']
+        reading = SimpleNamespace(title='Teclado Logitech G PRO RGB', price=10000)
+        read = AsyncMock(side_effect=[ReadError('blocked_no_bypass'), [reading]])
+        monitor = SimpleNamespace(search=SimpleNamespace(links=AsyncMock(return_value=urls)), read=read)
+        f = SimpleNamespace(canonical=lambda u: (u, 'kabum.com.br'))
+        db = SimpleNamespace(save_ad=lambda *a: {'id': 1})
+        monkeypatch.setattr('monitor.search_results.rank_offers', lambda values: [(r,u,s,None,False) for r,u,s in values])
+        monkeypatch.setattr('monitor.search_results.send_offer', AsyncMock())
+        send = AsyncMock()
+        await deliver_search(monitor, f, db, None, 0, 'Teclado Logitech G PRO RGB', send)
+        assert read.await_count == 2
+        text = '\n'.join(c.args[0] for c in send.await_args_list)
+        assert text.count('acesso suspenso') == 1
+        assert 'Outros links não consultados nesta busca: 5' in text
+        assert 'Ofertas enviadas: 1' in text
+    asyncio.run(run())
+
+
+def test_shared_external_quota_has_one_notice_for_affected_stores():
+    from monitor.discovery import SearchLinks
+    async def run():
+        notices = [f'{store}: O limite da busca externa sem chave foi atingido. Aguarde antes de tentar novamente.' for store in ('Terabyte', 'Mercado Livre', 'Amazon Brasil')]
+        notices += ['Mercado Livre: a descoberta falhou nesta consulta. Isso não prova que o produto não exista.']
+        monitor = SimpleNamespace(search=SimpleNamespace(links=AsyncMock(return_value=SearchLinks([], notices))))
+        send = AsyncMock()
+        await deliver_search(monitor, None, None, None, 0, 'Logitech', send)
+        text = '\n'.join(c.args[0] for c in send.await_args_list)
+        assert text.count('Índice externo temporariamente limitado') == 1
+        assert 'Terabyte, Mercado Livre, Amazon Brasil' in text
+        assert 'a descoberta falhou' not in text
+    asyncio.run(run())
+
+
+def test_quota_reuses_saved_matching_link_but_reads_price_again(monkeypatch):
+    from monitor.discovery import SearchLinks
+    async def run():
+        url = 'https://www.terabyteshop.com.br/produto/123/teclado-logitech-g-pro'
+        rows = [dict(url=url, title='Teclado Logitech G PRO RGB', store='Terabyte'),
+            dict(url=url+'-mouse', title='Mouse Logitech G PRO RGB', store='Terabyte')]
+        db = SimpleNamespace(rows=lambda sql: rows, save_ad=lambda *args: {'id': 5})
+        reading = SimpleNamespace(title='Teclado Logitech G PRO RGB', price=12345)
+        notice = 'Terabyte: O limite da busca externa sem chave foi atingido.'
+        monitor = SimpleNamespace(search=SimpleNamespace(links=AsyncMock(return_value=SearchLinks([], [notice]))), read=AsyncMock(return_value=[reading]))
+        monkeypatch.setattr('monitor.search_results.rank_offers', lambda values: [(r,u,s,None,False) for r,u,s in values])
+        offer = AsyncMock()
+        monkeypatch.setattr('monitor.search_results.send_offer', offer)
+        send = AsyncMock()
+        await deliver_search(monitor, SimpleNamespace(canonical=lambda u:(u,'terabyteshop.com.br')), db, None, 0, 'Teclado Logitech G PRO RGB', send)
+        monitor.read.assert_awaited_once_with(url)
+        assert offer.await_args.args[2].price == 12345
+        assert 'SQLite' in '\n'.join(c.args[0] for c in send.await_args_list)
+    asyncio.run(run())

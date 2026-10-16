@@ -282,3 +282,15 @@ Busca real local com as cinco lojas e a consulta exata do relatório: KaBuM desc
 
 Também foi executado o fluxo real deliver_search com descoberta/leitura nas cinco lojas, banco SQLite exclusivo em data e Telegram substituído por coletores locais: nenhum produto monitorado ou alerta foi criado. Esse ensaio revelou a necessidade adicional de excluir G515/G915, depois corrigida e conferida nos testes e na descoberta real final. O banco do usuário não foi aberto nem alterado. Não houve envio real ao Telegram nem implantação SSH. Bloqueios por IP, preço oculto e condição ausente permanecem limites explícitos: não foi validado funcionamento completo de todas as lojas.
 
+# Atualização 2026.10.16-quota.1
+
+297 testes automatizados passaram, sem chamadas reais às lojas nesta alteração.
+
+Correções referentes ao relatório das 09:22: o tipo de produto solicitado agora é exigido para teclado/keyboard, mouse/mice, headset/headphone/fone e monitor/monitores. Um mouse Logitech G PRO não pode passar como teclado apenas por compartilhar marca/família/RGB.
+
+Após uma recusa de acesso, a busca envia um único aviso por loja e não chama o leitor para os demais links dessa loja na mesma consulta. O resumo distingue a primeira falha dos links não consultados. A pausa de acesso do Fetcher continua sendo respeitada; não elimina bloqueios externos.
+
+Durante limitação do índice externo, links da mesma consulta ainda disponíveis no cache em memória podem ser reaproveitados por até sete dias após expirar a validade normal. Não se trata de cache de preço. Quando a busca retorna aviso de limite, também procura até três links compatíveis por loja afetada dentre os últimos cem anúncios salvos no SQLite, preservando a utilidade de links conhecidos após reinício. Preço/estoque são sempre consultados de novo; sem leitura válida não se anuncia preço atual. Fontes incompletas são informadas. Limites do provedor não foram contornados, removidos ou validados como restabelecidos.
+
+Avisos do mesmo limite externo são agrupados com as lojas afetadas. Os testes simulam 429, cache expirado/indisponível, ausência de repetição durante a pausa, reaproveitamento SQLite sem usar preço antigo, rejeição do mouse e continuidade em outra loja. Não houve nova validação em lojas reais nem na VPS nesta alteração.
+
