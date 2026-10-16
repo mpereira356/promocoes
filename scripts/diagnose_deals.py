@@ -21,8 +21,9 @@ async def diagnose(args):
     fetcher = Fetcher(config)
     try:
         monitor = Monitor(None, config, fetcher, None, None)
-        report = await Deals(monitor, Limits(args.pages, args.products, args.comparisons)).run(
-            args.category, DiscountFilter.parse(args.discount), config.domains, args.cep)
+        deals = Deals(monitor, Limits(args.pages, args.products, args.comparisons))
+        category = args.category if args.category in CATEGORIES else deals.catalog.request(args.category, fetcher)
+        report = await deals.run(category, DiscountFilter.parse(args.discount), config.domains, args.cep)
         return {'coverage': [asdict(c) for c in report.coverage], 'messages': list(messages(report)),
                 'examined': [asdict(o) for o in report.examined],
                 'robots': fetcher.robots_diagnostics}
@@ -34,7 +35,7 @@ def main():
     load_dotenv()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--stores', default=','.join(ADAPTERS))
-    parser.add_argument('--category', choices=CATEGORIES, default='hardware/placas-mae')
+    parser.add_argument('--category', default='hardware/placas-mae', help='Chave do catalogo, tema livre ou link HTTPS da categoria')
     parser.add_argument('--discount', default='>=30')
     parser.add_argument('--cep', default='')
     parser.add_argument('--pages', type=int, default=1)

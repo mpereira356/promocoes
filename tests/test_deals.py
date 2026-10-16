@@ -223,7 +223,8 @@ def test_telegram_unauthorized_and_duplicate_run():
         assert controller.session.stage == 'category'
         controller.session.stage = 'stores'
         controller.session.discount = DiscountFilter.parse('>=30')
-        update.callback_query = SimpleNamespace(data=f'promo:{controller.session.nonce}:run', answer=AsyncMock(), message=SimpleNamespace(reply_text=reply))
+        controller.session.category = controller.catalog.items['hardware/placas-mae']
+        update.callback_query = SimpleNamespace(data=f'promo:{controller.session.nonce}:{controller.session.revision}:run', answer=AsyncMock(), message=SimpleNamespace(reply_text=reply))
         await controller.callback(update, None)
         await controller.callback(update, None)
         assert len(scheduled) == 1

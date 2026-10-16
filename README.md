@@ -1,8 +1,10 @@
-**Títulos e exemplos:** a versão `2026.10.15-titulos.1` mostra títulos em negrito no Telegram, com HTML escapado, inclusive nas legendas de fotos. A ajuda explica os argumentos de `/configurar`, mostra quando os filtros disparam ou impedem um alerta, como remover o alvo e como alternar os modos. A seleção de promoções também traz exemplos de `>30` e `>=30`.
+**Versão atual: `2026.10.15-categorias.1`.** A busca de promoções aceita múltiplos departamentos, subcategorias, temas livres e links de categoria.
+
+**Títulos e exemplos:** os títulos aparecem em negrito no Telegram, com HTML escapado, inclusive nas legendas de fotos. A ajuda explica os argumentos de `/configurar`, mostra quando os filtros disparam ou impedem um alerta, como remover o alvo e como alternar os modos. A seleção de promoções também traz exemplos de `>30` e `>=30`.
 
 **Mensagens revisadas:** os textos enviados pelo usuário foram aplicados com acentuação, blocos curtos, botões e emojis consistentes. As regras de busca, comparação e monitoramento são preservadas. Os templates de referência estão em [TEMPLATES-REVISADOS.md](TEMPLATES-REVISADOS.md).
 
-**Busca pontual por categoria:** envie `/promocoes` e escolha Hardware > Placas-mãe, desconto (`>30`, `>=30` ou personalizado) e lojas. Retorna até três produtos, com desconto anunciado calculado e comparação separada, sem cadastrar monitoramento. A categoria inicial é Placas-mãe; lojas sem extração validada ou bloqueadas são identificadas no resumo. Veja [PROMOCOES.md](PROMOCOES.md) para limites, condições e validação.
+**Categorias ampliadas:** `/promocoes` agora navega por **201 categorias/subcategorias em 33 grupos** de links observados nas lojas, com paginação. Use `/categoria monitores`, `/categoria pets` ou qualquer outro tema; também aceita link HTTPS da categoria. `/categorias atualizar` relê os menus públicos. Sem página mapeada, usa busca por termo e informa essa limitação. Nenhuma dessas consultas cria monitoramento. Preço/estoque e acesso continuam sujeitos à validação da página. Veja [PROMOCOES.md](PROMOCOES.md).
 
 **Precos Amazon:** o robô carrega o painel publico de ofertas com Selenium quando o preco nao vem no HTML principal. O anuncio B08KGVH7YC foi validado com preco, vendedor e condicao reais. Pagamento/estoque ausentes continuam desconhecidos. `bash deploy/update.sh` instala as dependencias necessarias; confira [STATUS-LOJAS.md](STATUS-LOJAS.md) para validacao e limites.
 

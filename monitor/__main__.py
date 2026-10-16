@@ -25,6 +25,8 @@ BUSCAS
 /buscar nome — buscar ofertas com ID, fotos e medalhas. Não ativa acompanhamento.
 /buscarml nome — encontrar links do Mercado Livre. Resultados ainda não verificados serão identificados.
 /promocoes — busca pontual por categoria, desconto e lojas. Não cria acompanhamento.
+/categoria nome ou https://link — procurar qualquer tema ou usar uma página de categoria da loja.
+/categorias — navegar por departamentos e subcategorias; /categorias atualizar relê os menus das lojas.
 /descontopromo >=30 — informar percentual personalizado na etapa de desconto.
 /ceppromo 01001000 — informar o CEP da consulta. O frete ainda não é cotado.
 
@@ -136,7 +138,7 @@ def main():
         await send(text)
 
     promotions = PromotionsTelegram(config, Deals(monitor), send_promotion, background)
-    for name in ('promocoes', 'descontopromo', 'ceppromo'):
+    for name in ('promocoes', 'categoria', 'categorias', 'descontopromo', 'ceppromo'):
         app.add_handler(CommandHandler(name, promotions.command))
     app.add_handler(CallbackQueryHandler(promotions.callback, pattern=r'^promo:'))
 

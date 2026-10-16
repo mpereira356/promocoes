@@ -1,6 +1,14 @@
 # Busca pontual de promoções
 
-No Telegram, envie `/promocoes` e escolha **Hardware > Placas-mãe**, o filtro de desconto e as lojas. Marque ou desmarque cada loja e toque em **Pesquisar agora**. Todas significa todas as lojas suportadas **habilitadas em ALLOWED_DOMAINS**.
+No Telegram, envie `/promocoes` e escolha um departamento, subcategoria, filtro e lojas. As telas têm botões de próxima/anterior e permitem trocar de categoria. O catálogo distribuído reúne **201 categorias/subcategorias em 33 grupos**, com **215 links** observados nas lojas. Inclui Hardware, Periféricos, Monitores, Notebooks, Cadeiras, Casa e Lazer, Casa e Eletro, Games, Pets e outros. Só aparecem categorias com link em pelo menos uma loja habilitada em `ALLOWED_DOMAINS`.
+
+Também pode digitar `/categoria monitores`, `/categoria pets`, `/categoria casa e lazer` ou `/promocoes notebooks`. Se houver mais de uma opção, escolha o resultado correto. Para qualquer outro tema, como `/categoria brinquedos`, o bot aceita a consulta e informa que a descoberta será **por termo**, com cobertura parcial, sem inventar uma URL de categoria. Alguns termos comuns têm equivalência de busca explícita, como celulares → smartphone. Não há garantia de que todo tema exista em todas as lojas.
+
+Pode informar diretamente uma página: `/categoria https://www.pichau.com.br/pets`. A origem precisa ser uma loja autorizada. O extrator da loja será aplicado à página fornecida; ausência de dados ou formato não suportado será relatado, sem afirmar que a página foi lida com sucesso.
+
+Use `/categorias atualizar` ou o botão de atualização para reler uma página de menu por loja. O catálogo anterior é preservado em caso de bloqueio; atualizações têm cache de uma hora e valem para a execução atual. O catálogo distribuído é carregado novamente após reinício. O menu é parcial: links descobertos não comprovam preços, estoque ou acesso a todas as páginas. Amazon/Mercado Livre ainda não têm descoberta automática de menus validada; aceitam categoria por termo ou URL, respeitando as limitações de acesso existentes.
+
+Marque ou desmarque cada loja e toque em **Pesquisar agora**. Todas significa todas as lojas suportadas habilitadas em `ALLOWED_DOMAINS`. Quando uma loja não tiver página mapeada para a categoria escolhida, usa descoberta por termo e informa isso no resumo; o preço continua vindo da oferta.
 
 Para outro percentual, na etapa do desconto envie `/descontopromo >25,5` ou `/descontopromo >=30`. O primeiro exige mais de 25,5%; o segundo aceita exatamente 30%. O filtro usa centavos e comparação exata, sem arredondar o percentual antes de filtrar. O valor exibido tem duas casas decimais.
 
@@ -10,7 +18,7 @@ A consulta acontece naquele momento, termina com uma mensagem de conclusão e n�
 
 ## Cobertura inicial e limites
 
-A taxonomia inicial é **Hardware > Placas-mãe**. Outras categorias ainda não estão mapeadas e não são oferecidas como se estivessem prontas. Cada adaptador declara o próprio mapa de URLs, interpretação de categoria/paginação e metadados de oferta; novas categorias podem ser acrescentadas após validar sua URL e estrutura.
+A navegação usa `monitor/deals/catalog.py` e o catálogo público `category_seed.json`. Os links vieram dos menus reais; não são fabricados a partir de nomes. O mapa de cada adaptador é preenchido a partir desse catálogo, e a seleção efetiva é passada ao serviço, sem fixar Hardware/Placas-mãe. Menus, busca por nome e URL livre compartilham os mesmos leitores, validação de preços e limites. Equivalências entre rotas são explícitas; a comparação do mesmo produto continua exigindo identidade forte.
 
 Por pesquisa: até **2 páginas de categoria e 12 produtos por loja**. Para cada produto distinto que passar no filtro dentro dessa amostra, busca complementar de até **2 candidatos por outra loja selecionada**; os três melhores são apresentados. Os mesmos URLs são reutilizados em memória durante a consulta. A busca complementar reutiliza o provedor configurado; com `SEARCH_PROVIDER=direct` não exige chave de busca. Ela pode consultar sitemaps ou índice externo para descobrir links; nunca usa preços de snippets. Muitas ofertas aptas podem tornar a consulta demorada; o recebimento de comandos permanece ativo.
 
@@ -21,8 +29,8 @@ O resumo identifica páginas lógicas tentadas, produtos descobertos, leituras d
 | KaBuM | NEXT_DATA, incluindo JSON serializado duas vezes; paginação da categoria | `product.prices.oldPrice` vinculado a ID e título | Caminhos e estrutura observados em páginas reais |
 | Pichau | Cards `data-cy=list-product` e próximo link da própria categoria | Bloco principal `price_from`, associado ao preço Pix lido | Estruturas observadas em páginas reais; depende de acesso da loja |
 | Terabyte | Links de produto reconhecidos pelo adaptador existente e paginação declarada | Somente StrikethroughPrice estruturado da mesma oferta | Referência por HTML ainda não validada; categoria pode falhar |
-| Amazon | Somente ItemList/Product estruturados | Somente StrikethroughPrice estruturado da mesma oferta | HTML de categoria e referência por vendedor não validados; pode não produzir resultados |
-| Mercado Livre | Somente ItemList/Product estruturados e anúncios individuais | Somente StrikethroughPrice estruturado da mesma oferta | Acesso bloqueado nas verificações anteriores; não há promessa de extração |
+| Amazon | URL mapeada/livre: ItemList/Product estruturados; sem mapa: descoberta por termo | Somente StrikethroughPrice estruturado da mesma oferta | Menu automático, HTML de categoria e referência por vendedor não validados; pode não produzir resultados |
+| Mercado Livre | URL mapeada/livre: ItemList/Product estruturados e anúncios individuais; sem mapa: descoberta por termo | Somente StrikethroughPrice estruturado da mesma oferta | Menu automático não validado; acesso bloqueado nas verificações anteriores |
 
 O suporte genérico a `priceSpecification`/`StrikethroughPrice` segue o contrato estruturado e é testado com simulações; **não comprova que essas lojas o fornecem**. Nenhum percentual é atribuído se não existir uma referência válida da própria oferta. Bloqueios/CAPTCHA/robots são respeitados e não são contornados.
 
@@ -44,6 +52,9 @@ Sem enviar Telegram ou abrir o banco:
 
 ```bash
 python -m scripts.diagnose_deals --browser --stores kabum.com.br,pichau.com.br --discount ">=30" --pages 1 --products 3 --comparisons 1
+python -m scripts.diagnose_deals --browser --stores pichau.com.br --category pets --pages 1 --products 2
+python -m scripts.diagnose_categories --list
+python -m scripts.diagnose_categories --refresh --browser
 ```
 
 Na VPS instalada, use `/opt/price-monitor/.venv/bin/python` como `pricebot`. O diagnóstico padrão é menor que a busca do Telegram para limitar acessos. Rode a suíte local com `python -m pytest -q` (dependências de teste em `requirements.txt`).

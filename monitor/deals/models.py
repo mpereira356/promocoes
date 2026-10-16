@@ -96,3 +96,4 @@ class DealReport:
     cep: str = ''
     comparisons_limited: bool = False
     examined: list[DealOffer] = field(default_factory=list)
+    category_title: str = ''

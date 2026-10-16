@@ -6,9 +6,10 @@ from ..adapters.base import ReadError
 from ..models import normalize
 from ..search import Search
 from ..network import PAGE_AUDIT
-from .adapters import ADAPTERS, CATEGORIES
+from .adapters import ADAPTERS
 from .identity import model_relation, comparable
 from .models import Coverage, DealResult, DealReport, valid_price
+from .catalog import CategoryCatalog, Category
 
 
 @dataclass(frozen=True)
@@ -23,24 +24,48 @@ class Deals:
         self.monitor = monitor
         self.fetcher = monitor.fetcher
         self.limits = limits or Limits()
+        self.catalog = CategoryCatalog()
         if any(not 1 <= n <= 100 for n in vars(self.limits).values()):
             raise ValueError('Os limites devem estar entre 1 e 100.')
         self.lock = asyncio.Lock()
 
     async def run(self, category, discount, domains, cep=''):
         domains = list(dict.fromkeys(domains))
-        if category not in CATEGORIES or not domains or any(d not in ADAPTERS or d not in self.monitor.config.domains for d in domains):
+        if isinstance(category, str):
+            category = self.catalog.items.get(category)
+        if not isinstance(category, Category) or not domains or any(d not in ADAPTERS or d not in self.monitor.config.domains for d in domains):
             raise ValueError('Esta categoria ou loja não está habilitada.')
-        if cep and (len(cep) != 8 or not cep.isdigit()):
-            raise ValueError('O CEP deve conter oito dígitos.')
         if self.lock.locked():
             raise ValueError('Já existe uma consulta de promoções em andamento.')
+        for domain, url in category.urls.items():
+            if domain in domains and self.fetcher.canonical(url)[1] != domain:
+                raise ValueError('O link de categoria não corresponde à loja selecionada.')
+        if cep and (len(cep) != 8 or not cep.isdigit()):
+            raise ValueError('O CEP deve conter oito dígitos.')
         async with self.lock:
             return await self._run(category, discount, domains, cep)
 
     async def _run(self, category, discount, domains, cep):
         coverage = {d: Coverage(d, ADAPTERS[d].store) for d in domains}
         cache, pool = {}, []
+
+        async def discover(domain, query):
+            config = copy(self.monitor.config)
+            config.domains = (domain,)
+            audit = []
+            token = PAGE_AUDIT.set(audit)
+            try:
+                urls = await Search(config, self.fetcher).links(query)
+                coverage[domain].notices.extend(getattr(urls, 'notices', []))
+                return list(urls)
+            except (ReadError, ValueError):
+                coverage[domain].notices.append('A busca complementar está indisponível; a comparação será parcial.')
+                return []
+            finally:
+                PAGE_AUDIT.reset(token)
+                documents = [e for e in audit if e['domain'] == domain]
+                coverage[domain].discovery_pages += len(documents)
+                coverage[domain].discovery_loaded += sum(e['ok'] for e in documents)
 
         async def read(url, domain, comparison=False):
             try:
@@ -68,10 +93,20 @@ class Deals:
         for domain in domains:
             store, cov = ADAPTERS[domain], coverage[domain]
             cov.notices.extend(store.limitations)
-            if category not in store.categories:
-                cov.notices.append('Esta categoria ainda não foi mapeada para esta loja.')
+            if domain not in category.urls:
+                query = category.query or (category.path[-1] if category.path[-1] != 'Todas as subcategorias' else category.path[0])
+                cov.notices.append('Sem página de categoria mapeada nesta loja: busca por termo "' + query + '"; não representa varredura da categoria inteira.')
+                links = list(dict.fromkeys(await discover(domain, query)))
+                cov.discovered = len(links)
+                if len(links) > self.limits.products_per_store:
+                    cov.notices.append(f'A leitura foi limitada aos primeiros {self.limits.products_per_store} produtos encontrados.')
+                for link in links[:self.limits.products_per_store]:
+                    offers = await read(link, domain)
+                    pool.extend(offers)
+                    if not any(eligible(o, discount) for o in offers):
+                        cov.excluded += 1
                 continue
-            url, visited, links = store.category_url(category), set(), []
+            url, visited, links = category.urls[domain], set(), []
             for _ in range(self.limits.category_pages):
                 if not url or url in visited:
                     break
@@ -121,29 +156,12 @@ class Deals:
             for domain in domains:
                 if domain == offer.domain:
                     continue
-                config = copy(self.monitor.config)
-                config.domains = (domain,)
-                search = Search(config, self.fetcher)
-                audit = []
-                token = PAGE_AUDIT.set(audit)
-                try:
-                    urls = await search.links(query)
-                    coverage[domain].notices.extend(getattr(urls, 'notices', []))
-                    for url in list(urls)[:self.limits.comparisons_per_store]:
-                        pool.extend(await read(url, domain, comparison=True))
-                except (ReadError, ValueError):
-                    coverage[domain].notices.append('A busca complementar está indisponível; a comparação será parcial.')
-                finally:
-                    PAGE_AUDIT.reset(token)
-                    # Ofertas ja sao contadas separadamente; contar aqui somente
-                    # documentos usados para descobrir links, nao robots/retries.
-                    product_urls = set(cache)
-                    documents = [e for e in audit if e['domain'] == domain and e['url'] not in product_urls]
-                    coverage[domain].discovery_pages += len(documents)
-                    coverage[domain].discovery_loaded += sum(e['ok'] for e in documents)
+                urls = await discover(domain, query)
+                for url in urls[:self.limits.comparisons_per_store]:
+                    pool.extend(await read(url, domain, comparison=True))
 
         results = [compare_offer(o, pool) for o in qualified[:3]]
-        return DealReport(results, list(coverage.values()), discount, category, cep, True, pool)
+        return DealReport(results, list(coverage.values()), discount, category.key, cep, True, pool, category.title)
 
 
 def eligible(offer, discount):

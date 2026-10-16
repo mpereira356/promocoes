@@ -1,3 +1,19 @@
+# Atualização 2026.10.15-categorias.1
+
+236 testes locais passaram, incluindo as verificações de seleção livre e navegação paginada.
+
+O limite fixo Hardware/Placas-mãe foi removido da interface e da execução. O catálogo distribuído contém 215 links observados, agrupados em 201 categorias/subcategorias e 33 departamentos. Menus reais de KaBuM, Pichau e Terabyte foram consultados pelo Fetcher; a leitura de links não comprova extração de preços em todas essas categorias. As rotas anteriores de placas-mãe Amazon/Mercado Livre foram preservadas, com suas limitações.
+
+Novos testes locais simulam paginação de botões, rejeição de botões antigos, seleção de Pets chegando à execução, categorias livres fora do catálogo, recusa de URLs não autorizadas, atualização/cache dos menus e preservação em caso de bloqueio. Duas fixtures adicionais são recortes reduzidos de navegação real; testes que as leem não fazem consultas de rede. O pacote Kali inclui category_seed.json.
+
+Validação ao vivo separada, sem SQLite ou Telegram, em 15/10/2026:
+
+- Pichau/Monitores: 1 página, 36 links descobertos, 2 produtos lidos com preço Pix, disponibilidade e referência anterior. Os valores observados foram 408999/588234 e 139999/235293 centavos (atual/anterior); o filtro >=30% foi aplicado sobre esses valores. Não são preços atuais garantidos.
+- Pichau/Pets: 1 página, 36 links, 2 produtos com preços atuais de 7486 e 11174 centavos e disponibilidade declarada; sem referência anterior legível. Foram excluídos do filtro percentual, sem inventar desconto.
+- Terabyte/Monitores: 1 página, 152 links reconhecidos pelo adaptador existente, leitura limitada a 1 produto. Preço atual 148999 centavos e disponibilidade declarada, mas sem referência anterior validada; não qualificou como promoção percentual. A contagem é de links reconhecidos, não de todo o estoque da loja.
+
+A atualização automática dos menus foi validada com simulação e os mesmos marcadores HTML observados nas páginas reais; não houve envio real de botões ao Telegram nesta revisão. Pesquisa por termo é identificada como parcial e não se apresenta como varredura integral de categoria. As limitações de acesso e de referência anterior de cada loja continuam válidas.
+
 # Atualização 2026.10.15-titulos.1
 
 Títulos enviados em HTML com conteúdo dinâmico escapado. A divisão de mensagens ocorre antes da criação das tags e respeita unidades UTF-16, preservando emojis. A suíte inclui verificações de escape de nomes com `<`, `>` e `&`, divisão de textos longos e preservação do teclado/parse_mode. Exemplos de filtros explicam a combinação obrigatória de valor, percentual e alvo e não alteram os cálculos existentes. Os testes usam Telegram simulado; nenhum envio real ou nova consulta de loja foi realizado nesta atualização.

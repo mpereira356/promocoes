@@ -40,14 +40,14 @@ def messages(report):
             text += '\n'.join(offer.notes) + '\n'
         text += f'\n🔗 Link: {offer.url}'
         yield text
-    title = ' > '.join(CATEGORIES[report.category])
+    title = report.category_title or ' > '.join(CATEGORIES[report.category])
     text = f'✅ Busca pontual concluída — {title}\nFiltro: {report.filter}\nOfertas válidas apresentadas: {len(report.results)}\n\n'
     text += 'O desconto anunciado é calculado sobre a referência da própria loja; isso não comprova uma queda histórica. As comparações consideram o preço do produto, sem frete.\n\n'
     text += f'Consulta: {datetime.now(ZoneInfo("America/Sao_Paulo")).isoformat(timespec="seconds")}\n\nCobertura parcial — não representa o site inteiro:\n'
     for cov in report.coverage:
         text += (f'• {cov.store}: {cov.category_pages} página(s) de categoria tentada(s), '
                  f'{cov.product_pages} oferta(s) tentada(s), {cov.comparison_pages} oferta(s) complementares; '
-                 f'{cov.discovery_pages} documento(s) de descoberta complementar ({cov.discovery_loaded} lidos); '
+                 f'{cov.discovery_pages} documento(s) de descoberta ({cov.discovery_loaded} lidos); '
                  f'{cov.discovered} links descobertos, {cov.excluded} produtos sem oferta apta.\n')
         if cov.notices:
             text += '\n'.join('  ⚠️ ' + n for n in dict.fromkeys(cov.notices)) + '\n'

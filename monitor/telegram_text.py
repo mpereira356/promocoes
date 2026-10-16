@@ -12,7 +12,7 @@ PREFIXES = (
     '✅ Pesquisa concluída', '✅ Busca pontual concluída', '⚠️ Pesquisa encerrada',
     '⚠️ Avisos da pesquisa', '🏷️ Busca pontual de promoções', '🏷️ Oferta ',
     '📉 QUEDA DE PREÇO', '📈 AUMENTO DE PREÇO', '📊 Oferta ',
-    'Hardware · escolha a subcategoria:',
+    'Hardware · escolha a subcategoria:', '🏷️ ', '✅ Catálogo atualizado',
     '🔎 ', '🆔 ID do anúncio:', '🆔 Anúncio:', '📦 Produto ',
 )
 
@@ -22,7 +22,7 @@ def render(text, bold_lines=()):
     lines = []
     for line in text.split('\n'):
         safe = escape(line)
-        if line and (line in HEADINGS or line in titles or line.startswith(PREFIXES)):
+        if line and (line in HEADINGS or line in titles or line.startswith(PREFIXES) or ' · escolha a subcategoria' in line):
             safe = '<b>' + safe + '</b>'
         lines.append(safe)
     return '\n'.join(lines)
