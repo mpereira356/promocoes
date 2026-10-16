@@ -11,6 +11,7 @@ from .search import search_error_message
 async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketplace_only=False):
     sent = failed = unverified = priced = 0
     notices = []
+    unverified_links, failures = [], []
     interrupted = False
     try:
         if marketplace_only:
@@ -27,7 +28,7 @@ async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketpla
             if external:
                 _, domain = fetcher.canonical(url)
                 if domain == 'mercadolivre.com.br' and not adapter(domain).is_product_url(url):
-                    await send(discovered_text(candidate))
+                    unverified_links.append((candidate, 'Catálogo com vários vendedores; nenhuma oferta individual confirmada'))
                     unverified += 1
                     continue
             try:
@@ -48,15 +49,20 @@ async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketpla
                     reason = 'O leitor encontrou um erro interno; consulte o tipo registrado nos logs do serviço'
                 logging.getLogger(__name__).critical('search_offer_failed type=%s', type(exc).__name__)
                 if external:
-                    await send(discovered_text(candidate) + '\n⚠️ Leitura da página: ' + reason + '.')
+                    unverified_links.append((candidate, reason))
                     unverified += 1
                 else:
-                    await send('⚠️ Não foi possível ler esta oferta. Motivo: ' + reason + '.\n' + url)
+                    failures.append((url, reason))
         for r, url, store, rank, provisional in rank_offers(offers):
             ad = db.save_ad(url, store, r)
             await send_offer(bot, chat, r, url, store, rank, provisional, ad['id'])
             sent += 1
             priced += int(getattr(r, 'price', None) is not None and getattr(r, 'price', 0) > 0)
+        if failures:
+            await send('⚠️ Ofertas não verificadas\n\n' + '\n\n'.join(
+                reason + '.\n' + url for url, reason in failures))
+        for text in grouped_unverified(unverified_links):
+            await send(text)
         if notices:
             await send('⚠️ Avisos da pesquisa\n\n' + '\n'.join(notices))
     except ReadError as exc:
@@ -67,8 +73,25 @@ async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketpla
         await send('⚠️ A busca foi interrompida por uma falha. Tente novamente mais tarde.')
     finally:
         status = ('⚠️ Pesquisa encerrada com falha' if interrupted else
-            '⚠️ Pesquisa concluída com limitações' if failed or (sent and not priced) else '✅ Pesquisa concluída')
+            '⚠️ Pesquisa concluída com limitações' if failed or unverified or notices or (sent and not priced) else '✅ Pesquisa concluída')
         await send(f'{status}\n\nOfertas enviadas: {sent}\nLinks com falha de leitura: {failed}\nAvisos das lojas: {len(notices)}\nLinks para conferência: {unverified}\nPreços lidos nas ofertas enviadas: {priced}')
+
+
+def grouped_unverified(entries):
+    from urllib.parse import urlsplit
+    groups = {}
+    for candidate, reason in entries:
+        domain = (urlsplit(candidate.url).hostname or '').removeprefix('www.')
+        domain = 'mercadolivre.com.br' if domain == 'produto.mercadolivre.com.br' else domain
+        groups.setdefault(domain, []).append((candidate, reason))
+    for domain, candidates in groups.items():
+        text = (f'🔎 {adapter(domain).name} — links sem preço confirmado\n\n'
+            'Fonte: índice externo Tavily Search. Título e oferta ainda não conferidos na página.\n'
+            'Preço, estoque, vendedor, condição e pagamento não foram verificados.\n'
+            'Este grupo não ativa monitoramento nem alertas.\n\n')
+        text += '\n\n'.join(f'{i}. {c.title[:200]}\n{c.url}' for i, (c, _) in enumerate(candidates, 1))
+        text += '\n\nLeitura da página: ' + '; '.join(dict.fromkeys(reason for _, reason in candidates)) + '.'
+        yield text
 
 
 def discovered_text(candidate):

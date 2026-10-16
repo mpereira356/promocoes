@@ -103,3 +103,53 @@ def test_exact_offer_diagnostic_does_not_echo_rejected_credentials():
         assert 'private-secret' not in json.dumps(report)
         assert report['offers'][0]['price_verified'] is False
     asyncio.run(run())
+
+
+def test_store_refusal_pauses_only_that_store_and_expires(monkeypatch):
+    import httpx
+    async def run():
+        config = SimpleNamespace(domains=('pichau.com.br', 'kabum.com.br'), browser=False, delay=0)
+        f = Fetcher(config)
+        f.public = AsyncMock()
+        pichau = 'https://www.pichau.com.br/product'
+        kabum = 'https://www.kabum.com.br/produto/123/product'
+        get = AsyncMock(side_effect=[
+            httpx.Response(403, text='Access denied', request=httpx.Request('GET', pichau)),
+            httpx.Response(200, text='Other store', request=httpx.Request('GET', kabum)),
+            httpx.Response(200, text='Recovered', request=httpx.Request('GET', pichau)),
+        ])
+        monkeypatch.setattr(f.client, 'get', get)
+        monkeypatch.setattr('monitor.network.asyncio.sleep', AsyncMock())
+        try:
+            with pytest.raises(ReadError, match='blocked_no_bypass'):
+                await f.request(pichau)
+            with pytest.raises(ReadError, match='domain_access_cooldown'):
+                await f.request(pichau + '-another')
+            assert get.await_count == 1
+            assert (await f.request(kabum))[0] == 'Other store'
+            f.access_paused['pichau.com.br'] = -1
+            assert (await f.request(pichau))[0] == 'Recovered'
+            assert get.await_count == 3
+        finally:
+            await f.close()
+    asyncio.run(run())
+
+
+def test_catalogs_are_grouped_and_never_reported_as_verified_offers():
+    from monitor.discovery import SearchLinks, LinkCandidate
+    async def run():
+        urls = [f'https://www.mercadolivre.com.br/logitech/p/MLB{i}' for i in range(6)]
+        links = SearchLinks(urls, candidates={u: LinkCandidate(u, f'Logitech {i}', 'Tavily Search') for i, u in enumerate(urls)})
+        read, send = AsyncMock(), AsyncMock()
+        monitor = SimpleNamespace(search=SimpleNamespace(links=AsyncMock(return_value=links)), read=read)
+        f = SimpleNamespace(canonical=lambda u: (u, 'mercadolivre.com.br'))
+        await deliver_search(monitor, f, None, None, 1, 'Logitech', send)
+        read.assert_not_awaited()
+        assert send.await_count == 2
+        text = send.await_args_list[0].args[0]
+        assert 'links sem preço confirmado' in text
+        assert all(u in text for u in urls)
+        summary = send.await_args_list[-1].args[0]
+        assert summary.startswith('⚠️ Pesquisa concluída com limitações')
+        assert 'Ofertas enviadas: 0' in summary and 'Links para conferência: 6' in summary
+    asyncio.run(run())

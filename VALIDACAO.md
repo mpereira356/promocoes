@@ -242,3 +242,13 @@ Nos links Amazon não houve validação de preço. O navegador Selenium local ap
 
 O resumo de buscas diferencia conclusão com limitações e informa quantas ofertas enviadas tiveram preço lido. Exceções internas registram apenas o tipo no log. O novo `scripts.diagnose_offers` consulta links exatos e informa motivos e posições do código sem enviar mensagens nem alterar dados. Os testes adicionais de classificação de erro, DNS e credenciais rejeitadas são simulações; os testes dos recortes reais não executam rede.
 
+# Atualização 2026.10.16-access.1 — Logitech e bloqueios por loja
+
+Consulta real local dos dois links informados em 16/10/2026, com o transporte Chromium de produção: Logitech G213 Prodigy, R$ 419,99 Pix, indisponível; Logitech G PRO GX Blue, R$ 639,99 Pix, disponível segundo a página. O bloqueio relatado na VPS não foi reproduzido neste ambiente; essas leituras não validam acesso pelo IP da VPS nem garantem consultas futuras.
+
+Após 401/403 ou CAPTCHA, o Fetcher suspende novas consultas àquela loja por 15 minutos. A pausa fica em memória e expira automaticamente; não afeta outras lojas e não tenta contornar a recusa. A primeira recusa continua sendo informada. O diagnóstico de links exatos agora inclui status HTTP das páginas e transporte usado para distinguir HTTP de Chromium.
+
+Catálogos e links externos sem preço ficam agrupados por loja depois dos anúncios efetivamente lidos. Não são salvos como ofertas ou usados em alertas. Resumos com esses links ou avisos passam a indicar conclusão com limitações. Não houve validação de preços do Mercado Livre nesta alteração; agrupar links não implementa uma nova integração de preços.
+
+268 testes automatizados passaram. Novos testes simulam bloqueio 403, ausência de repetição durante a pausa, continuidade em outra loja, expiração e agrupamento de seis catálogos sem consulta nem gravação de oferta. Nenhuma mensagem real ao Telegram foi enviada.
+

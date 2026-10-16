@@ -105,6 +105,7 @@ def form_search_url(html, base, query, fields=None):
 
 
 REASONS = {
+    'domain_access_cooldown': 'A loja recusou acesso recentemente. Novas consultas a ela ficam suspensas por até 15 minutos; as outras lojas continuam',
     'network_dns_failure': 'O servidor não conseguiu resolver o endereço da loja após três tentativas de DNS',
     'amazon_price_requires_cart': 'A Amazon ocultou o preço e pede adicionar o item ao carrinho. Nenhuma ação de compra foi feita; preço não confirmado',
     'amazon_browser_crashed': 'O processo do Chrome encerrou ou a aba falhou. Verifique memória, espaço temporário e os logs do serviço',

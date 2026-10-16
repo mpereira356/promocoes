@@ -39,6 +39,7 @@ async def diagnose(config, urls):
                     for f in traceback.extract_tb(exc.__traceback__) if 'monitor' in Path(f.filename).parts]
             report['offers'].append(item)
         report['robots'] = fetcher.robots_diagnostics
+        report['page_access'] = fetcher.page_access
         return report
     finally:
         await fetcher.close()

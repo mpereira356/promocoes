@@ -27,6 +27,11 @@ class Fetcher:
         self.robots_diagnostics = {}
         self.content_types = {}
         self.browser_transport = None
+        self.access_paused = {}
+        self.page_access = {}
+
+    def pause_access(self, domain):
+        self.access_paused[domain] = time.monotonic() + 900
 
     def uses_browser(self, domain):
         return getattr(self.config, "browser", False) and domain in (
@@ -88,6 +93,8 @@ class Fetcher:
     async def request(self, url, check_robots=False):
         for redirect in range(5):
             url, domain = self.canonical(url)
+            if self.access_paused.get(domain, 0) > time.monotonic():
+                raise ReadError('domain_access_cooldown')
             if check_robots:
                 await self.allowed_by_robots(url)
             await self.public(url)
@@ -108,6 +115,8 @@ class Fetcher:
                         else:
                             response = await self.client.get(url)
                     except ReadError as exc:
+                        if str(exc) in ('blocked_no_bypass', 'captcha_no_bypass'):
+                            self.pause_access(domain)
                         if str(exc) not in (
                             "browser_navigation_failed_TimeoutError",
                             "browser_connection_failed",
@@ -149,10 +158,14 @@ class Fetcher:
             if urlsplit(url).path == '/robots.txt':
                 origin = 'https://' + urlsplit(url).netloc
                 self.robots_diagnostics.setdefault(origin, {})['http_status'] = response.status_code
+            else:
+                self.page_access[domain] = {'http_status': response.status_code,
+                    'transport': 'chromium' if self.uses_browser(domain) else 'http'}
             if response.status_code in (301, 302, 303, 307, 308):
                 url = urljoin(url, response.headers.get("location", ""))
                 continue
             if response.status_code in (403, 401):
+                self.pause_access(domain)
                 if any(
                     m in response.text.lower()
                     for m in (
@@ -211,6 +224,7 @@ class Fetcher:
         if final != url:
             await self.allowed_by_robots(final)
         if is_access_challenge(text):
+            self.pause_access(domain)
             raise ReadError("captcha_no_bypass")
         entry['ok'] = True
         return text, final
