@@ -5,7 +5,7 @@ from pathlib import Path
 import httpx
 from .adapters import adapter
 from .adapters.base import ReadError
-from .discovery import REASONS, relevance, SearchLinks
+from .discovery import REASONS, relevance, reading_relevance, SearchLinks
 from .presentation import rank_offers, send_offer
 from .search import search_error_message
 
@@ -77,7 +77,7 @@ async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketpla
                 readings = await monitor.read(url)
                 if not readings:
                     raise ReadError('structured_product_missing_or_ambiguous')
-                if not query.startswith('https://') and any(not relevance(query, r.title) for r in readings):
+                if not query.startswith('https://') and any(not reading_relevance(query, r) for r in readings):
                     raise ReadError('different_model')
                 _, domain = fetcher.canonical(url)
                 offers.extend((r, url, adapter(domain).name) for r in readings)

@@ -1,1 +1,1 @@
-VERSION = "2026.10.16-search-delivery.1"
+VERSION = "2026.10.16-echo-search.1"

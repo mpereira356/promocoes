@@ -39,6 +39,13 @@ def model_conflict(left, right):
     a, b = normalize(left), normalize(right)
     if brand_conflict(left, right):
         return True
+    if 'echo dot' in a and 'echo dot' in b:
+        if ('max' in a.split()) != ('max' in b.split()):
+            return True
+        ga = re.search(r'\becho dot (\d+)(?:a|th)?\b', a)
+        gb = re.search(r'\becho dot (\d+)(?:a|th)?\b', b)
+        if ga and gb and ga[1] != gb[1]:
+            return True
     if 'logitech' in a.split() and 'logitech' in b.split():
         ma, mb = re.search(r'\bg pro( x)?\b', a), re.search(r'\bg pro( x)?\b', b)
         if ma and mb and bool(ma[1]) != bool(mb[1]):
@@ -63,7 +70,7 @@ def same_product(seed, candidate):
     if model_conflict(seed.title, candidate.title):
         return False
     left, right = seed.identifiers, candidate.identifiers
-    for key in ("gtin", "mpn"):
+    for key in ("gtin", "mpn", "generation"):
         if left.get(key) and right.get(key) and left[key] != right[key]:
             return False
     if left.get("gtin") and left.get("gtin") == right.get("gtin"):

@@ -5,7 +5,7 @@ from .adapters.base import ReadError
 from .search import search_error_message
 from .models import Reading
 from .identity import same_product, search_terms
-from .discovery import REASONS, relevance
+from .discovery import REASONS, reading_relevance
 import json
 
 
@@ -157,7 +157,7 @@ class Monitor:
                         if not current:
                             continue
                         for reading in readings:
-                            if not seed_reading and not p['query'].startswith('https://') and not relevance(p['query'], reading.title):
+                            if not seed_reading and not p['query'].startswith('https://') and not reading_relevance(p['query'], reading):
                                 self.db.failure(candidate['id'], 'different_model')
                                 notes.append(f"🔎 Oferta {candidate['id']} descartada: produto incompatível com o monitoramento.")
                                 continue

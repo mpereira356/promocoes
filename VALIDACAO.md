@@ -1,3 +1,13 @@
+# Echo Dot - 2026.10.16-echo-search.1
+
+Falha de descoberta Amazon reproduzida para "Echo Dot 5a geracao" (com ordinal e acentos no comando original). A consulta externa com inurl:dp devolveu produtos sem relacao; sem o operador retornou links Echo. Agora existe uma unica alternativa sem o operador quando a primeira consulta nao encontra candidatos relevantes. Ambas usam cache e nao ha alternativa apos erro de quota/bloqueio. Categorias continuam descartadas e precos do indice externo continuam ignorados.
+
+O titulo real Amazon diz "geracao mais recente" e omite o numero. Para descoberta provisoria, o slug de um Echo Dot pode fornecer geracao; isso nao basta para aceitar a leitura. A ficha tecnica observada em #tech declara Echo Dot 5a geracao (2022), vinculada ao ASIN B09B8VGCR8. Essa evidencia e registrada separadamente e usada na verificacao da consulta e exibida no cartao. Echo Show, Dot Max, outra geracao e suportes sao rejeitados nos testes. URLs de outro modelo nao substituem a ficha tecnica; sem evidencia a correspondencia continua recusada.
+
+Consultas reais locais em 16/10/2026: descoberta do Echo Dot preto e uma leitura com R$ 584,11, Amazon.com.br, disponivel. Em repeticoes posteriores, a mesma pagina ocultou o preco e pediu carrinho, sem valor individual verificavel. O fluxo completo de descoberta/leitura/SQLite/formatacao foi executado com HTTP real e entrega Telegram simulada: um candidato foi entregue, sem falha de descoberta, mas sem preco na resposta oculta. Portanto nao se afirma leitura de preco permanente. Nenhuma compra/carrinho foi acionado, nenhum bloqueio foi contornado e nao houve acesso a VPS. Pichau, Terabyte e Mercado Livre nao foram revalidados nesta revisao.
+
+346 testes passaram, com tres avisos PTB preexistentes. Dez novos testes cobrem alternativa limitada/cache/quota, geracao da ficha tecnica, versoes/acessorios e alternancia real de resposta visivel/oculta. Os dois recortes reais foram reduzidos para excluir scripts, formularios e dados de sessao.
+
 # Entrega de resultados - 2026.10.16-search-delivery.1
 
 Corrigido o alcance da falha: antes, uma excecao ao salvar ou enviar um unico cartao abortava todos os demais resultados. Agora cada anuncio tem isolamento de persistencia e entrega, com contadores separados e continuidade do processamento. Falhas ao enviar avisos nao impedem tentar enviar o resumo. Nao se reenvia automaticamente o cartao inteiro apos timeout ambiguo, para evitar duplicacao; o resumo informa entrega incompleta ou nao confirmada. Se o Telegram estiver indisponivel para o resumo, a falha e registrada, sem prometer entrega.

@@ -3,7 +3,7 @@
 import json
 import re
 from dataclasses import dataclass
-from urllib.parse import urljoin, urlsplit, urlencode
+from urllib.parse import urljoin, urlsplit, urlencode, unquote
 from bs4 import BeautifulSoup
 from .models import normalize
 from .adapters.base import ReadError, nodes
@@ -33,6 +33,8 @@ def relevance(query, title):
         return set(text.split())
     wanted = terms(query) - stop
     found = terms(title)
+    if 'echo dot' in normalize(query) and 'echo dot' not in normalize(title):
+        return 0
     vacuum_parts = {'copo', 'filtro', 'escova', 'bico', 'bateria', 'carregador', 'peca'}
     if ('aspirador' in wanted and not wanted & vacuum_parts
             and found & {'sobressalente', 'reposicao', 'substituicao'}
@@ -67,6 +69,31 @@ def relevance(query, title):
         return 0
     score = len(wanted & found) / len(wanted)
     return score if score >= 0.6 else 0
+
+
+def candidate_relevance(query, candidate):
+    score = relevance(query, candidate.title)
+    if score:
+        return score
+    # O titulo comercial Amazon pode omitir a geracao. O slug apenas permite
+    # descobrir a pagina; a ficha tecnica ainda precisa confirmar o modelo.
+    p = urlsplit(candidate.url)
+    title = normalize(candidate.title)
+    if p.hostname not in ('www.amazon.com.br', 'amazon.com.br') or 'echo dot' not in title:
+        return 0
+    if re.search(r'\b\d+(?:a)?\s+geracao\b', title):
+        return 0
+    slug = normalize(re.sub(r'(\d+)[ªº°]', r'\1', unquote(p.path)))
+    generation = re.search(r'\becho dot (\d+)\s+geracao\b', slug)
+    return relevance(query, candidate.title + ' ' + generation[1] + ' geracao') if generation else 0
+
+
+def reading_relevance(query, reading):
+    generation = getattr(reading, 'identifiers', {}).get('generation', '')
+    title = reading.title
+    if generation:
+        title += ' ' + generation
+    return relevance(query, title)
 
 
 def documents(soup):
@@ -226,7 +253,7 @@ class DirectSearch:
                             await self.fetcher.render(final), final
                         )
                 ranked = sorted(
-                    ((relevance(query, c.title), c) for c in candidates),
+                    ((candidate_relevance(query, c), c) for c in candidates),
                     key=lambda x: x[0],
                     reverse=True,
                 )

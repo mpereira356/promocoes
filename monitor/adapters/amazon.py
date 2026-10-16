@@ -111,6 +111,19 @@ class AmazonAdapter(StructuredAdapter):
         actual_asins = {n.get('value') for n in soup.select('input#ASIN')}
         if actual_asins and actual_asins != {expected_asin}:
             raise ReadError('different_model')
+        if actual_asins == {expected_asin}:
+            generations = set()
+            for row in soup.select('#tech table tr'):
+                cells = row.find_all('td', recursive=False)
+                if len(cells) == 2 and normalize(cells[0].get_text(' ', strip=True)) == 'geracao':
+                    text = cells[1].get_text(' ', strip=True)
+                    value = normalize(re.sub(r'(\d+)[ªº°]', r'\1', text))
+                    if re.fullmatch(r'echo dot \d+ geracao(?: \d{4})?', value):
+                        generations.add(value)
+            if len(generations) == 1:
+                details['generation'] = next(iter(generations))
+            elif len(generations) > 1:
+                raise ReadError('conflicting_product_identifiers')
         titles = soup.select('#productTitle')
         rows = soup.select('#aod-offer-list #aod-offer')
         if rows:

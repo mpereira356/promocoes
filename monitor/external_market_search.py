@@ -7,7 +7,7 @@ from urllib.parse import urlsplit, unquote
 import re
 import httpx
 from .adapters.base import ReadError
-from .discovery import LinkCandidate, relevance
+from .discovery import LinkCandidate, candidate_relevance
 from .models import normalize
 from .identity import model_conflict
 
@@ -26,6 +26,13 @@ class ExternalMarketSearch:
         self.cooldown = 0
 
     async def links(self, query, domain='mercadolivre.com.br'):
+        result = await self._links(query, domain)
+        if domain == 'amazon.com.br' and not any(candidate_relevance(query, c) for c in result):
+            # No maximo uma alternativa; nunca repetir apos bloqueio/limite.
+            result = await self._links(query, domain, product_hint=False)
+        return result
+
+    async def _links(self, query, domain, product_hint=True):
         if domain not in self.fetcher.config.domains:
             raise ReadError('url_not_allowed')
         # O indice pode devolver somente categorias para a grafia acentuada,
@@ -33,9 +40,11 @@ class ExternalMarketSearch:
         # diacriticos na descoberta Amazon; a validacao do produto nao muda.
         lookup = query
         if domain == 'amazon.com.br':
-            lookup = ''.join(c for c in unicodedata.normalize('NFKD', query)
+            lookup = re.sub(r'(\d+)[ªº°]', r'\1', query)
+            lookup = ''.join(c for c in unicodedata.normalize('NFKD', lookup)
                              if not unicodedata.combining(c))
-        key = (domain, lookup.strip().casefold())
+        lookup = re.sub(r'(\d+)[ªº°]', r'\1', lookup)
+        key = (domain, lookup.strip().casefold()) if product_hint else (domain, lookup.strip().casefold(), 'plain')
         async with self.lock:
             cached = self.cache.get(key)
             if cached and cached[0] > time.monotonic():
@@ -50,7 +59,7 @@ class ExternalMarketSearch:
                         response = await client.post(
                             'https://api.tavily.com/search',
                             headers={'X-Tavily-Access-Mode': 'keyless', 'X-Client-Source': 'price-monitor'},
-                            json={'query': lookup + ' site:' + domain + (' inurl:dp' if domain == 'amazon.com.br' else ''),
+                            json={'query': lookup + ' site:' + domain + (' inurl:dp' if domain == 'amazon.com.br' and product_hint else ''),
                                   'include_domains': [domain],
                                   'include_domains_mode': 'restrict', 'search_depth': 'basic',
                                   'auto_parameters': False, 'max_results': 10,

@@ -83,6 +83,8 @@ def offer_text(reading, store="", rank=None, provisional=False, ad_id=None):
         )
     if store:
         parts.append("🏪 Loja: " + store[:80])
+    if reading.identifiers.get('generation'):
+        parts.append('📌 Geração na ficha técnica: ' + reading.identifiers['generation'])
     parts += [
         ('💰 Preço da oferta principal: não divulgado' if reading.price is None and reading.starting_price is not None else f"💰 Preço: {price}"),
         f'💳 Pagamento: {reading.payment[:100] or "❓ Não declarado para este preço"}',

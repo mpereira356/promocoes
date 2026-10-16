@@ -258,3 +258,48 @@ def test_search_delivers_real_page_minimum_without_counting_individual_price():
         assert any('a partir de' in c.args[0] for c in send.await_args_list)
         assert 'Pre\u00e7os lidos nas ofertas enviadas: 0' in send.await_args_list[-1].args[0]
     asyncio.run(run())
+
+
+
+def test_echo_generation_comes_from_same_asin_technical_table_not_url():
+    from monitor.discovery import reading_relevance
+    from bs4 import BeautifulSoup
+    html=Path('tests/fixtures/amazon_echo_generation_real.html').read_text(encoding='utf-8')
+    url='https://www.amazon.com.br/dp/B09B8VGCR8'
+    r=AmazonAdapter().parse(html,url)[0]
+    assert r.identifiers['generation']=='echo dot 5 geracao 2022'
+    assert r.price==58411 and reading_relevance('Echo Dot 5\u00aa gera\u00e7\u00e3o',r)
+    assert not reading_relevance('Echo Dot 4\u00aa gera\u00e7\u00e3o',r)
+    soup=BeautifulSoup(html,'html.parser');soup.select_one('#tech')['id']='recommendations'
+    unknown=AmazonAdapter().parse(str(soup),url)[0]
+    assert not reading_relevance('Echo Dot 5\u00aa gera\u00e7\u00e3o',unknown)
+    soup=BeautifulSoup(html,'html.parser');soup.select_one('#tech').append(BeautifulSoup('<table><tr><td>Gera\u00e7\u00e3o</td><td>Echo Dot 4\u00aa gera\u00e7\u00e3o (2020)</td></tr></table>','html.parser'))
+    with pytest.raises(ReadError,match='conflicting_product_identifiers'):AmazonAdapter().parse(str(soup),url)
+
+
+@pytest.mark.parametrize('title,slug,expected', [
+    ('Echo Dot Geracao mais recente','Echo-Dot-5%C2%AA-geracao',True),
+    ('Echo Dot Geracao mais recente','Echo-Dot-4%C2%AA-geracao',False),
+    ('Echo Dot Max Geracao mais recente','Echo-Dot-5%C2%AA-geracao',False),
+    ('Suporte para Echo Dot 5 Geracao','Echo-Dot-5%C2%AA-geracao',False),
+    ('Echo Show 5 Geracao','Echo-Dot-5%C2%AA-geracao',False),
+    ('Echo Dot 4 Geracao','Echo-Dot-5%C2%AA-geracao',False),
+])
+def test_echo_discovery_slug_is_only_provisional_and_variants_stay_separate(title,slug,expected):
+    from monitor.discovery import LinkCandidate,candidate_relevance
+    c=LinkCandidate('https://www.amazon.com.br/'+slug+'/dp/B09B8VGCR8',title)
+    assert bool(candidate_relevance('Echo Dot 5 Geracao',c))==expected
+
+
+
+def test_real_echo_alternating_hidden_response_never_reuses_captured_price():
+    from monitor.discovery import reading_relevance
+    adapter=AmazonAdapter()
+    url='https://www.amazon.com.br/dp/B09B8VGCR8'
+    visible=Path('tests/fixtures/amazon_echo_generation_real.html').read_text(encoding='utf-8')
+    hidden=Path('tests/fixtures/amazon_echo_hidden_real.html').read_text(encoding='utf-8')
+    assert adapter.parse(visible,url)[0].price==58411
+    r=adapter.parse(hidden,url)[0]
+    assert r.price is None and r.stock=='unknown' and not r.comparable
+    assert adapter.price_requires_cart(hidden)
+    assert reading_relevance('Echo Dot 5 geracao',r)

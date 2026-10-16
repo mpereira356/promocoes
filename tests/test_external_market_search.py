@@ -142,7 +142,7 @@ def test_amazon_diacritics_normalized_without_extra_request_or_model_changes(mon
     async def run():
         url = 'https://www.amazon.com.br/dp/B0F53JGRLS'
         post = AsyncMock(return_value=httpx.Response(200, json={'results': [
-            {'url': url, 'title': 'Aspirador portatil'}]}))
+            {'url': url, 'title': 'Aspirador de Po Portatil 920-011902 Wi-Fi'}]}))
         monkeypatch.setattr(httpx.AsyncClient, 'post', post)
         f = SimpleNamespace(config=SimpleNamespace(domains=('amazon.com.br',)),
                             canonical=lambda u: (u, 'amazon.com.br'))
@@ -162,3 +162,34 @@ def test_vacuum_replacement_motor_is_not_complete_appliance():
     assert not relevance('Aspirador de Po Portatil',
         'YobiLife Motor de escova central para aspirador de po portatil Dreame peca sobressalente de reposicao')
     assert relevance('Aspirador de Po Portatil', 'MONOZEL Aspirador de Po Portatil com motor e filtro')
+
+
+
+def test_amazon_bounded_fallback_without_inurl_and_cache(monkeypatch):
+    async def run():
+        url='https://www.amazon.com.br/Echo-Dot-5%C2%AA-geracao-Cor-Preta/dp/B09B8VGCR8'
+        post=AsyncMock(side_effect=[
+            httpx.Response(200,json={'results':[{'url':'https://www.amazon.com.br/dp/B0F32PTQD3','title':'Smartwatch Huawei Watch Fit 4'}]}),
+            httpx.Response(200,json={'results':[{'url':url,'title':'Echo Dot (Geracao mais recente) Cor Preta'}]}),
+        ])
+        monkeypatch.setattr(httpx.AsyncClient,'post',post)
+        f=SimpleNamespace(config=SimpleNamespace(domains=('amazon.com.br',)),canonical=lambda u:(u,'amazon.com.br'))
+        search=ExternalMarketSearch(f)
+        result=await search.links('Echo Dot 5\u00aa gera\u00e7\u00e3o','amazon.com.br')
+        assert result[0].url==url and post.await_count==2
+        assert post.await_args_list[0].kwargs['json']['query']=='Echo Dot 5 geracao site:amazon.com.br inurl:dp'
+        assert post.await_args_list[1].kwargs['json']['query']=='Echo Dot 5 geracao site:amazon.com.br'
+        assert result==await search.links('Echo Dot 5\u00aa gera\u00e7\u00e3o','amazon.com.br')
+        assert post.await_count==2
+    asyncio.run(run())
+
+
+def test_amazon_quota_never_triggers_alternative_query(monkeypatch):
+    async def run():
+        post=AsyncMock(return_value=httpx.Response(429))
+        monkeypatch.setattr(httpx.AsyncClient,'post',post)
+        search=ExternalMarketSearch(SimpleNamespace(config=SimpleNamespace(domains=('amazon.com.br',))))
+        with pytest.raises(ReadError,match='external_search_limited'):
+            await search.links('Echo Dot 5','amazon.com.br')
+        assert post.await_count==1
+    asyncio.run(run())
