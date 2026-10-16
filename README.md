@@ -1,3 +1,5 @@
+**Mensagens revisadas:** a versão `2026.10.15-editorial.1` aplica os textos enviados pelo usuário, com acentuação, blocos curtos, botões e emojis consistentes. As regras de busca, comparação e monitoramento são preservadas. Os templates de referência estão em [TEMPLATES-REVISADOS.md](TEMPLATES-REVISADOS.md).
+
 **Busca pontual por categoria:** envie `/promocoes` e escolha Hardware > Placas-mãe, desconto (`>30`, `>=30` ou personalizado) e lojas. Retorna até três produtos, com desconto anunciado calculado e comparação separada, sem cadastrar monitoramento. A categoria inicial é Placas-mãe; lojas sem extração validada ou bloqueadas são identificadas no resumo. Veja [PROMOCOES.md](PROMOCOES.md) para limites, condições e validação.
 
 **Precos Amazon:** o robô carrega o painel publico de ofertas com Selenium quando o preco nao vem no HTML principal. O anuncio B08KGVH7YC foi validado com preco, vendedor e condicao reais. Pagamento/estoque ausentes continuam desconhecidos. `bash deploy/update.sh` instala as dependencias necessarias; confira [STATUS-LOJAS.md](STATUS-LOJAS.md) para validacao e limites.

@@ -1,3 +1,7 @@
+# Atualização 2026.10.15-editorial.1
+
+Revisão de apresentação baseada no arquivo de templates enviado pelo usuário: ajuda, lista, histórico, cartões, botões, estados de leitura, alertas, erros e promoções. Os testes existentes foram ajustados às novas mensagens, preservando as verificações de preços, limites, autorização, duplicidade e persistência. As mensagens comuns continuam como texto simples, sem asteriscos de formatação; os resultados de promoções mantêm o título em HTML escapado. O envio alternativo para legendas longas foi preservado. Esta revisão não valida novamente o acesso às lojas nem envia mensagens reais no Telegram.
+
 # Atualização 2026.10.15-promocoes.1
 
 224 testes locais passaram. Os testes novos simulam filtros estritos/inclusivos, centavos, referências ausentes/zero/inválidas, parcelas, cupons sem reaplicação, ranking e deduplicação, comparação por identificadores e variantes, condições diferentes, falhas parciais, bloqueio de consultas duplicadas, autorização e callbacks antigos. O serviço manual é exercitado sem banco, agendador ou envio Telegram. Há teste de compartilhamento de uma leitura com o Monitor existente e de empacotamento do módulo/documentação para Kali.

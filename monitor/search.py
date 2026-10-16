@@ -7,18 +7,18 @@ from .adapters.base import ReadError
 
 def search_error_message(code):
     return {
-        'marketplace_not_authorized': 'Adicione mercadolivre.com.br a ALLOWED_DOMAINS no .env e reinicie o servico.',
+        'marketplace_not_authorized': 'Adicione mercadolivre.com.br a ALLOWED_DOMAINS no arquivo .env e reinicie o serviço.',
         "search_not_configured": (
-            "A busca por nome nao esta configurada: falta SEARCH_API_KEY no arquivo .env.\n"
-            "Crie uma chave em https://api-dashboard.search.brave.com/ e preencha:\n"
-            "SEARCH_PROVIDER=brave\nSEARCH_API_KEY=sua_chave\n"
-            "Depois salve e reinicie o robo. O token do Telegram nao substitui essa chave."
+            "A busca por nome não está configurada: falta SEARCH_API_KEY no arquivo .env.\n\n"
+            "Crie uma chave em https://api-dashboard.search.brave.com/ e configure:\n"
+            "SEARCH_PROVIDER=brave\nSEARCH_API_KEY=sua_chave\n\n"
+            "Depois, salve e reinicie o robô. O token do Telegram não substitui essa chave."
         ),
-        "search_disabled": "A busca por nome esta desativada. Use SEARCH_PROVIDER=direct no .env para pesquisar nas lojas sem chave, ou cadastre um link.",
-        "search_provider_invalid": "SEARCH_PROVIDER invalido. Use direct (sem chave), brave (opcional) ou disabled.",
-        "search_auth_error": "A API de busca recusou a chave ou a permissao. Confira sua chave e o acesso no painel Brave Search.",
-        "search_rate_limit_deferred": "A API de busca limitou as consultas. Aguarde antes de tentar novamente.",
-        "search_unavailable": "A API de busca nao respondeu apos as tentativas. Tente novamente mais tarde.",
+        "search_disabled": "A busca por nome está desativada. Configure SEARCH_PROVIDER=direct no arquivo .env para pesquisar nas lojas sem chave, ou cadastre um link.",
+        "search_provider_invalid": "SEARCH_PROVIDER inválido. Use direct (sem chave), brave (opcional) ou disabled.",
+        "search_auth_error": "A API de busca recusou a chave ou a permissão. Confira a chave e o acesso no painel Brave Search.",
+        "search_rate_limit_deferred": "A API de busca atingiu o limite de consultas. Aguarde antes de tentar novamente.",
+        "search_unavailable": "A API de busca não respondeu após as tentativas. Tente novamente mais tarde.",
     }.get(code, "A API de busca retornou um erro. Confira sua conta e tente novamente.")
 
 

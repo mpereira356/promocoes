@@ -94,10 +94,10 @@ def test_reference_discount_independent_of_other_store_price():
     result = compare_offer(a, [a, b])
     assert result.offer.percent == 30
     assert result.lowest is b
-    assert 'mais barata' in result.comparison
+    assert 'preço menor' in result.comparison
     assert result.offer.reading.price == 70000
     b.reading.price = 80000
-    assert 'menor' in compare_offer(a, [a, b]).comparison
+    assert 'Menor' in compare_offer(a, [a, b]).comparison
 
 
 def test_only_three_purchase_options():
@@ -173,8 +173,8 @@ def test_manual_run_partial_failure_no_database_and_no_future_jobs():
         assert any('blocked' in n for n in report.coverage[1].notices)
         output = '\n'.join(messages(report))
         assert '🏆' in output and 'concluída' in output and '01001000' in output
-        assert 'não comprova queda histórica' in output
-        assert 'comparação não confirmada' in output
+        assert 'não comprova uma queda histórica' in output
+        assert 'Comparação não confirmada' in output
         assert monitor.read_snapshot.await_count == 1
         await fetcher.close()
     asyncio.run(scenario())
@@ -295,7 +295,7 @@ def test_query_all_qualifying_products_but_present_only_three(monkeypatch):
         monitor = SimpleNamespace(config=config, fetcher=fetcher, read_snapshot=read_snapshot)
         report = await Deals(monitor).run('hardware/placas-mae', DiscountFilter.parse('>30'), config.domains)
         assert len(queries) == 4 and len(report.results) == 3
-        assert report.coverage[1].notices == ['Categoria nao consultada com sucesso: blocked_no_bypass']
+        assert report.coverage[1].notices == ['A categoria não pôde ser consultada com sucesso: blocked_no_bypass']
         await fetcher.close()
     asyncio.run(scenario())
 

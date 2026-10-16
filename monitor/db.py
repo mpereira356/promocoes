@@ -233,18 +233,18 @@ class DB:
                     "UPDATE candidates SET title=? WHERE id=?",
                     (reading.title, candidate["id"]),
                 )
-                return "Pendente: confirme o modelo com /confirmar %s" % candidate["id"]
+                return 'Confirme o modelo com /confirmar %s' % candidate["id"]
             if normalize(candidate["title"]) != normalize(reading.title):
                 self.conn.execute(
                     "UPDATE candidates SET confirmed=0,notified=0,title=? WHERE id=?",
                     (reading.title, candidate["id"]),
                 )
                 return (
-                    "Titulo alterado: nova confirmacao necessaria /confirmar %s"
+                    'O título da oferta mudou. É necessária uma nova confirmação com /confirmar %s'
                     % candidate["id"]
                 )
             if not reading.comparable:
-                return "Leitura registrada; faltam dados explicitos para comparar."
+                return 'Leitura registrada, mas ainda faltam dados explícitos para comparar preços.'
             key = (
                 candidate["id"],
                 normalize(reading.title),
@@ -263,7 +263,7 @@ class DB:
                     key + (reading.price, reading.price),
                 )
                 sid = cursor.lastrowid
-                result = "Nova oferta/condicao: preco inicial registrado; sem preco anterior."
+                result = 'Nova oferta ou condição: preço inicial registrado. Ainda não há preço anterior comparável.'
             else:
                 sid = row["id"]
                 episode = row["episode"] + int(row["last"] != reading.price)
@@ -291,22 +291,22 @@ class DB:
                     from zoneinfo import ZoneInfo
 
                     direction = (
-                        "📉 Queda de preco" if delta > 0 else "📈 Aumento de preco"
+                        "📉 Queda de preço" if delta > 0 else "📈 Aumento de preço"
                     )
                     variation = "Economia" if delta > 0 else "Aumento"
                     msg = (
-                        f"🚨🚨 ALERTA DE PRECO 🚨🚨\n{direction}: {reading.title}\nMonitoramento {candidate['product']} | Oferta {candidate['id']}\nLoja: {candidate['store']}\nVendedor: {reading.seller}\n"
-                        f"Condicao: {reading.condition}\nAnterior: R$ {row['last']/100:.2f}\nAtual: R$ {reading.price/100:.2f}\n"
+                        f"{'📉 QUEDA DE PREÇO' if delta > 0 else '📈 AUMENTO DE PREÇO'}\n\n{direction}: {reading.title}\nMonitoramento {candidate['product']} · Oferta {candidate['id']}\n\n🏪 Loja: {candidate['store']}\n👤 Vendedor: {reading.seller}\n"
+                        f"📦 Condição: {reading.condition}\n\n💰 Preço anterior: R$ {row['last']/100:.2f}\n💰 Preço atual: R$ {reading.price/100:.2f}\n"
                         f"{variation}: R$ {abs(delta)/100:.2f} ({abs(delta)/row['last']*100:.2f}%)\n"
-                        f"Menor historico: R$ {min(row['lowest'],reading.price)/100:.2f}\nPagamento: {reading.payment}\n"
-                        f"Estoque: disponivel segundo a pagina\nFrete nao incluido.\n"
-                        f"{datetime.fromtimestamp(now,ZoneInfo('America/Sao_Paulo')).isoformat(timespec='seconds')}\n{candidate['url']}"
+                        f"📉 Menor preço registrado: R$ {min(row['lowest'],reading.price)/100:.2f}\n💳 Pagamento: {reading.payment}\n"
+                        f"📊 Estoque: disponível segundo a página\n🚚 Frete não incluído.\n"
+                        f"\nConsulta: {datetime.fromtimestamp(now,ZoneInfo('America/Sao_Paulo')).isoformat(timespec='seconds')}\n{candidate['url']}"
                     )
                     self.conn.execute(
                         "INSERT OR IGNORE INTO alerts(series,episode,message) VALUES (?,?,?)",
                         (sid, episode, msg),
                     )
-                result = f'Atual: R$ {reading.price/100:.2f}; menor: R$ {min(row["lowest"],reading.price)/100:.2f}'
+                result = f'Preço atual: R$ {reading.price/100:.2f} · Menor registrado: R$ {min(row["lowest"],reading.price)/100:.2f}'
             self.conn.execute(
                 "INSERT INTO prices(series,at,price,stock) VALUES (?,?,?,?)",
                 (sid, now, reading.price, reading.stock),

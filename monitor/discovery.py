@@ -105,32 +105,32 @@ def form_search_url(html, base, query, fields=None):
 
 
 REASONS = {
-    'selenium_not_installed': 'Selenium nao instalado; atualize com deploy/update.sh',
-    'amazon_offers_http_error': 'Amazon recusou ou nao entregou o painel de ofertas',
-    'amazon_offers_unavailable': 'nao foi possivel carregar as opcoes de compra Amazon no navegador',
-    'different_model': 'titulo real da pagina nao corresponde ao produto pesquisado',
-    'external_search_limited': 'limite da busca externa sem chave atingido; aguarde antes de tentar novamente',
-    'external_search_unavailable': 'indice externo indisponivel; nenhum resultado foi inventado',
-    'mercadolivre_api_token_missing': 'API oficial exige MERCADOLIVRE_ACCESS_TOKEN no .env',
-    'mercadolivre_api_token_expired': 'token da API invalido ou expirado; atualize MERCADOLIVRE_ACCESS_TOKEN',
-    'mercadolivre_api_access_denied': 'API oficial recusou acesso (403); verifique permissoes do aplicativo, token pode nao ser suficiente',
-    'mercadolivre_api_failed': 'API oficial indisponivel ou resposta invalida',
-    "marketplace_individual_listing_required": "exige link de anuncio individual; catalogo pode trocar de vendedor",
-    "browser_not_installed": "Chromium indisponivel; execute o instalador com --with-browser",
-    "browser_navigation_failed_TimeoutError": "tempo limite ao carregar a pagina no Chromium",
-    "browser_connection_failed": "conexao com a loja interrompida",
-    "browser_navigation_failed_Error": "falha de navegacao no Chromium",
-    "browser_resource_refused": "recurso da pagina recusado por seguranca ou falha de rede",
-    "structured_product_missing_or_ambiguous": "pagina sem dados estruturados de um produto unico",
-    "redirect_changed_store": "redirecionamento para outra loja recusado",
-    "blocked_no_bypass": "acesso bloqueado pela loja; sem tentativa de contorno",
-    "captcha_no_bypass": "CAPTCHA detectado; consulta interrompida",
-    "robots_unavailable": "nao foi possivel obter robots.txt; acesso suspenso",
-    "robots_disallowed": "robots.txt nao permite esta consulta",
-    "search_form_not_supported": "formulario de busca nao suportado; exige adaptacao",
-    "network_or_rate_limit": "erro de rede ou limite de consultas",
-    "rate_limit_deferred": "limite de consultas; tentar em outro ciclo",
-    "page_removed": "pagina de busca indisponivel",
+    'selenium_not_installed': 'Selenium não está instalado. Atualize o serviço com deploy/update.sh',
+    'amazon_offers_http_error': 'A Amazon recusou a consulta ou não carregou o painel de ofertas',
+    'amazon_offers_unavailable': 'Não foi possível carregar as opções de compra da Amazon no navegador',
+    'different_model': 'O título real da página não corresponde ao produto pesquisado',
+    'external_search_limited': 'O limite da busca externa sem chave foi atingido. Aguarde antes de tentar novamente',
+    'external_search_unavailable': 'O índice externo está indisponível. Nenhum resultado foi inventado',
+    'mercadolivre_api_token_missing': 'A API oficial exige MERCADOLIVRE_ACCESS_TOKEN no arquivo .env',
+    'mercadolivre_api_token_expired': 'O token da API é inválido ou expirou. Atualize MERCADOLIVRE_ACCESS_TOKEN',
+    'mercadolivre_api_access_denied': 'A API oficial recusou o acesso (403). Verifique as permissões do aplicativo; o token pode não ser suficiente',
+    'mercadolivre_api_failed': 'A API oficial está indisponível ou retornou uma resposta inválida',
+    "marketplace_individual_listing_required": 'É necessário um link de anúncio individual; um catálogo pode trocar de vendedor',
+    "browser_not_installed": 'Chromium está indisponível. Execute o instalador com --with-browser',
+    "browser_navigation_failed_TimeoutError": 'A página excedeu o tempo limite de carregamento no Chromium',
+    "browser_connection_failed": 'A conexão com a loja foi interrompida',
+    "browser_navigation_failed_Error": 'Não foi possível navegar no Chromium',
+    "browser_resource_refused": 'Um recurso da página foi recusado por segurança ou por uma falha de rede',
+    "structured_product_missing_or_ambiguous": 'A página não contém dados estruturados de um único produto',
+    "redirect_changed_store": 'O redirecionamento para outra loja foi recusado',
+    "blocked_no_bypass": 'A loja bloqueou o acesso. Nenhuma tentativa de contornar o bloqueio foi feita',
+    "captcha_no_bypass": 'CAPTCHA detectado. A consulta foi interrompida',
+    "robots_unavailable": 'Não foi possível obter o robots.txt; o acesso foi suspenso',
+    "robots_disallowed": 'O robots.txt não permite esta consulta',
+    "search_form_not_supported": 'O formulário de busca não é compatível e precisa de adaptação',
+    "network_or_rate_limit": 'Ocorreu uma falha de rede ou foi atingido o limite de consultas',
+    "rate_limit_deferred": 'O limite de consultas foi atingido. Tente novamente em outro ciclo',
+    "page_removed": 'A página de busca está indisponível',
 }
 
 
@@ -152,7 +152,7 @@ class DirectSearch:
             factory = ADAPTERS.get(domain)
             if not factory:
                 notices.append(
-                    f"{domain}: dominio autorizado para links, mas sem adaptador de busca direta. Adicionar o dominio nao instala uma integracao."
+                    f"{domain}: o domínio está autorizado para links, mas ainda não tem adaptador de busca direta. Autorizar o domínio não instala uma integração."
                 )
                 continue
             store = factory()
@@ -213,7 +213,7 @@ class DirectSearch:
                 groups.append(accepted[:6])
                 if not accepted:
                     notices.append(
-                        f"{store.name}: nenhum candidato compativel na fonte consultada (HTML, sitemap limitado ou indice externo). Isso nao prova ausencia do produto."
+                        f"{store.name}: não encontramos um candidato compatível na fonte consultada (HTML, sitemap limitado ou índice externo). Isso não prova que o produto não exista."
                     )
             except Exception as exc:
                 reason = (
@@ -223,7 +223,7 @@ class DirectSearch:
                 )
                 notices.append(f"{store.name}: {reason}.")
                 if domain == 'mercadolivre.com.br':
-                    notices.append('Mercado Livre: descoberta falhou nesta consulta. Isso nao prova ausencia do produto.')
+                    notices.append('Mercado Livre: a descoberta falhou nesta consulta. Isso não prova que o produto não exista.')
         # Distribuir o limite entre lojas; a ultima loja nao deve desaparecer.
         for index in range(6):
             for group in groups:

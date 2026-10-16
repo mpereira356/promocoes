@@ -111,7 +111,7 @@ if [[ "$source_dir" != "$install_dir" ]]; then
         find "$install_dir/$folder" -type d -exec chmod 0750 {} +
         find "$install_dir/$folder" -type f -exec chmod 0640 {} +
     done
-    for filename in requirements-server.txt requirements-browser.txt requirements-selenium.txt .env.example README.md LEIA-ME-KALI.md MERCADO-LIVRE.md STATUS-LOJAS.md VALIDACAO.md PROMOCOES.md; do
+    for filename in requirements-server.txt requirements-browser.txt requirements-selenium.txt .env.example README.md LEIA-ME-KALI.md MERCADO-LIVRE.md STATUS-LOJAS.md VALIDACAO.md PROMOCOES.md TEMPLATES-REVISADOS.md; do
         install -m 0640 -o root -g pricebot "$source_dir/$filename" "$install_dir/$filename"
     done
 fi

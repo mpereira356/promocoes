@@ -62,10 +62,10 @@ def test_unverified_catalog_is_sent_without_reading_or_saving_offer():
         f = SimpleNamespace(canonical=lambda u: (u, 'mercadolivre.com.br'))
         await deliver_search(monitor, f, None, None, 1, 'B550', send)
         text = send.await_args_list[0].args[0]
-        assert URL in text and 'nao verificados' in text and 'nao ativa monitoramento' in text
+        assert URL in text and 'não foram verificados' in text and 'não ativa monitoramento' in text
         assert '/monitorar' not in text and 'R$' not in text
         read.assert_not_awaited()
-        assert 'Links para conferencia: 1' in send.await_args_list[-1].args[0]
+        assert 'Links para conferência: 1' in send.await_args_list[-1].args[0]
     asyncio.run(run())
 
 
@@ -94,7 +94,7 @@ def test_blocked_individual_listing_remains_unverified_without_saving():
         f = SimpleNamespace(canonical=lambda u: (u, 'mercadolivre.com.br'))
         await deliver_search(monitor, f, None, None, 1, 'B550', send)
         text = send.await_args_list[0].args[0]
-        assert url in text and 'nao verificados' in text and 'Leitura da pagina' in text
+        assert url in text and 'não foram verificados' in text and 'Leitura da página' in text
         assert 'Ofertas enviadas: 0' in send.await_args_list[-1].args[0]
-        assert 'Links para conferencia: 1' in send.await_args_list[-1].args[0]
+        assert 'Links para conferência: 1' in send.await_args_list[-1].args[0]
     asyncio.run(run())

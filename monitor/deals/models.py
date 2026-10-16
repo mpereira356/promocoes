@@ -14,10 +14,10 @@ class DiscountFilter:
     def parse(cls, text):
         match = re.fullmatch(r'\s*(>=|>)\s*(\d{1,3}(?:[.,]\d{1,4})?)\s*%?\s*', text)
         if not match:
-            raise ValueError('Use >30 ou >=30, com percentual entre 0 e 100.')
+            raise ValueError('Use >30 ou >=30, com um percentual entre 0 e 100.')
         value = Decimal(match[2].replace(',', '.'))
         if value > 100:
-            raise ValueError('Percentual deve estar entre 0 e 100.')
+            raise ValueError('O percentual deve estar entre 0 e 100.')
         return cls(match[1] == '>=', value)
 
     def accepts(self, old, current):

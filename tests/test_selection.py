@@ -87,7 +87,7 @@ def test_photo_card_and_fallback(tmp_path):
             bot.send_photo.side_effect = RuntimeError("image unavailable")
             await send_card(bot, config.chat, c)
             bot.send_message.assert_awaited_once()
-            assert "Foto indisponivel" in bot.send_message.await_args.args[1]
+            assert "Foto indisponível" in bot.send_message.await_args.args[1]
         finally:
             db.conn.close()
 

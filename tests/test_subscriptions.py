@@ -38,9 +38,7 @@ def test_id_stable_search_is_not_monitoring_and_restart(data):
     again = db.save_ad(ad["url"], ad["store"], replace(r, price=90000))
     assert ad["id"] == again["id"]
     assert not db.rows("SELECT * FROM products")
-    assert offer_text(r, "KaBuM", ad_id=ad["id"]).startswith(
-        f"🆔 Anuncio ID: {ad['id']}\n"
-    )
+    assert f"🆔 ID do anúncio: {ad['id']}\n" in offer_text(r, "KaBuM", ad_id=ad["id"])
     token = db.request_scope(ad["id"])
     other = DB(path)
     try:
@@ -99,9 +97,9 @@ def test_all_changes_up_down_repeat_and_failure(data):
     db.record(candidate, replace(r, price=90000))
     alerts = db.rows("SELECT * FROM alerts")
     assert len(alerts) == 2
-    assert "Aumento de preco" in alerts[0]["message"]
-    assert "Queda de preco" in alerts[1]["message"] and "🚨" in alerts[1]["message"]
-    assert "Anterior: R$ 1100.00" in alerts[1]["message"]
+    assert "Aumento de preço" in alerts[0]["message"]
+    assert "Queda de preço" in alerts[1]["message"] and "📉 QUEDA DE PREÇO" in alerts[1]["message"]
+    assert "Preço anterior: R$ 1100.00" in alerts[1]["message"]
     assert db.rows("SELECT active FROM products")[0]["active"] == 1
     # Limites de queda/preco alvo sao ignorados intencionalmente no modo todas.
 

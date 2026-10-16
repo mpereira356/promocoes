@@ -22,7 +22,7 @@ def test_successful_search_sends_offers_before_completion(monkeypatch):
         monkeypatch.setattr('monitor.search_results.rank_offers', lambda offers: [(reading, url, 'Pichau', 1, False)])
         await deliver_search(monitor, fetcher, db, None, 1, 'b550', send)
         assert send.await_args_list[0].args[0] == 'Oferta 7'
-        assert 'Ofertas enviadas: 1. Links com falha de leitura: 0' in send.await_args_list[-1].args[0]
+        assert 'Ofertas enviadas: 1\nLinks com falha de leitura: 0' in send.await_args_list[-1].args[0]
     asyncio.run(run())
 
 
@@ -36,7 +36,7 @@ def test_search_always_finishes_and_does_not_expose_internal_errors(failure):
         )
         await deliver_search(monitor, None, None, None, 1, 'b550', send)
         messages = [c.args[0] for c in send.await_args_list]
-        assert messages[-1].startswith('Pesquisa concluida.')
+        assert messages[-1].startswith('✅ Pesquisa concluída')
         assert 'Links com falha de leitura: 1' in messages[-1]
         assert all('private detail' not in m for m in messages)
         assert monitor.read.await_count == 1
@@ -48,7 +48,7 @@ def test_discovery_failure_finishes_with_honest_status():
         send = AsyncMock()
         monitor = SimpleNamespace(search=SimpleNamespace(links=AsyncMock(side_effect=ReadError('search_unavailable'))))
         await deliver_search(monitor, None, None, None, 1, 'b550', send)
-        assert send.await_args_list[-1].args[0].startswith('Pesquisa encerrada com falha.')
+        assert send.await_args_list[-1].args[0].startswith('⚠️ Pesquisa encerrada com falha')
     asyncio.run(run())
 
 

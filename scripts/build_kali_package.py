@@ -19,6 +19,7 @@ def build_package(output=None):
         "STATUS-LOJAS.md",
         "VALIDACAO.md",
         "PROMOCOES.md",
+        "TEMPLATES-REVISADOS.md",
         ".env.example",
         "requirements.txt",
         "requirements.lock.txt",

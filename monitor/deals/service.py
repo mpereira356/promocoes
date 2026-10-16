@@ -24,17 +24,17 @@ class Deals:
         self.fetcher = monitor.fetcher
         self.limits = limits or Limits()
         if any(not 1 <= n <= 100 for n in vars(self.limits).values()):
-            raise ValueError('Limites devem estar entre 1 e 100.')
+            raise ValueError('Os limites devem estar entre 1 e 100.')
         self.lock = asyncio.Lock()
 
     async def run(self, category, discount, domains, cep=''):
         domains = list(dict.fromkeys(domains))
         if category not in CATEGORIES or not domains or any(d not in ADAPTERS or d not in self.monitor.config.domains for d in domains):
-            raise ValueError('Categoria ou loja nao habilitada.')
+            raise ValueError('Esta categoria ou loja não está habilitada.')
         if cep and (len(cep) != 8 or not cep.isdigit()):
-            raise ValueError('CEP deve ter oito digitos.')
+            raise ValueError('O CEP deve conter oito dígitos.')
         if self.lock.locked():
-            raise ValueError('Ja existe uma consulta de promocoes em andamento.')
+            raise ValueError('Já existe uma consulta de promoções em andamento.')
         async with self.lock:
             return await self._run(category, discount, domains, cep)
 
@@ -62,14 +62,14 @@ class Deals:
                 cache[url] = offers
                 return offers
             except (ReadError, ValueError, TypeError, KeyError):
-                coverage[domain].notices.append('Falha de leitura de oferta: ' + url)
+                coverage[domain].notices.append('⚠️ Falha na leitura da oferta: ' + url)
                 return []
 
         for domain in domains:
             store, cov = ADAPTERS[domain], coverage[domain]
             cov.notices.extend(store.limitations)
             if category not in store.categories:
-                cov.notices.append('Categoria ainda nao mapeada nesta loja.')
+                cov.notices.append('Esta categoria ainda não foi mapeada para esta loja.')
                 continue
             url, visited, links = store.category_url(category), set(), []
             for _ in range(self.limits.category_pages):
@@ -86,7 +86,7 @@ class Deals:
                         if candidate not in links:
                             links.append(candidate)
                     if not page.urls:
-                        cov.notices.append('Nenhum link extraido: pagina vazia ou formato de categoria nao validado.')
+                        cov.notices.append('Não foi possível extrair links: a página está vazia ou o formato da categoria ainda não foi validado.')
                     nxt = page.next_url
                     if nxt:
                         canonical, target_domain = self.fetcher.canonical(nxt)
@@ -97,14 +97,14 @@ class Deals:
                     url = nxt
                 except (ReadError, ValueError, TypeError, KeyError) as exc:
                     safe = str(exc) if isinstance(exc, ReadError) else 'formato_nao_suportado'
-                    cov.notices.append('Categoria nao consultada com sucesso: ' + safe)
+                    cov.notices.append('A categoria não pôde ser consultada com sucesso: ' + safe)
                     url = None
                     break
             if url and len(visited) >= self.limits.category_pages:
-                cov.notices.append(f'Limite de {self.limits.category_pages} paginas de categoria atingido.')
+                cov.notices.append(f'Limite de {self.limits.category_pages} páginas de categoria atingido.')
             cov.discovered = len(links)
             if len(links) > self.limits.products_per_store:
-                cov.notices.append(f'Leitura limitada aos primeiros {self.limits.products_per_store} produtos descobertos.')
+                cov.notices.append(f'A leitura foi limitada aos primeiros {self.limits.products_per_store} produtos encontrados.')
             for link in links[:self.limits.products_per_store]:
                 offers = await read(link, domain)
                 pool.extend(offers)
@@ -132,7 +132,7 @@ class Deals:
                     for url in list(urls)[:self.limits.comparisons_per_store]:
                         pool.extend(await read(url, domain, comparison=True))
                 except (ReadError, ValueError):
-                    coverage[domain].notices.append('Busca complementar indisponivel; comparacao parcial.')
+                    coverage[domain].notices.append('A busca complementar está indisponível; a comparação será parcial.')
                 finally:
                     PAGE_AUDIT.reset(token)
                     # Ofertas ja sao contadas separadamente; contar aqui somente
@@ -171,7 +171,7 @@ def compare_offer(offer, pool):
         seen.add(candidate.domain)
         others.append(candidate)
     if not others:
-        return DealResult(offer, [offer], 'comparação não confirmada')
+        return DealResult(offer, [offer], 'Comparação não confirmada')
     lowest = min([offer] + others, key=lambda o: o.reading.price)
-    label = 'existe oferta mais barata' if lowest.reading.price < offer.reading.price else 'menor preço encontrado'
+    label = 'Foi encontrada uma oferta com preço menor' if lowest.reading.price < offer.reading.price else 'Menor preço encontrado'
     return DealResult(offer, [offer] + others[:2], label, lowest)

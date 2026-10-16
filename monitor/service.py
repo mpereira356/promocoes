@@ -38,7 +38,7 @@ class Monitor:
                 await self.send_candidate(candidate)
             else:
                 await self.send(
-                    f"Oferta {candidate['id']}: {candidate['title']}\n{candidate['url']}\nEscolha com /confirmar {candidate['id']}."
+                    f"🏷️ Oferta {candidate['id']}\n{candidate['title']}\n{candidate['url']}\n\nPara escolher esta oferta, use /confirmar {candidate['id']}."
                 )
             self.db.run(
                 "UPDATE candidates SET notified=1 WHERE id=?", (candidate["id"],)
@@ -106,11 +106,11 @@ class Monitor:
     async def check(self, pid):
         lock = self.locks.setdefault(pid, asyncio.Lock())
         if lock.locked():
-            return "Verificacao ja em andamento."
+            return '⏳ Já existe uma verificação em andamento para este produto.'
         async with lock:
             products = self.db.rows("SELECT * FROM products WHERE id=?", (pid,))
             if not products:
-                return "Produto nao encontrado."
+                return 'Produto não encontrado. Confira o ID e tente novamente.'
             p = products[0]
             seed_ad = self.db.get_ad(p["seed_ad"]) if p["seed_ad"] else None
             seed_reading = (
@@ -137,7 +137,7 @@ class Monitor:
                 )
                 if not candidates and not notes:
                     notes.append(
-                        "Nenhuma oferta descoberta nesta consulta. Tente um nome mais curto ou cadastre um link."
+                        'Não encontramos ofertas nesta consulta. Tente um nome mais curto ou cadastre um link.'
                     )
                 for candidate in candidates:
                     try:
@@ -181,10 +181,10 @@ class Monitor:
                             price = (
                                 f"R$ {reading.price/100:.2f}"
                                 if reading.price is not None
-                                else "preco nao lido"
+                                else 'Preço não lido'
                             )
                             notes.append(
-                                f"Anuncio ID: {ad['id']} | Oferta {candidate['id']}: {reading.title}\n{price}; estoque: {reading.stock}; pagamento: {reading.payment or 'nao identificado'}\n{info}\n{candidate['url']}"
+                                f"🆔 Anúncio: {ad['id']} · Oferta {candidate['id']}\n{reading.title}\n\n💰 Preço: {price}; estoque: {reading.stock}; pagamento: {reading.payment or 'não identificado'}\n{info}\n{candidate['url']}"
                             )
                     except Exception as exc:
                         # Nunca colocar excecoes de bibliotecas/URLs com tokens em logs ou mensagens.
@@ -196,7 +196,7 @@ class Monitor:
                         ):
                             self.db.failure(candidate["id"], code)
                         notes.append(
-                            f"Oferta {candidate['id']}: {code}. Ultimo preco preservado."
+                            f"⚠️ Oferta {candidate['id']}: {code}. O último preço válido foi preservado."
                         )
                 await self.options(pid, only_new=True)
                 await self.deliver()

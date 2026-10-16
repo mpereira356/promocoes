@@ -50,66 +50,66 @@ def rank_offers(offers):
 def offer_text(reading, store="", rank=None, provisional=False, ad_id=None):
     price = (
         'R$ ' + f'{reading.price // 100:,}'.replace(',', '.') + f',{reading.price % 100:02d}'
-        if reading.price is not None else 'nao lido'
+        if reading.price is not None else 'não lido'
     )
     stock = {
-        "in_stock": "✅ Disponivel segundo a pagina",
-        "out_of_stock": "❌ INDISPONIVEL",
-        "unknown": "❓ Nao confirmado pela pagina",
-    }.get(reading.stock, "❓ Nao confirmado pela pagina")
+        "in_stock": "✅ Disponível segundo a página",
+        "out_of_stock": "❌ INDISPONÍVEL",
+        "unknown": "❓ Não confirmado pela página",
+    }.get(reading.stock, "❓ Não confirmado pela página")
     condition = {
         "NewCondition": "🆕 Novo",
         "UsedCondition": "⚠️ USADO",
         "RefurbishedCondition": "⚠️ RECONDICIONADO",
         "DamagedCondition": "⚠️ DANIFICADO",
-    }.get(reading.condition, "❓ Nao declarada pela pagina")
+    }.get(reading.condition, "❓ Não declarada pela página")
     parts = [reading.title[:350], '']
     if rank in MEDALS:
         parts.insert(
             0,
-            f"{MEDALS[rank]} {rank}º menor valor desta busca — {reading.payment[:100]}",
+            f"{MEDALS[rank]} {rank}º menor preço desta busca — {reading.payment[:100]}",
         )
         parts.insert(
             1,
             (
-                "⚠️ Ranking provisorio: condicao nao declarada."
+                "⚠️ Ranking provisório: condição não declarada."
                 if provisional
-                else "Ranking entre ofertas da mesma condicao e pagamento."
+                else "Ranking entre ofertas com a mesma condição e forma de pagamento."
             ),
         )
         parts.insert(
-            2, "🔎 Os modelos desta busca podem ser diferentes; confira o produto."
+            2, "🔎 Os modelos desta busca podem ser diferentes. Confira se a oferta corresponde ao produto desejado.\n"
         )
     if store:
         parts.append("🏪 Loja: " + store[:80])
     parts += [
-        f"💰 Preco: {price}",
-        f'💳 Pagamento: {reading.payment[:100] or "❓ Nao declarado para este preco"}',
-        f'👤 Vendedor: {reading.seller[:100] or "❓ Nao declarado pela pagina"}',
-        f"Condicao: {condition}",
-        f"Estoque: {stock}",
-        "🚚 Frete nao incluido.",
+        f"💰 Preço: {price}",
+        f'💳 Pagamento: {reading.payment[:100] or "❓ Não declarado para este preço"}',
+        f'👤 Vendedor: {reading.seller[:100] or "❓ Não declarado pela página"}',
+        f"📦 Condição: {condition}",
+        f"📊 Estoque: {stock}",
+        "🚚 Frete não incluído.",
         '',
     ]
     if not reading.comparable:
         missing = []
         if not reading.condition:
-            missing.append("condicao")
+            missing.append("condição")
         if not reading.payment:
             missing.append("pagamento")
         if not reading.seller:
             missing.append("vendedor")
         if reading.price is None:
-            missing.append("preco")
+            missing.append("preço")
         if reading.currency != "BRL":
             missing.append("moeda BRL")
         parts.append(
-            "⏸️ Alertas de preco suspensos: falta confirmar " + ", ".join(missing) + "."
+            "⏸️ Alertas de preço suspensos: faltam dados confirmados — " + ", ".join(missing) + "."
         )
     parts.append("🔎 Confira o modelo exato antes de monitorar.")
     if ad_id is not None:
-        parts.insert(0, f"🆔 Anuncio ID: {ad_id}\n")
-        parts.append(f"\n🔔 Monitorar: /monitorar {ad_id}")
+        parts.append(f"\n🆔 ID do anúncio: {ad_id}")
+        parts.append(f"🔔 Monitorar: /monitorar {ad_id}")
     return "\n".join(parts)
 
 
@@ -123,7 +123,7 @@ async def send_offer(
             [
                 [
                     InlineKeyboardButton(
-                        f"🔔 Monitorar anuncio {ad_id}", callback_data=f"watch:{ad_id}"
+                        f"🔔 Monitorar anúncio {ad_id}", callback_data=f"watch:{ad_id}"
                     )
                 ],
                 [InlineKeyboardButton("🔗 Abrir oferta", url=url)],
@@ -134,7 +134,7 @@ async def send_offer(
         try:
             await bot.send_photo(
                 chat, photo=reading.image,
-                caption=text if fits_caption else reading.title[:200] + '\n📋 Detalhes na proxima mensagem.',
+                caption=text if fits_caption else reading.title[:200] + '\n📋 Os detalhes da oferta serão enviados na próxima mensagem.',
                 reply_markup=keyboard
             )
         except Exception:

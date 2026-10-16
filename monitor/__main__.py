@@ -19,31 +19,42 @@ from .version import VERSION
 from .deals.service import Deals
 from .deals.telegram import PromotionsTelegram
 
-HELP = """/buscar nome - encontrar anuncios com ID, fotos e medalhas (sem ativar acompanhamento)
-/promocoes - busca pontual por categoria, desconto e lojas; sem acompanhamento
-/descontopromo >=30 - percentual personalizado na etapa de desconto
-/ceppromo 01001000 - informar CEP da consulta (frete ainda nao cotado)
-/buscarml nome - descobrir links Mercado Livre; dados nao verificados sao identificados
-/monitorar ID_DO_ANUNCIO - escolher so esta oferta ou outras lojas
-/monitorar nome ou https://link - procurar anuncios para escolher
-/lista - produtos, status e ofertas pendentes
-/opcoes PRODUTO_ID - reenviar candidatos com foto e botao de escolha
-/confirmar OFERTA_ID - aprovar exatamente o titulo e link exibidos
-/historico PRODUTO_ID - ultimas 30 leituras e menores precos por modalidade
-/pausar ID - interromper acompanhamento
-/retomar ID - reativar e agendar consulta imediata
-/remover ID - excluir produto, historico e alertas
-/verificar ID - consultar agora, mesmo pausado
-/configurar ID reais porcentagem alvo - filtros por produto; use - para remover alvo
-/alertas ID todas|quedas - avisar qualquer alteracao ou somente quedas filtradas
-Ex.: /configurar 1 50 5 1500 (reais E percentual E alvo)
-/ajuda - comandos
-/status - versao instalada e modo de acesso das lojas
-Busca padrao: diretamente nas lojas, sem chave de API.
-Todos os horarios usam America/Sao_Paulo. Frete nao incluido.
-Monitoramentos nao expiram. Avisos padrao para aumentos e quedas, com dados comparaveis.
-IDs de anuncio, oferta e monitoramento sao diferentes; cada mensagem indica qual usar.
-Confirme ofertas somente apos conferir modelo, variante e link."""
+HELP = """🛍️ Bot de ofertas e monitoramento
+
+BUSCAS
+/buscar nome — buscar ofertas com ID, fotos e medalhas. Não ativa acompanhamento.
+/buscarml nome — encontrar links do Mercado Livre. Resultados ainda não verificados serão identificados.
+/promocoes — busca pontual por categoria, desconto e lojas. Não cria acompanhamento.
+/descontopromo >=30 — informar percentual personalizado na etapa de desconto.
+/ceppromo 01001000 — informar o CEP da consulta. O frete ainda não é cotado.
+
+MONITORAMENTO
+/monitorar ID_DO_ANUNCIO — escolher entre acompanhar só esta oferta ou procurar o mesmo produto em outras lojas.
+/monitorar nome ou https://link — procurar anúncios para você escolher.
+/lista — ver produtos, status e ofertas pendentes.
+/opcoes PRODUTO_ID — reenviar ofertas candidatas com foto e botão de escolha.
+/confirmar OFERTA_ID — confirmar exatamente o título e o link exibidos.
+/historico ID — ver as últimas 30 leituras e os menores preços por modalidade.
+/pausar ID — interromper o acompanhamento.
+/retomar ID — reativar e agendar uma consulta imediata.
+/remover ID — excluir o produto, o histórico e os alertas associados.
+/verificar ID — consultar agora, mesmo se estiver pausado.
+/configurar ID reais porcentagem alvo — definir filtros por produto; use - para remover o alvo.
+/alertas ID todas|quedas — avisar sobre qualquer alteração ou somente sobre quedas que atendam aos filtros.
+
+Exemplo de filtros
+/configurar 1 50 5 1500
+Os argumentos são: ID, valor mínimo em reais, percentual mínimo e preço-alvo.
+
+/status — ver a versão instalada e o modo de acesso às lojas.
+
+Observações
+• A busca padrão consulta diretamente as lojas, sem chave de API.
+• Os horários seguem America/Sao_Paulo.
+• O frete não está incluído.
+• Os monitoramentos não expiram. Por padrão, há avisos de aumentos e quedas quando os dados permitem comparação.
+• ID de anúncio, ID de oferta e ID de monitoramento são diferentes. Confira qual ID cada mensagem solicita.
+• Antes de confirmar uma oferta, confira o modelo, a variante e o link."""
 
 
 async def chunks(send, text):
@@ -126,7 +137,7 @@ def main():
         try:
             await send(await monitor.check(pid))
         except Exception:
-            await send("Falha na verificacao. Dados validos anteriores preservados.")
+            await send('⚠️ Não foi possível concluir a verificação. Os dados válidos anteriores foram preservados.')
 
     async def command(update, context):
         if not authorized(update, config):
@@ -141,20 +152,20 @@ def main():
             if name in ("/ajuda", "/start"):
                 error = monitor.search.configuration_error()
                 return await reply(
-                    f"Versao: {VERSION}\n"
+                    f"Versão: {VERSION}\n"
                     + HELP
                     + ("\n\n" + search_error_message(error) if error else "")
                 )
             if name == "/status":
                 return await reply(
-                    f'Versao: {VERSION}\nBusca: {config.provider}\nChromium: {"ativado" if config.browser else "desativado"}\nPichau/Terabyte: descoberta por sitemaps.\nPreco e estoque conferidos na oferta; CAPTCHA e robots.txt continuam respeitados.'
+                    f'ℹ️ Status do bot\n\nVersão: {VERSION}\nBusca: {config.provider}\nChromium: {"ativado" if config.browser else "desativado"}\nPichau/Terabyte: descoberta por sitemaps.\nPreço e estoque são conferidos na página da oferta. CAPTCHA e robots.txt continuam sendo respeitados.'
                 )
             if name == "/lista":
                 rows = db.rows("SELECT * FROM products ORDER BY id")
                 lines = []
                 for p in rows:
                     lines.append(
-                        f"Monitoramento {p['id']} | Anuncio {p['seed_ad'] or 'legado'}: {p['query']} | {'ativo' if p['active'] else 'pausado'} | abrangencia: {p['scope']} | alertas: {p['alert_mode']} | sem vencimento | proxima: {datetime.fromtimestamp(p['next_due'],ZoneInfo('America/Sao_Paulo')).isoformat(timespec='seconds')}"
+                        f"🔔 Monitoramento {p['id']} — {p['query']}\nStatus: {'ativo' if p['active'] else 'pausado'}\nAnúncio de referência: {p['seed_ad'] or 'legado'}\nAbrangência: {p['scope']}\nAlertas: {p['alert_mode']}\nPrazo: sem vencimento\nPróxima consulta: {datetime.fromtimestamp(p['next_due'],ZoneInfo('America/Sao_Paulo')).isoformat(timespec='seconds')}\n"
                     )
                     for c in db.rows(
                         "SELECT * FROM candidates WHERE product=?", (p["id"],)
@@ -164,13 +175,13 @@ def main():
                             (c["id"],),
                         )
                         lines.append(
-                            f"  Anuncio {c['ad_id'] or 'pendente'} | Oferta {c['id']}: {'confirmada' if c['confirmed'] else 'aguarda confirmacao'} | {c['title']} | ultima leitura: {last[0]['status'] if last else 'pendente'}\n{c['url']}"
+                            f"  🏷️ Anúncio {c['ad_id'] or 'pendente'} · Oferta {c['id']}\n  Confirmação: {'confirmada' if c['confirmed'] else 'aguardando confirmação'}\n  Produto: {c['title']}\n  Última leitura: {last[0]['status'] if last else 'pendente'}\n  {c['url']}\n"
                         )
-                return await reply("\n".join(lines) or "Nenhum produto.")
+                return await reply("\n".join(lines) or 'Sua lista ainda está vazia. Use /buscar nome ou /monitorar nome para começar.')
             if name in ("/monitorar", "/buscar", "/buscarml"):
                 query = " ".join(args).strip()
                 if not query or len(query) > 600:
-                    return await reply("Informe um nome ou link (ate 600 caracteres).")
+                    return await reply('Informe um nome ou link com até 600 caracteres.')
                 if name == "/monitorar" and query.isdigit():
                     return await ask_scope(app.bot, config.chat, db, int(query))
                 if "://" in query:
@@ -189,63 +200,63 @@ def main():
                         marketplace_only=name == '/buscarml'
                     )
 
-                await reply("🔎 Pesquisando links do Mercado Livre..." if name == '/buscarml' else "Consultando paginas das ofertas...")
+                await reply('🔎 Pesquisando links do Mercado Livre...' if name == '/buscarml' else '🔎 Consultando as páginas das ofertas...')
                 background(search_send())
                 return
             if not args:
-                return await reply("Informe um ID. Veja /ajuda.")
+                return await reply('Informe um ID. Consulte os comandos disponíveis em /ajuda.')
             pid = int(args[0])
             if name == "/confirmar":
                 candidate = db.confirm_candidate(pid)
                 if candidate is None:
                     return await reply(
-                        "Oferta inexistente ou sem titulo lido. Execute /verificar PRODUTO_ID."
+                        'Oferta não encontrada ou ainda sem título lido. Execute /verificar PRODUTO_ID e tente novamente.'
                     )
                 await reply(
-                    "Modelo confirmado: "
+                    "✅ Modelo confirmado\n"
                     + candidate["title"]
-                    + "\nA proxima leitura valida registra a base inicial."
+                    + "\n\nA próxima leitura válida registrará o preço inicial."
                 )
                 background(check_send(candidate["product"]))
                 return
             products = db.rows("SELECT * FROM products WHERE id=?", (pid,))
             if not products:
-                return await reply("Produto nao encontrado.")
+                return await reply('Produto não encontrado. Confira o ID e tente novamente.')
             if name == "/opcoes":
                 if not await monitor.options(pid):
                     await reply(
-                        "Nenhuma oferta pendente de escolha. Use /verificar ID para buscar novamente."
+                        'Não há ofertas pendentes de escolha. Use /verificar ID para buscar novamente.'
                     )
             elif name == "/verificar":
-                await reply("Verificacao solicitada.")
+                await reply('🔎 Verificação solicitada. Avisarei quando a consulta terminar.')
                 background(check_send(pid))
             elif name == "/pausar":
                 db.run("UPDATE products SET active=0 WHERE id=?", (pid,))
                 await reply(
-                    "Pausado. Uma leitura ja iniciada pode terminar; alertas ficam suspensos."
+                    '⏸️ Monitoramento pausado. Uma leitura já iniciada ainda pode terminar; os alertas ficam suspensos.'
                 )
             elif name == "/retomar":
                 db.run("UPDATE products SET active=1,next_due=0 WHERE id=?", (pid,))
-                await reply("Retomado; consulta agendada.")
+                await reply('▶️ Monitoramento retomado. Uma consulta foi agendada.')
             elif name == "/remover":
                 db.run("DELETE FROM products WHERE id=?", (pid,))
-                await reply("Produto e dados associados removidos.")
+                await reply('🗑️ Produto, histórico e alertas associados foram removidos.')
             elif name == "/alertas":
                 if len(args) != 2 or args[1].lower() not in ("todas", "quedas"):
-                    return await reply("Use /alertas ID todas ou /alertas ID quedas.")
+                    return await reply('Use: /alertas ID todas ou /alertas ID quedas.')
                 mode = "all" if args[1].lower() == "todas" else "drops"
                 db.run("UPDATE products SET alert_mode=? WHERE id=?", (mode, pid))
                 await reply(
-                    "Avisos de aumentos e quedas ativados."
+                    '🔔 Alertas de aumentos e quedas ativados.'
                     if mode == "all"
-                    else "Avisos somente de quedas, respeitando os filtros."
+                    else '📉 Alertas somente para quedas ativados, respeitando os filtros configurados.'
                 )
             elif name == "/configurar":
                 from decimal import Decimal
 
                 if len(args) != 4:
                     return await reply(
-                        "Use /configurar ID reais porcentagem alvo (ou -)."
+                        'Use: /configurar ID reais porcentagem alvo (ou - para remover o alvo).'
                     )
                 minimum, percent = Decimal(args[1]), Decimal(args[2])
                 target = None if args[3] == "-" else Decimal(args[3])
@@ -262,7 +273,7 @@ def main():
                     ),
                 )
                 await reply(
-                    "Filtros atualizados; modo somente quedas ativado. Use /alertas ID todas para voltar a qualquer alteracao."
+                    '✅ Filtros atualizados. O modo de alertas está definido como somente quedas. Para receber avisos de qualquer alteração, use /alertas ID todas.'
                 )
             elif name == "/historico":
                 rows = db.rows(
@@ -279,19 +290,19 @@ def main():
                     ).isoformat(timespec="seconds")
                     detail = json.loads(r["detail"]) if r["detail"] else {}
                     lines.append(
-                        f"{when} | oferta {r['cid']} | {r['status']} | {detail}"
+                        f"🕒 {when}\nOferta {r['cid']} · Status: {r['status']}\nDetalhes: {detail}\n"
                     )
                 for s in db.rows(
                     "SELECT s.* FROM series s JOIN candidates c ON c.id=s.candidate WHERE c.product=?",
                     (pid,),
                 ):
                     lines.append(
-                        f"Oferta {s['candidate']} | {s['seller']} | {s['condition']} | {s['payment']} | ultimo R$ {s['last']/100:.2f}; menor R$ {s['lowest']/100:.2f}"
+                        f"📊 Oferta {s['candidate']}\nVendedor: {s['seller']} · Condição: {s['condition']}\nPagamento: {s['payment']}\nÚltimo preço: R$ {s['last']/100:.2f} · Menor registrado: R$ {s['lowest']/100:.2f}\n"
                     )
-                await reply("\n".join(lines) or "Sem historico.")
+                await reply("\n".join(lines) or 'Ainda não há histórico para este produto.')
         except Exception:
             await reply(
-                "Comando ou configuracao invalida. Consulte /ajuda; nenhum erro de leitura representa preco zero."
+                '⚠️ Comando ou configuração inválida. Consulte /ajuda. Uma falha de leitura nunca é tratada como preço zero.'
             )
 
     for name in (

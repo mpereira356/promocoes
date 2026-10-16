@@ -62,7 +62,7 @@ def test_unknown_condition_provisional_unknown_payment_stock_price_unranked():
         [(x, f"https://example.org/{i}", "Loja") for i, x in enumerate(cases)]
     )
     assert ranked[0][3:] == (1, True)
-    assert "Ranking provisorio" in offer_text(ranked[0][0], "Loja", 1, True)
+    assert "Ranking provisório" in offer_text(ranked[0][0], "Loja", 1, True)
     assert all(item[3] is None for item in ranked[1:])
     assert all(not item[0].comparable for item in ranked[:2])
 

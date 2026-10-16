@@ -55,7 +55,7 @@ def test_initial_new_drop_duplicate_and_return(setup):
     db.record(c, low)
     db.record(c, low)
     assert count(db) == 1
-    assert "Anterior: R$ 1000.00" in db.rows("SELECT message FROM alerts")[0]["message"]
+    assert "Preço anterior: R$ 1000.00" in db.rows("SELECT message FROM alerts")[0]["message"]
     db.record(c, r)
     db.record(c, low)
     assert count(db) == 3  # Queda, aumento e nova queda: qualquer alteracao e avisada.
@@ -275,7 +275,7 @@ async def test_duplicate_product_check(setup, config):
     m.read = read
     first = asyncio.create_task(m.check(c["product"]))
     await entered.wait()
-    assert await m.check(c["product"]) == "Verificacao ja em andamento."
+    assert await m.check(c["product"]) == "⏳ Já existe uma verificação em andamento para este produto."
     release.set()
     await first
     assert len(calls) == 1

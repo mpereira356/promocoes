@@ -147,7 +147,7 @@ def test_blocked_store_does_not_hide_success():
         try:
             found = await DirectSearch(c, f).links("b550")
             assert len(found) == 1
-            assert "Pichau" in found.notices[0] and "bloqueado" in found.notices[0]
+            assert "Pichau" in found.notices[0] and "bloqueou o acesso" in found.notices[0]
             assert (
                 f.html.await_count == 2
             )  # Nenhuma segunda tentativa para contornar 403.

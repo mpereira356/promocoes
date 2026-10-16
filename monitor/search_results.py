@@ -17,7 +17,7 @@ async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketpla
             urls = [query] if query.startswith('https://') else await monitor.search.links(query)
         notices = getattr(urls, 'notices', [])
         if not urls:
-            await send('Nenhuma oferta descoberta.')
+            await send('Não encontramos ofertas nesta consulta.')
         offers = []
         for url in urls:
             candidate = getattr(urls, 'candidates', {}).get(url)
@@ -40,25 +40,25 @@ async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketpla
                 failed += 1
                 reason = REASONS.get(str(exc), 'falha de leitura nao identificada') if isinstance(exc, ReadError) else 'falha interna de leitura'
                 if external:
-                    await send(discovered_text(candidate) + '\nLeitura da pagina: ' + reason + '.')
+                    await send(discovered_text(candidate) + '\n⚠️ Leitura da página: ' + reason + '.')
                     unverified += 1
                 else:
-                    await send('Nao foi possivel ler esta oferta: ' + reason + '.\n' + url)
+                    await send('⚠️ Não foi possível ler esta oferta. Motivo: ' + reason + '.\n' + url)
         for r, url, store, rank, provisional in rank_offers(offers):
             ad = db.save_ad(url, store, r)
             await send_offer(bot, chat, r, url, store, rank, provisional, ad['id'])
             sent += 1
         if notices:
-            await send('Avisos da pesquisa:\n' + '\n'.join(notices))
+            await send('⚠️ Avisos da pesquisa\n\n' + '\n'.join(notices))
     except ReadError as exc:
         interrupted = True
         await send(search_error_message(str(exc)))
     except Exception:
         interrupted = True
-        await send('Busca interrompida por uma falha. Tente novamente mais tarde.')
+        await send('⚠️ A busca foi interrompida por uma falha. Tente novamente mais tarde.')
     finally:
-        status = 'Pesquisa encerrada com falha' if interrupted else 'Pesquisa concluida'
-        await send(f'{status}. Ofertas enviadas: {sent}. Links com falha de leitura: {failed}. Avisos das lojas: {len(notices)}. Links para conferencia: {unverified}.')
+        status = '⚠️ Pesquisa encerrada com falha' if interrupted else '✅ Pesquisa concluída'
+        await send(f'{status}\n\nOfertas enviadas: {sent}\nLinks com falha de leitura: {failed}\nAvisos das lojas: {len(notices)}\nLinks para conferência: {unverified}')
 
 
 def discovered_text(candidate):
@@ -68,9 +68,9 @@ def discovered_text(candidate):
     return (
         '🔎 ' + store + ' — link encontrado\n\n'
         + candidate.title[:350] + '\n\n'
-        + '📌 Fonte: indice externo Tavily Search; titulo ainda nao conferido na pagina.\n'
-        + '❓ Preco, estoque, vendedor, condicao e pagamento nao verificados.\n'
-        + '⚠️ Confira o modelo, a oferta e o vendedor ao abrir. Catalogos podem alternar vendedores.\n'
-        + '⏸️ Este resultado nao ativa monitoramento nem alertas.\n\n'
+        + '📌 Fonte: índice externo Tavily Search. O título ainda não foi conferido na página.\n'
+        + '❓ Preço, estoque, vendedor, condição e forma de pagamento não foram verificados.\n'
+        + '⚠️ Ao abrir, confira o modelo, a oferta e o vendedor. Catálogos podem alternar vendedores.\n'
+        + '⏸️ Este resultado não ativa monitoramento nem alertas.\n\n'
         + '🔗 ' + candidate.url
     )
