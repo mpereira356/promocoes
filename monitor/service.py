@@ -21,6 +21,7 @@ class Monitor:
         self.inflight = {}
         self.alert_lock = asyncio.Lock()
         self.send_candidate = send_candidate
+        self.amazon_offers = None
 
     async def options(self, pid, only_new=False):
         extra = " AND c.notified=0 AND p.active=1" if only_new else ""
@@ -62,7 +63,17 @@ class Monitor:
             raise ReadError("redirect_changed_store")
         parser = adapter(final_domain)
         try:
-            return parser.parse(html, final)
+            readings = parser.parse(html, final)
+            if final_domain == 'amazon.com.br' and self.config.browser and all(r.price is None for r in readings):
+                offers_url = parser.buying_options_url(html, final)
+                if not offers_url and any(r.stock != 'out_of_stock' for r in readings):
+                    offers_url = parser.hidden_price_panel_url(html, final)
+                if offers_url:
+                    from .amazon_offers import AmazonOffersReader
+                    if self.amazon_offers is None:
+                        self.amazon_offers = AmazonOffersReader(self.fetcher)
+                    return parser.parse(await self.amazon_offers.html(offers_url), final)
+            return readings
         except ReadError as exc:
             if (
                 self.config.browser

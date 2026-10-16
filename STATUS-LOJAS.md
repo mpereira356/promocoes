@@ -1,6 +1,16 @@
+# Precos Amazon ? atualizacao 2026.10.15-amazon-offers.1
+
+O leitor agora tenta o painel publico de opcoes de compra quando a pagina Amazon nao fornece preco e nao declara indisponibilidade. Usa o link publicado pela loja ou o painel AOD observado no redirecionamento real, sempre para o mesmo ASIN e com robots.txt conferido antes. Selenium normal, sem stealth, login ou interacao com CAPTCHA; nenhum botao de carrinho/compra e acionado. O navegador roda em uma thread com fila, sem bloquear comandos Telegram, e e encerrado ao final de cada leitura.
+
+Validacao real local em 15/10/2026: o fluxo Monitor.read completo no anuncio https://www.amazon.com.br/Gigabyte-B550-AORUS-ELITE-AX/dp/B08KGVH7YC retornou 172711 centavos (R$ 1.727,11), vendedor Amazon Global (ID A2EB9PYM83FCP9), condicao Novo. O painel apresentava frete separado; esse valor nao foi somado ao preco. Sao dados observados no teste, nao precos fixos no codigo. O painel nao declarou modalidade nem estoque de forma explicita; esses campos continuam desconhecidos, impedindo comparacoes e medalhas dessa leitura. Nao houve envio Telegram real nem alteracao do banco do usuario.
+
+170 testes locais passaram. A fixture amazon_aod_real.html e um recorte de DOM real, sem forms, cookies ou tokens. Testes simulados extras cobrem conflitos de preco, frete/cupom, troca de produto/ASIN, bloqueio por robots e acionamento do navegador so quando falta preco.
+
+O instalador com --with-browser (usado por deploy/update.sh) instala chromium-driver e Selenium. A execucao desse novo fluxo ainda nao foi validada na VPS Kali; nao e necessario executar o diagnostico Selenium manual anterior para ativar a coleta Amazon.
+
 # Estado real das lojas em 15/10/2026
 
-Teste adicional Selenium 4.51.0 + Chrome padrao headless em 15/10/2026: robots.txt Mercado Livre respondeu 403 (text/html). Nenhuma pagina de produto ou preco foi consultada apos essa recusa. Teste local Windows; nao foi testado Selenium com janela visivel nem na VPS. O motor de producao permanece Playwright.
+Teste adicional Selenium 4.51.0 + Chrome padrao headless em 15/10/2026: robots.txt Mercado Livre respondeu 403 (text/html). Nenhuma pagina de produto ou preco foi consultada apos essa recusa. Teste local Windows; nao foi testado Selenium com janela visivel nem na VPS. O transporte geral permanece Playwright; o painel de ofertas Amazon agora usa Selenium normal quando o preco nao esta no HTML inicial.
 
 Diagnostico Selenium opcional no Kali, apos atualizar o projeto:
 
@@ -13,7 +23,7 @@ sudo -u pricebot .venv/bin/python -m scripts.diagnose_selenium --binary /usr/bin
 
 Esse teste nao acessa Telegram ou SQLite. `--headed` exige ambiente grafico e pode ser usado em computador com desktop; nao funciona em SSH puro. Usa perfil novo, nao importa cookies do navegador pessoal e nao interage com desafios. A instalacao do driver no Kali ainda depende de validacao no servidor.
 
-Versao: `2026.10.15-stores.1`.
+Versao atual: `2026.10.15-amazon-offers.1`. Os testes anteriores abaixo permanecem como registro historico.
 
 | Loja | Descoberta real | Leitura real validada nesta etapa | Limite atual |
 | --- | --- | --- | --- |
@@ -21,7 +31,7 @@ Versao: `2026.10.15-stores.1`.
 | KaBuM | B550 Aorus Elite V2 encontrada | Titulo, preco, Pix, vendedor GIGANTEC e disponibilidade | Condicao ausente na pagina analisada; alertas dessa oferta permanecem suspensos |
 | Terabyte | B550 Aorus Elite V2 e Open Box encontradas | Oferta regular: titulo, preco, vendedor, condicao e indisponibilidade declarada | Modalidade de pagamento nao confirmada para a oferta indisponivel; nao anunciar como disponivel |
 | Mercado Livre | Links encontrados no indice externo | Paginas continuam bloqueando a leitura com 403 | Links nao verificados nao recebem preco, medalha ou monitoramento |
-| Amazon Brasil | Links reais da B550 e de Echo Dot encontrados | B550: titulo e indisponibilidade explicita. Echo Dot: titulo e vendedor Amazon.com.br | Amazon omitiu preco na resposta e pediu adicionar ao carrinho; nao foi feito login, compra ou interacao com carrinho. Condicao e estoque Echo nao confirmados |
+| Amazon Brasil | Links reais encontrados | Anuncio B08KGVH7YC: preco do painel AOD, vendedor Amazon Global e condicao Novo, com Selenium normal | Modalidade de pagamento e estoque nao explicitados no painel; alertas dessa leitura continuam suspensos. Alguns outros produtos seguem com preco oculto ou indisponivel |
 
 **Nao ha validacao completa de todos os campos em todas as lojas.** Nenhum adaptador pode prometer encontrar qualquer produto, interpretar qualquer frase ou manter acesso a paginas que mudam/restringem acesso. Os campos ausentes sao declarados ausentes, sem inferir produto novo, Pix ou estoque.
 

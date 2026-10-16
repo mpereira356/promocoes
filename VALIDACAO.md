@@ -1,3 +1,9 @@
+# Atualizacao 2026.10.15-amazon-offers.1
+
+170 testes locais passaram. Validacao real separada do fluxo completo Monitor.read no ASIN Amazon B08KGVH7YC obteve preco 172711 centavos, vendedor Amazon Global com identificador explicito e condicao Novo no painel publico AOD. Frete separado nao foi usado como preco. Pagamento e estoque nao foram confirmados; a leitura nao e comparavel para alertas. Selenium normal carregou o painel com JavaScript, sem login, CAPTCHA, compras ou modificacao da automacao. A validacao ocorreu no Windows; o novo caminho Selenium Amazon ainda depende de verificacao na VPS.
+
+A fixture amazon_aod_real.html e um recorte do DOM real, diferenciado dos testes simulados. Inclui somente titulo, condicao, bloco de preco e vendedor; forms, cookies e tokens nao sao incluidos. Os testes de integracao usam navegador simulado; nao enviaram Telegram.
+
 # Atualizacao 2026.10.15-stores.1
 
 157 testes locais passaram. Novos testes simulados cobrem fallback de sitemap incompleto, separacao de Aorus Elite/Elite AX/Gaming X, titulo real divergente da pesquisa, ordinais/capacidades e bloqueios Amazon. Duas fixtures reduzidas foram obtidas de paginas Amazon reais, sem dados de sessao: B550 indisponivel e Echo Dot com preco oculto.

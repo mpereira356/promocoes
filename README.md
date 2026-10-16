@@ -1,3 +1,5 @@
+**Precos Amazon:** a versao `2026.10.15-amazon-offers.1` carrega o painel publico de ofertas com Selenium quando o preco nao vem no HTML principal. O anuncio B08KGVH7YC foi validado com preco, vendedor e condicao reais. Pagamento/estoque ausentes continuam desconhecidos. `bash deploy/update.sh` instala as dependencias necessarias; confira [STATUS-LOJAS.md](STATUS-LOJAS.md) para validacao e limites.
+
 Para publicar no GitHub e atualizar o servidor com Git, veja [GITHUB.md](GITHUB.md).
 
 **Leia [STATUS-LOJAS.md](STATUS-LOJAS.md) para o estado real de cada integracao.** Amazon Brasil foi adicionada a descoberta e ao leitor de paginas; precos ocultos ou dados ausentes permanecem desconhecidos. Pichau/Terabyte usam descoberta externa quando o sitemap limitado nao encontra candidatos. Nem todas as lojas possuem todos os campos validados; nao ha promessa de cobertura universal.

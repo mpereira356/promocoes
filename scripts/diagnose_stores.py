@@ -12,10 +12,12 @@ from monitor.discovery import DirectSearch
 from monitor.adapters import adapter
 from monitor.adapters.base import ReadError
 from monitor.version import VERSION
+from monitor.service import Monitor
 
 
 async def diagnose(config, query):
     fetcher = Fetcher(config)
+    monitor = Monitor(None, config, fetcher, None, None)
     report = {
         "version": VERSION,
         "chromium": config.browser,
@@ -31,8 +33,7 @@ async def diagnose(config, query):
             item['discovery_sources'] = {u: links.candidates[u].source or 'pagina ou sitemap da loja' for u in urls if u in links.candidates}
             if urls:
                 try:
-                    body, final = await fetcher.html(urls[0])
-                    readings = adapter(domain).parse(body, final)
+                    readings = await monitor.read(urls[0])
                     item["readings"] = [
                         {
                             "title": r.title,

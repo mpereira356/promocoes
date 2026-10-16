@@ -105,6 +105,9 @@ def form_search_url(html, base, query, fields=None):
 
 
 REASONS = {
+    'selenium_not_installed': 'Selenium nao instalado; atualize com deploy/update.sh',
+    'amazon_offers_http_error': 'Amazon recusou ou nao entregou o painel de ofertas',
+    'amazon_offers_unavailable': 'nao foi possivel carregar as opcoes de compra Amazon no navegador',
     'different_model': 'titulo real da pagina nao corresponde ao produto pesquisado',
     'external_search_limited': 'limite da busca externa sem chave atingido; aguarde antes de tentar novamente',
     'external_search_unavailable': 'indice externo indisponivel; nenhum resultado foi inventado',

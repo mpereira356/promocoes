@@ -121,7 +121,7 @@ fi
 "$install_dir/.venv/bin/python" -m pip install --disable-pip-version-check -r "$install_dir/requirements-server.txt"
 if [[ $with_browser -eq 1 ]]; then
     # Chromium do Kali/Debian fornece as bibliotecas nativas; o Playwright usa seu binario compativel.
-    DEBIAN_FRONTEND=noninteractive apt-get install -y chromium
+    DEBIAN_FRONTEND=noninteractive apt-get install -y chromium chromium-driver
     "$install_dir/.venv/bin/python" -m pip install --disable-pip-version-check -r "$install_dir/requirements-browser.txt"
     chown -R root:pricebot "$install_dir/.venv"
     chmod -R g+rX,o-rwx "$install_dir/.venv"
