@@ -2,6 +2,7 @@
 
 import hashlib
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from .telegram_text import render, send_text
 
 
 def identity(candidate):
@@ -43,13 +44,13 @@ async def send_card(bot, chat, candidate):
     if candidate["image"]:
         try:
             await bot.send_photo(
-                chat, photo=candidate["image"], caption=text, reply_markup=keyboard
+                chat, photo=candidate["image"], caption=render(text, (candidate['title'][:500],)), reply_markup=keyboard, parse_mode='HTML'
             )
             return
         except Exception:
             # Imagem bloqueada, invalida ou grande: manter a escolha por texto.
             pass
-    await bot.send_message(chat, text + "\n📷 Foto indisponível; você ainda pode escolher pelos botões acima.", reply_markup=keyboard)
+    await send_text(lambda t, **kw: bot.send_message(chat, t, **kw), text + "\n📷 Foto indisponível; você ainda pode escolher pelos botões acima.", bold_lines=(candidate['title'][:500],), reply_markup=keyboard)
 
 
 async def handle_choice(update, config, db, send, on_confirm=None):

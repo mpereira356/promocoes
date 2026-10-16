@@ -1,4 +1,6 @@
-**Mensagens revisadas:** a versão `2026.10.15-editorial.1` aplica os textos enviados pelo usuário, com acentuação, blocos curtos, botões e emojis consistentes. As regras de busca, comparação e monitoramento são preservadas. Os templates de referência estão em [TEMPLATES-REVISADOS.md](TEMPLATES-REVISADOS.md).
+**Títulos e exemplos:** a versão `2026.10.15-titulos.1` mostra títulos em negrito no Telegram, com HTML escapado, inclusive nas legendas de fotos. A ajuda explica os argumentos de `/configurar`, mostra quando os filtros disparam ou impedem um alerta, como remover o alvo e como alternar os modos. A seleção de promoções também traz exemplos de `>30` e `>=30`.
+
+**Mensagens revisadas:** os textos enviados pelo usuário foram aplicados com acentuação, blocos curtos, botões e emojis consistentes. As regras de busca, comparação e monitoramento são preservadas. Os templates de referência estão em [TEMPLATES-REVISADOS.md](TEMPLATES-REVISADOS.md).
 
 **Busca pontual por categoria:** envie `/promocoes` e escolha Hardware > Placas-mãe, desconto (`>30`, `>=30` ou personalizado) e lojas. Retorna até três produtos, com desconto anunciado calculado e comparação separada, sem cadastrar monitoramento. A categoria inicial é Placas-mãe; lojas sem extração validada ou bloqueadas são identificadas no resumo. Veja [PROMOCOES.md](PROMOCOES.md) para limites, condições e validação.
 

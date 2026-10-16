@@ -2,6 +2,7 @@
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from .models import normalize
+from .telegram_text import render, send_text
 
 MEDALS = {1: "🥇", 2: "🥈", 3: "🥉"}
 
@@ -134,7 +135,8 @@ async def send_offer(
         try:
             await bot.send_photo(
                 chat, photo=reading.image,
-                caption=text if fits_caption else reading.title[:200] + '\n📋 Os detalhes da oferta serão enviados na próxima mensagem.',
+                caption=render(text, (reading.title[:350],)) if fits_caption else render(reading.title[:200] + '\n📋 Os detalhes da oferta serão enviados na próxima mensagem.', (reading.title[:200],)),
+                parse_mode='HTML',
                 reply_markup=keyboard
             )
         except Exception:
@@ -142,4 +144,4 @@ async def send_offer(
         else:
             if fits_caption:
                 return
-    await bot.send_message(chat, text + "\n" + url, reply_markup=keyboard)
+    await send_text(lambda t, **kw: bot.send_message(chat, t, **kw), text + "\n" + url, bold_lines=(reading.title[:350],), reply_markup=keyboard)

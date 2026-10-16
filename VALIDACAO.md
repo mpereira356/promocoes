@@ -1,3 +1,7 @@
+# Atualização 2026.10.15-titulos.1
+
+Títulos enviados em HTML com conteúdo dinâmico escapado. A divisão de mensagens ocorre antes da criação das tags e respeita unidades UTF-16, preservando emojis. A suíte inclui verificações de escape de nomes com `<`, `>` e `&`, divisão de textos longos e preservação do teclado/parse_mode. Exemplos de filtros explicam a combinação obrigatória de valor, percentual e alvo e não alteram os cálculos existentes. Os testes usam Telegram simulado; nenhum envio real ou nova consulta de loja foi realizado nesta atualização.
+
 # Atualização 2026.10.15-editorial.1
 
 Revisão de apresentação baseada no arquivo de templates enviado pelo usuário: ajuda, lista, histórico, cartões, botões, estados de leitura, alertas, erros e promoções. Os testes existentes foram ajustados às novas mensagens, preservando as verificações de preços, limites, autorização, duplicidade e persistência. As mensagens comuns continuam como texto simples, sem asteriscos de formatação; os resultados de promoções mantêm o título em HTML escapado. O envio alternativo para legendas longas foi preservado. Esta revisão não valida novamente o acesso às lojas nem envia mensagens reais no Telegram.

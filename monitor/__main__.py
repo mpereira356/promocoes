@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from html import escape
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler
@@ -18,6 +17,7 @@ from .subscriptions import ask_scope, handle_subscription
 from .version import VERSION
 from .deals.service import Deals
 from .deals.telegram import PromotionsTelegram
+from .telegram_text import send_text
 
 HELP = """🛍️ Bot de ofertas e monitoramento
 
@@ -44,7 +44,22 @@ MONITORAMENTO
 
 Exemplo de filtros
 /configurar 1 50 5 1500
-Os argumentos são: ID, valor mínimo em reais, percentual mínimo e preço-alvo.
+• 1: ID do monitoramento mostrado em /lista.
+• 50: queda de pelo menos R$ 50,00 desde o último preço válido.
+• 5: queda de pelo menos 5% desde o último preço válido.
+• 1500: preço atual de até R$ 1.500,00.
+O alerta exige TODAS essas condições juntas, na mesma oferta e modalidade.
+Se o preço cair de R$ 1.600,00 para R$ 1.480,00, a queda será de R$ 120,00 (7,5%) e o alerta será enviado, se os dados forem comparáveis.
+De R$ 1.600,00 para R$ 1.520,00, não haverá alerta: o preço ainda supera o alvo.
+
+Exemplos de uso
+/configurar 1 50 5 - — mantém as quedas mínimas, sem preço-alvo.
+/configurar 1 0 0 1500 — sem queda mínima, mas só alerta em uma queda que termine em até R$ 1.500,00. Não avisa apenas por já estar abaixo do alvo.
+/alertas 1 todas — volta a avisar aumentos e quedas, sem aplicar esses filtros.
+/alertas 1 quedas — volta a aplicar os filtros às quedas.
+/descontopromo >30 — exclui exatamente 30%; aceita, por exemplo, 31%.
+/descontopromo >=30 — inclui exatamente 30%. Use na etapa de desconto de /promocoes.
+Use ponto para centavos em /configurar: 50.90 significa R$ 50,90. Informe todos os valores, sem R$ ou separador de milhar.
 
 /status — ver a versão instalada e o modo de acesso às lojas.
 
@@ -57,10 +72,7 @@ Observações
 • Antes de confirmar uma oferta, confira o modelo, a variante e o link."""
 
 
-async def chunks(send, text):
-    # Texto simples: nomes de lojas nao injetam Markdown/HTML.
-    for start in range(0, len(text), 3800):
-        await send(text[start : start + 3800])
+CONFIGURE_HELP = 'Exemplo de filtros\n' + HELP.split('Exemplo de filtros\n', 1)[1].split('\n/status', 1)[0]
 
 
 def main():
@@ -73,7 +85,7 @@ def main():
     tasks = set()
 
     async def send(text):
-        await chunks(lambda t: app.bot.send_message(config.chat, t), text)
+        await send_text(lambda t, **kw: app.bot.send_message(config.chat, t, **kw), text)
 
     async def send_candidate(candidate):
         await send_card(app.bot, config.chat, candidate)
@@ -121,12 +133,7 @@ def main():
         task.add_done_callback(done)
 
     async def send_promotion(text):
-        async def formatted(part):
-            first, separator, rest = part.partition('\n')
-            rendered = ('<b>' + escape(first) + '</b>' + separator + escape(rest)
-                        if first.startswith('🏆') else escape(part))
-            await app.bot.send_message(config.chat, rendered, parse_mode='HTML')
-        await chunks(formatted, text)
+        await send(text)
 
     promotions = PromotionsTelegram(config, Deals(monitor), send_promotion, background)
     for name in ('promocoes', 'descontopromo', 'ceppromo'):
@@ -144,7 +151,7 @@ def main():
             return
 
         async def reply(text):
-            await chunks(update.effective_message.reply_text, text)
+            await send_text(update.effective_message.reply_text, text)
 
         name = update.effective_message.text.split()[0].split("@")[0].lower()
         args = context.args
@@ -256,7 +263,7 @@ def main():
 
                 if len(args) != 4:
                     return await reply(
-                        'Use: /configurar ID reais porcentagem alvo (ou - para remover o alvo).'
+                        'Use: /configurar ID reais porcentagem alvo (ou - para remover o alvo).\n\n' + CONFIGURE_HELP
                     )
                 minimum, percent = Decimal(args[1]), Decimal(args[2])
                 target = None if args[3] == "-" else Decimal(args[3])

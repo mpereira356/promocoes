@@ -7,6 +7,7 @@ from ..selection import authorized
 from .adapters import ADAPTERS
 from .models import DiscountFilter
 from .formatting import messages
+from ..telegram_text import send_text
 
 
 @dataclass
@@ -32,7 +33,8 @@ class PromotionsTelegram:
     async def command(self, update, context):
         if not authorized(update, self.config):
             return
-        reply = update.effective_message.reply_text
+        async def reply(text, **kwargs):
+            await send_text(update.effective_message.reply_text, text, **kwargs)
         name = update.effective_message.text.split()[0].split('@')[0].lower()
         if self.running:
             return await reply('Já há uma busca de promoções em andamento. Os demais comandos continuam disponíveis.')
@@ -77,13 +79,14 @@ class PromotionsTelegram:
             return await query.answer('Esta seleção expirou ou já há uma pesquisa em andamento. Inicie outra com /promocoes.', show_alert=True)
         await query.answer()
         action = parts[2]
-        reply = query.message.reply_text
+        async def reply(text, **kwargs):
+            await send_text(query.message.reply_text, text, **kwargs)
         if action == 'hardware' and session.stage == 'category':
             session.stage = 'subcategory'
             return await reply('Hardware · escolha a subcategoria:', reply_markup=self.keyboard([('Placas-mãe', 'motherboards')]))
         if action == 'motherboards' and session.stage == 'subcategory':
             session.stage = 'filter'
-            return await reply('Escolha o desconto anunciado ou informe um percentual personalizado com /descontopromo >25,5.\n\n>30 exclui 30%; >=30 inclui 30%.', reply_markup=self.keyboard([('Maior que 30%', 'gt30'), ('Maior ou igual a 30%', 'ge30')]))
+            return await reply('Escolha o desconto anunciado ou informe um percentual personalizado com /descontopromo >25,5.\n\nExemplos de uso\n/descontopromo >30 — desconto maior que 30%: 30% não entra; 31% entra.\n/descontopromo >=30 — desconto de pelo menos 30%: 30% já entra.\nDe R$ 1.000,00 por R$ 700,00 = 30% de desconto anunciado; só entra em >=30.\nEsta busca é pontual e não cria alertas.', reply_markup=self.keyboard([('Maior que 30%', 'gt30'), ('Maior ou igual a 30%', 'ge30')]))
         if action in ('gt30', 'ge30') and session.stage == 'filter':
             session.discount = DiscountFilter.parse('>30' if action == 'gt30' else '>=30')
             session.stage = 'stores'
