@@ -3,7 +3,7 @@ import time
 from .adapters import adapter
 from .adapters.base import ReadError
 from .search import search_error_message
-from .models import Reading
+from .models import Reading, normalize
 from .identity import same_product, search_terms
 from .discovery import REASONS, reading_relevance
 import json
@@ -85,19 +85,29 @@ class Monitor:
         try:
             readings = parser.parse(html, final)
             if final_domain == 'amazon.com.br' and self.config.browser and all(r.price is None for r in readings):
-                if parser.price_requires_cart(html):
+                offers_url = parser.buying_options_url(html, final)
+                if parser.price_requires_cart(html) and not offers_url:
                     if any(r.starting_price is not None for r in readings):
                         return readings, html, final
                     raise ReadError('amazon_price_requires_cart')
-                offers_url = parser.buying_options_url(html, final)
                 if not offers_url and any(r.stock != 'out_of_stock' for r in readings):
                     offers_url = parser.hidden_price_panel_url(html, final)
                 if offers_url:
                     from .amazon_offers import AmazonOffersReader
                     if self.amazon_offers is None:
                         self.amazon_offers = AmazonOffersReader(self.fetcher)
-                    html = await self.amazon_offers.html(offers_url)
-                    return parser.parse(html, final), html, final
+                    try:
+                        panel_html = await self.amazon_offers.html(offers_url)
+                        panel_readings = parser.parse(panel_html, final)
+                        if {normalize(r.title) for r in panel_readings} != {normalize(r.title) for r in readings}:
+                            raise ReadError('conflicting_product_title')
+                        return parser.enrich_identifiers(panel_readings, readings[0].identifiers), panel_html, final
+                    except ReadError as exc:
+                        if (str(exc) in ('amazon_browser_start_failed', 'amazon_browser_crashed',
+                                'selenium_not_installed', 'browser_not_installed', 'amazon_offers_panel_timeout')
+                                and any(r.starting_price is not None for r in readings)):
+                            return readings, html, final
+                        raise
             return readings, html, final
         except ReadError as exc:
             if (

@@ -258,3 +258,41 @@ def test_real_terabyte_seo_title_and_cash_block_have_pix_and_boleto():
     assert all(not r.payment for r in TerabyteAdapter().parse(html, url.replace('/36231/', '/99999/')))
     # Um segundo preço fora do modal torna a vinculação ambígua e é recusado.
     assert all(not r.payment for r in TerabyteAdapter().parse(html + '<p id="valVista">R$ 5,00</p>', url))
+
+
+
+def test_amazon_static_script_policy_is_cached_and_never_authorizes_other_hosts():
+    import httpx
+    async def run():
+        client=SimpleNamespace(get=AsyncMock(return_value=httpx.Response(200,text='User-agent: *\nAllow: /')))
+        f=SimpleNamespace(public=AsyncMock(),client=client)
+        t=ChromiumTransport(f)
+        url='https://m.media-amazon.com/images/I/example.js'
+        assert all(await asyncio.gather(*(t.amazon_script_allowed(url) for _ in range(4))))
+        assert client.get.await_count==1
+        for rejected in ('https://evil.org/images/I/test.js','http://m.media-amazon.com/images/I/test.js',
+                         'https://m.media-amazon.com/cart/test.js','https://m.media-amazon.com/images/I/test.jpg'):
+            assert not await t.amazon_script_allowed(rejected)
+        t.asset_policies.clear();client.get.return_value=httpx.Response(200,text='User-agent: *\nDisallow: /')
+        assert not await t.amazon_script_allowed(url)
+    asyncio.run(run())
+
+
+
+@pytest.mark.parametrize('href,click', [('/gp/offer-listing/B0CYGT9CWW/ref=test',True),('/gp/offer-listing/B08KGVH7YC/ref=test',False),('https://evil.org/gp/offer-listing/B0CYGT9CWW',False)])
+def test_public_options_button_is_activated_only_for_same_origin_asin(href,click):
+    async def run():
+        url='https://www.amazon.com.br/dp/B0CYGT9CWW'
+        policy=RobotsPolicy('User-agent: *\nAllow: /')
+        f=SimpleNamespace(canonical=lambda u:(u,'amazon.com.br'),public=AsyncMock(),robots={'https://www.amazon.com.br':(0,policy)},config=SimpleNamespace(delay=0))
+        t=ChromiumTransport(f);t.browser=Browser('<html>Panel</html>');c=t.browser.context
+        c.url=url
+        c.wait_for_load_state=AsyncMock();c.wait_for_selector=AsyncMock();c.content=AsyncMock(return_value='<html>Panel</html>')
+        link=SimpleNamespace(count=AsyncMock(return_value=1),get_attribute=AsyncMock(return_value=href),evaluate=AsyncMock())
+        link.first=link
+        c.locator=lambda selector:link if 'buybox-see-all' in selector else SimpleNamespace(count=AsyncMock(return_value=0))
+        await t.get(url,render=True,offer_panel=True)
+        assert link.evaluate.await_count==int(click)
+        c.wait_for_selector.assert_awaited_once_with('#aod-offer-list #aod-offer',state='attached',timeout=20000)
+        assert c.closed
+    asyncio.run(run())

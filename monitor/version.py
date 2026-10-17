@@ -1,1 +1,1 @@
-VERSION = "2026.10.17-mensagens.1"
+VERSION = "2026.10.17-amazon-options.1"

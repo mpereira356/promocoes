@@ -1,3 +1,13 @@
+# Opcoes de compra Amazon - 2026.10.17-amazon-options.1
+
+O link publico declarado em "Ver todas as opcoes de compra" agora tem prioridade sobre a mensagem de preco oculto/carrinho. Falhas tecnicas de inicializacao, ausencia de Selenium ou encerramento do Chrome permitem uma tentativa com o Chromium Playwright ja instalado pelo deploy. Bloqueio, CAPTCHA, HTTP recusado e timeout de leitura nao disparam troca de navegador. Falhas de acesso sao respeitadas. O navegador aguarda scripts/painel e aciona somente o link publico do mesmo ASIN e origem; nenhum botao de compra e utilizado. Precos do painel so sao aceitos se o titulo corresponder ao da pagina principal, preservando identificadores do produto.
+
+O modo de painel admite apenas scripts estaticos dos CDNs Amazon observados, com DNS publico, robots.txt proprio, cache de regras e limite de recursos. Outros dominios, metodos que alteram estado e rotas de carrinho/checkout continuam recusados. Se o painel falhar tecnicamente mas existir minimo publico, o bot preserva apenas a referencia "a partir de", sem trata-la como preco individual ou gerar alertas.
+
+Validacao real local em 17/10/2026: B0CYGT9CWW possui o botao e o link informado, e publicou outras ofertas a partir de R$ 369,00. Tentativas de carregar o painel com Playwright terminaram em timeout, sem linhas de ofertas individuais. Portanto NAO foi validada a coleta de preco por vendedor desse AK820. A VPS, instalacao de ChromeDriver como pricebot e envio real Telegram nao foram acessados. Nao se afirma que todos os problemas Amazon foram resolvidos.
+
+362 testes passaram, com tres avisos PTB preexistentes. Dezesseis novos casos simulam precedencia do botao sobre o aviso de carrinho, alternativa tecnica de navegador, recusa de troca apos bloqueio/CAPTCHA/timeout, politica/cache do CDN, acionamento restrito ao ASIN correto e preservacao da referencia publica. O preco 172711 centavos usado no teste de painel vem de uma fixture historica de placa-mae; nao e o preco do AK820. A fixture nova AK820 e recorte real reduzido do botao e do minimo publico, sem scripts, formularios ou tokens.
+
 # Echo Dot - 2026.10.16-echo-search.1
 
 Falha de descoberta Amazon reproduzida para "Echo Dot 5a geracao" (com ordinal e acentos no comando original). A consulta externa com inurl:dp devolveu produtos sem relacao; sem o operador retornou links Echo. Agora existe uma unica alternativa sem o operador quando a primeira consulta nao encontra candidatos relevantes. Ambas usam cache e nao ha alternativa apos erro de quota/bloqueio. Categorias continuam descartadas e precos do indice externo continuam ignorados.

@@ -29,9 +29,29 @@ class AmazonOffersReader:
                 await asyncio.sleep(max(0, self.fetcher.last.get(domain, 0) + self.fetcher.config.delay - time.monotonic()))
                 worker = asyncio.create_task(asyncio.to_thread(self._load, url, policy))
                 try:
-                    return await asyncio.shield(worker)
+                    try:
+                        return await asyncio.shield(worker)
+                    except ReadError as exc:
+                        if str(exc) not in ('amazon_browser_start_failed', 'amazon_browser_crashed', 'selenium_not_installed'):
+                            raise
+                        response = await self.fetcher.chromium().get(url, render=True, offer_panel=True)
+                        if response.status_code in (401, 403):
+                            self.fetcher.pause_access(domain)
+                            raise ReadError('blocked_no_bypass')
+                        if response.status_code != 200:
+                            raise ReadError('amazon_offers_http_error')
+                        final, target = self.fetcher.canonical(str(response.url))
+                        expected = re.search(r'/(?:gp/offer-listing|dp|gp/product)/([A-Z0-9]{10})(?:/|$)', urlsplit(url).path)
+                        actual = re.search(r'/(?:dp|gp/product)/([A-Z0-9]{10})(?:/|$)', urlsplit(final).path)
+                        if target != domain or not expected or not actual or expected[1] != actual[1]:
+                            raise ReadError('different_model')
+                        return response.text
                 except asyncio.CancelledError:
                     await worker
+                    raise
+                except ReadError as exc:
+                    if str(exc) in ('blocked_no_bypass', 'captcha_no_bypass'):
+                        self.fetcher.pause_access(domain)
                     raise
                 finally:
                     self.fetcher.last[domain] = time.monotonic()
@@ -70,6 +90,8 @@ class AmazonOffersReader:
             if not expected or not actual or expected[1] != actual[1]:
                 raise ReadError('different_model')
             response = main_response(driver.get_log('performance'), driver.current_url)
+            if response['http_status'] in (401, 403):
+                raise ReadError('blocked_no_bypass')
             if response['http_status'] != 200:
                 raise ReadError('amazon_offers_http_error')
             def ready(d):

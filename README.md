@@ -6,7 +6,7 @@
 
 **Categorias ampliadas:** `/promocoes` agora navega por **201 categorias/subcategorias em 33 grupos** de links observados nas lojas, com paginação. Use `/categoria monitores`, `/categoria pets` ou qualquer outro tema; também aceita link HTTPS da categoria. `/categorias atualizar` relê os menus públicos. Sem página mapeada, usa busca por termo e informa essa limitação. Nenhuma dessas consultas cria monitoramento. Preço/estoque e acesso continuam sujeitos à validação da página. Veja [PROMOCOES.md](PROMOCOES.md).
 
-**Precos Amazon:** o robô carrega o painel publico de ofertas com Selenium quando o preco nao vem no HTML principal. O anuncio B08KGVH7YC foi validado com preco, vendedor e condicao reais. Pagamento/estoque ausentes continuam desconhecidos. `bash deploy/update.sh` instala as dependencias necessarias; confira [STATUS-LOJAS.md](STATUS-LOJAS.md) para validacao e limites.
+**Precos Amazon:** quando nao ha preco principal e a pagina declara "Ver todas as opcoes de compra", o robo tenta o painel publico do mesmo ASIN, sem adicionar itens ao carrinho. Usa Selenium e, se houver falha tecnica de inicializacao, tenta o Chromium do Playwright instalado por `bash deploy/update.sh`. A leitura individual do painel AK820 B0CYGT9CWW ainda nao foi confirmada no teste local; a pagina publicou apenas uma referencia a partir de R$ 369,00. Veja [STATUS-LOJAS.md](STATUS-LOJAS.md) para distinguir simulacao, capturas reais e limitacoes.
 
 Para publicar no GitHub e atualizar o servidor com Git, veja [GITHUB.md](GITHUB.md).
 

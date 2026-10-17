@@ -63,6 +63,9 @@ def test_buying_options_link_must_be_declared_for_same_asin():
 def test_monitor_uses_browser_only_for_declared_options_when_price_missing():
     async def run():
         main = '<span id="productTitle">Gigabyte B550 AORUS ELITE AX V2</span><div id="buybox-see-all-buying-choices"><a href="/gp/offer-listing/B08KGVH7YC/ref=dp_olp_unknown_mbc">Ver ofertas</a></div>'
+        from bs4 import BeautifulSoup
+        title = BeautifulSoup(HTML, 'html.parser').select_one('#productTitle').get_text(' ', strip=True)
+        main = main.replace('>Gigabyte B550 AORUS ELITE AX V2<', '>' + title + '<')
         f = SimpleNamespace(canonical=lambda u: (u, 'amazon.com.br'), html=AsyncMock(return_value=(main, URL)))
         m = Monitor(None, SimpleNamespace(browser=True), f, None, None)
         m.amazon_offers = SimpleNamespace(html=AsyncMock(return_value=HTML))
@@ -303,3 +306,74 @@ def test_real_echo_alternating_hidden_response_never_reuses_captured_price():
     assert r.price is None and r.stock=='unknown' and not r.comparable
     assert adapter.price_requires_cart(hidden)
     assert reading_relevance('Echo Dot 5 geracao',r)
+
+
+
+def test_declared_buying_options_take_precedence_over_cart_price_warning():
+    from bs4 import BeautifulSoup
+    async def run():
+        html=Path('tests/fixtures/amazon_ak820_buying_options_real.html').read_text(encoding='utf-8')
+        url='https://www.amazon.com.br/dp/B0CYGT9CWW'
+        title=BeautifulSoup(html,'html.parser').select_one('#productTitle').get_text(' ',strip=True)
+        panel=BeautifulSoup(HTML,'html.parser')
+        panel.select_one('#productTitle').string=title
+        panel.select_one('#aod-asin-title-text').string=title
+        f=SimpleNamespace(canonical=lambda u:(u,'amazon.com.br'),html=AsyncMock(return_value=(html,url)))
+        m=Monitor(None,SimpleNamespace(browser=True),f,None,None)
+        m.amazon_offers=SimpleNamespace(html=AsyncMock(return_value=str(panel)))
+        r=(await m.read(url))[0]
+        assert r.price==172711  # Preco da fixture simulada, nao do AK820 real.
+        assert r.title==title
+        assert '/gp/offer-listing/B0CYGT9CWW/' in m.amazon_offers.html.await_args.args[0]
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize('reason', ['amazon_browser_start_failed','amazon_browser_crashed','selenium_not_installed'])
+def test_driver_technical_failure_uses_playwright_public_panel(monkeypatch,reason):
+    import httpx
+    async def run():
+        url='https://www.amazon.com.br/gp/offer-listing/B08KGVH7YC/ref=test'
+        browser=SimpleNamespace(get=AsyncMock(return_value=httpx.Response(200,text=HTML,request=httpx.Request('GET',URL))))
+        f=SimpleNamespace(canonical=lambda u:(u,'amazon.com.br'),allowed_by_robots=AsyncMock(),public=AsyncMock(),
+            robots={'https://www.amazon.com.br':(0,SimpleNamespace())},locks={},last={},config=SimpleNamespace(delay=0),
+            chromium=lambda:browser)
+        reader=AmazonOffersReader(f)
+        def fail(*args):raise ReadError(reason)
+        monkeypatch.setattr(reader,'_load',fail)
+        result=await reader.html(url)
+        assert AmazonAdapter().parse(result,URL)[0].price==172711
+        browser.get.assert_awaited_once_with(url,render=True,offer_panel=True)
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize('reason', ['captcha_no_bypass','blocked_no_bypass','amazon_offers_http_error','amazon_offers_panel_timeout'])
+def test_no_browser_fallback_after_store_refusal_or_read_timeout(monkeypatch,reason):
+    async def run():
+        browser=AsyncMock()
+        f=SimpleNamespace(canonical=lambda u:(u,'amazon.com.br'),allowed_by_robots=AsyncMock(),public=AsyncMock(),
+            robots={'https://www.amazon.com.br':(0,SimpleNamespace())},locks={},last={},config=SimpleNamespace(delay=0),
+            chromium=browser,pause_access=lambda d:None)
+        reader=AmazonOffersReader(f)
+        def fail(*args):raise ReadError(reason)
+        monkeypatch.setattr(reader,'_load',fail)
+        with pytest.raises(ReadError,match=reason):await reader.html('https://www.amazon.com.br/gp/offer-listing/B08KGVH7YC/ref=test')
+        browser.assert_not_called()
+    asyncio.run(run())
+
+
+
+@pytest.mark.parametrize('reason,preserved', [('amazon_offers_panel_timeout',True),('browser_not_installed',True),('blocked_no_bypass',False),('captcha_no_bypass',False)])
+def test_public_minimum_survives_browser_failure_but_not_block_or_captcha(reason,preserved):
+    async def run():
+        html=Path('tests/fixtures/amazon_ak820_buying_options_real.html').read_text(encoding='utf-8')
+        url='https://www.amazon.com.br/dp/B0CYGT9CWW'
+        f=SimpleNamespace(canonical=lambda u:(u,'amazon.com.br'),html=AsyncMock(return_value=(html,url)))
+        m=Monitor(None,SimpleNamespace(browser=True),f,None,None)
+        m.amazon_offers=SimpleNamespace(html=AsyncMock(side_effect=ReadError(reason)))
+        if preserved:
+            r=(await m.read(url))[0]
+            assert r.price is None and r.starting_price==36900 and not r.comparable
+        else:
+            with pytest.raises(ReadError,match=reason):await m.read(url)
+        m.amazon_offers.html.assert_awaited_once()
+    asyncio.run(run())
