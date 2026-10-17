@@ -275,7 +275,7 @@ class DirectSearch:
                 groups.append(accepted[:6])
                 if not accepted:
                     notices.append(
-                        f"{store.name}: não encontramos um candidato compatível na fonte consultada (HTML, sitemap limitado ou índice externo). Isso não prova que o produto não exista."
+                        f"{store.name}: modelo solicitado não encontrado nesta pesquisa."
                     )
             except Exception as exc:
                 reason = (
