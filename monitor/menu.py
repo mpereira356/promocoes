@@ -12,6 +12,7 @@ from .selection import authorized
 from .telegram_text import render, send_text
 
 SHORTCUTS = {'🏠 Menu': 'home', '🔎 Buscar': 'search', '🏷️ Promoções': 'promos', '🔔 Monitoramentos': 'list'}
+SHORTCUTS['💸 Empréstimos'] = 'loans'
 
 
 def keyboard(rows):
@@ -44,9 +45,12 @@ class BotMenu:
         self.pending = None
         self.cards = {}
         self.last_user_message_id = None
+        from .loans import Loans, LoansMenu
+        self.loans = LoansMenu(self, Loans(db))
 
     def clear(self):
         self.pending = None
+        self.loans.pending = None
 
     def forget(self,pid):
         self.cards={token:value for token,value in self.cards.items() if value[0]!=pid}
@@ -83,7 +87,7 @@ class BotMenu:
         message_text=(getattr(update.effective_message,'text','') or '').split()
         if message_text and message_text[0].split('@')[0] == '/start':
             await update.effective_message.reply_text('⌨️ Atalhos ativados. Use 🏠 Menu para voltar quando quiser.',
-                reply_markup=ReplyKeyboardMarkup([['🔎 Buscar','🏷️ Promoções'],['🔔 Monitoramentos','🏠 Menu']],
+                reply_markup=ReplyKeyboardMarkup([['🔎 Buscar','🏷️ Promoções'],['🔔 Monitoramentos','💸 Empréstimos'],['🏠 Menu']],
                     resize_keyboard=True,is_persistent=True,selective=True))
         counts=self.db.rows('SELECT COUNT(*) AS total, SUM(active) AS active FROM products')[0]
         active=counts['active'] or 0
@@ -95,6 +99,7 @@ class BotMenu:
         markup=keyboard([
             [('🔎 Buscar produto','search'),('🏷️ Promoções','promos')],
             [('🔔 Meus monitoramentos','list:0')],
+            [('💸 Dinheiro emprestado','loans')],
             [('➕ Monitorar produto','monitor'),('🛒 Mercado Livre','ml')],
             [('🗂️ Categorias','categories'),('💡 Exemplos de filtros','examples')],
             [('❓ Ajuda','help'),('ℹ️ Status','status')],
@@ -102,6 +107,7 @@ class BotMenu:
         await self.output(update,text,markup)
 
     async def prompt(self, update, kind, card=''):
+        self.clear()
         self.pending=Input(kind,card=card)
         prompts={
             'search': ('🔎 Buscar produto','Digite o nome ou link na próxima mensagem.\nExemplo: SSD Kingston NV3 1TB\nVou pesquisar agora, sem ativar acompanhamento.'),
@@ -251,6 +257,8 @@ class BotMenu:
         text=(update.effective_message.text or '').strip()
         if text in SHORTCUTS:return await self.action(update,context,SHORTCUTS[text])
         if text.lower() in ('cancelar','voltar','menu'):return await self.home(update,context)
+        if self.loans.pending:
+            return await self.loans.text(update,text)
         state=self.pending
         if not state:
             if getattr(update.effective_chat,'type','private')=='private':return await self.home(update,context)
@@ -276,6 +284,9 @@ class BotMenu:
         else:await self.dispatch(update,context,name=command,args=text.split())
 
     async def action(self,update,context,action):
+        if action.startswith('loans'):
+            self.clear()
+            return await self.loans.action(update, action)
         if action in ('home','cancel'):return await self.home(update,context)
         if action=='list':return await self.listing(update)
         if action in ('search','ml','monitor'):return await self.prompt(update,action)
@@ -295,6 +306,9 @@ class BotMenu:
         await update.callback_query.answer()
         parts=(update.callback_query.data or '').split(':')
         if len(parts)<2 or parts[0]!='ui':return
+        if parts[1]=='loans':
+            self.clear()
+            return await self.loans.action(update, ':'.join(parts[1:]))
         if len(parts)==2:return await self.action(update,context,parts[1])
         if parts[1]=='list' and len(parts)==3 and parts[2].isdigit():return await self.listing(update,int(parts[2]))
         state=self.pending

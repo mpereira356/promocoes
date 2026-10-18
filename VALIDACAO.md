@@ -410,3 +410,18 @@ Consulta real local integrada DirectSearch + Monitor com a expressão Aspirador 
 
 Os testes usam recorte do HTML real e simulações de ASIN incorreto, representações de preço conflitantes, moeda estrangeira, preço zero, estoque ausente e formatação final de uma busca com Telegram substituído. O Monitor leu preço principal sem iniciar Selenium. O Selenium local também foi testado numa página data: sem acessar Amazon e apresentou tab crashed; isso continua sendo uma limitação daquele motor local, sem ser interpretado como bloqueio da Amazon. Não houve envio real Telegram, implantação SSH ou validação na VPS. Produtos com preço efetivamente oculto/carrinho e campos ausentes continuam sem preço/comparação confirmados; não foi comprovado funcionamento de todo o catálogo.
 
+# Emprestimos pessoais - 2026.10.18-loans.1
+
+419 testes passaram, com tres avisos PTB preexistentes. Quinze novos casos
+cobrem valores, datas invalidas/passadas, cadastro guiado pelo menu, escape de
+HTML no nome, autorizacao, confirmacao do pagamento, prorrogacao, manter pendente,
+cancelamento, dois horarios em America/Sao_Paulo, serializacao de verificacoes
+simultaneas, falha de envio, recuperacao de avisos atrasados e preservacao dos
+lembretes enviados apos fechar e reabrir um SQLite em disco.
+
+As notificacoes Telegram foram simuladas. Nao houve envio real ao chat nem
+execucao na VPS. A tarefa usa o mesmo ciclo de vida da aplicacao e consulta
+pendencias a cada 30 segundos, separada das verificacoes de precos. Nao utiliza
+servicos externos de pagamento. Reinicios entre envio e confirmacao SQLite
+podem repetir um lembrete; nao se promete entrega exatamente uma vez.
+

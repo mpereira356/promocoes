@@ -24,6 +24,7 @@ from .menu import BotMenu, navigation
 HELP = """🛍️ Bot de ofertas e monitoramento
 
 /menu — abrir o menu de botões e os atalhos.
+/emprestimos — cadastrar dinheiro emprestado, consultar pendências, marcar pagamento ou prorrogar a cobrança.
 /cancelar — sair da entrada atual e voltar ao menu; não interrompe consultas já iniciadas.
 
 BUSCAS
@@ -106,17 +107,19 @@ def main():
 
     async def start(app):
         app.bot_data["scheduler"] = asyncio.create_task(monitor.scheduler())
+        app.bot_data['loans_scheduler'] = asyncio.create_task(ui.loans.loans.scheduler(send))
         try:
             await app.bot.set_my_commands([
                 BotCommand('menu','Abrir menu de botões'), BotCommand('promocoes','Promoções por categoria'),
                 BotCommand('buscar','Buscar produto'), BotCommand('lista','Meus monitoramentos'),
+                BotCommand('emprestimos','Dinheiro emprestado e lembretes'),
                 BotCommand('ajuda','Comandos e exemplos'), BotCommand('cancelar','Sair da entrada atual'),
             ],scope=BotCommandScopeChat(config.chat))
         except Exception:
             pass  # O menu inline continua funcionando sem o atalho nativo.
 
     async def stop(app):
-        running = list(tasks) + [app.bot_data["scheduler"]]
+        running = list(tasks) + [app.bot_data["scheduler"], app.bot_data['loans_scheduler']]
         for task in running:
             task.cancel()
         await asyncio.gather(*running, return_exceptions=True)
@@ -172,6 +175,8 @@ def main():
         try:
             if name in ('/start','/menu','/cancelar'):
                 return await ui.home(update,context)
+            if name == '/emprestimos':
+                return await ui.loans.listing(update)
             if name == '/ajuda':
                 error = monitor.search.configuration_error()
                 return await reply(
@@ -337,6 +342,7 @@ def main():
     for name in (
         "start",
         "menu",
+        "emprestimos",
         "cancelar",
         "ajuda",
         "status",

@@ -40,3 +40,17 @@ As condições são combinadas com **E**: todas precisam ser atendidas, na mesma
 Confirmações são de uso único. Cartões removidos são invalidados para impedir que um ID reutilizado no banco reative um botão antigo. Todos os comandos, textos recebidos e callbacks continuam restritos ao usuário e chat autorizados.
 
 O menu melhora a navegação; não altera limitações de acesso, frete ou extração das lojas. A validação desta interface usa Telegram simulado, conforme `VALIDACAO.md`.
+# Dinheiro emprestado
+
+No menu principal: **💸 Dinheiro emprestado**. Atalho: `/emprestimos`.
+
+- **➕ Emprestar:** nome → valor (ex.: `150` ou `1.250,50`) → data (`25/12/2026`).
+- **⏳ Pendentes:** lista paginada com total e identificação dos atrasados.
+- Abra um empréstimo para **✅ Marcar como pago** (com confirmação),
+  **⏳ Falta pagar** (mantém a pendência) ou **📅 Prorrogar** (escolhe nova data).
+- **✅ Pagos:** histórico dos empréstimos quitados.
+- Lembretes: 09h e 18h em America/Sao_Paulo, no chat configurado, dois por data.
+  Após reinício, avisos pendentes são recuperados com intervalo mínimo de uma hora.
+  Pagos não recebem novos avisos. Manter pendente não repete lembretes diariamente.
+- Para atualizar os atalhos abaixo do campo de mensagem, envie `/start` novamente.
+

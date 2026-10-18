@@ -1,4 +1,27 @@
-**Versão atual: `2026.10.16-amazon-main.1`.** Envie **/start** ou **/menu** para usar a central de botões: buscas, promoções, monitoramentos, histórico, pausa e filtros guiados. Após tocar em Buscar, basta digitar o nome do produto. Os filtros são configurados passo a passo e conferidos antes de aplicar. Veja [MENU-TELEGRAM.md](MENU-TELEGRAM.md).
+**Versão atual: `2026.10.18-loans.1`.** Envie **/start** ou **/menu** para usar a central de botões: buscas, promoções, monitoramentos e dinheiro emprestado. Veja [MENU-TELEGRAM.md](MENU-TELEGRAM.md).
+
+**💸 Dinheiro emprestado:** no menu principal, toque nesse botão ou envie
+`/emprestimos`. Use **➕ Emprestar** e informe o nome, o valor (ex.: `150`
+ou `1.250,50`) e a data (ex.: `25/12/2026`). A lista mostra pendências,
+atrasos, total e histórico dos pagos. Abra um registro para confirmar pagamento,
+manter **Falta pagar** ou **Prorrogar** com outra data. Não há pagamentos parciais
+nesta versão; marcar pago representa quitação integral.
+
+Os dois lembretes são enviados ao chat configurado às **09h e 18h, no fuso
+America/Sao_Paulo**, para cada data combinada. O bot não envia mensagens para
+a pessoa cadastrada. Pagamento encerra os lembretes; prorrogação substitui a
+data e permite dois novos avisos. Manter pendente não reinicia avisos já enviados.
+Não há repetição diária automática após o segundo aviso; o registro continua
+marcado como pendente/atrasado até pagar ou prorrogar.
+
+Cadastros e envios ficam no mesmo SQLite dos produtos; não é preciso editar o
+`.env` nem instalar dependências novas. Reinícios preservam os dados e os avisos
+registrados. Se o bot estiver desligado no horário, recupera avisos pendentes
+quando voltar, com intervalo mínimo de uma hora entre os dois. Nesse caso,
+não é possível garantir dois avisos no dia original. Uma falha de envio será
+tentada novamente; uma interrupção entre a entrega ao Telegram e a gravação
+no SQLite pode ocasionar repetição. Cadastros guiados ainda não concluídos
+expiram em 15 minutos ou ao reiniciar.
 
 **Títulos e exemplos:** os títulos aparecem em negrito no Telegram, com HTML escapado, inclusive nas legendas de fotos. A ajuda explica os argumentos de `/configurar`, mostra quando os filtros disparam ou impedem um alerta, como remover o alvo e como alternar os modos. A seleção de promoções também traz exemplos de `>30` e `>=30`.
 
