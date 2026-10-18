@@ -24,17 +24,18 @@ async def send_card(bot, chat, candidate):
         [
             [
                 InlineKeyboardButton(
-                    "✅ Confirmar e acompanhar",
+                    "✅ Sim, acompanhar esta oferta",
                     callback_data=f"choose:{candidate['id']}:{identity(candidate)}",
                 )
             ],
-            [InlineKeyboardButton("Abrir na loja", url=candidate["url"])],
+            [InlineKeyboardButton('✖️ Agora não', callback_data=f"choose:{candidate['id']}:{identity(candidate)}:skip")],
+            [InlineKeyboardButton("🔗 Conferir na loja", url=candidate["url"])],
             [InlineKeyboardButton('🏠 Menu principal', callback_data='ui:home')],
         ]
     )
     candidate = dict(candidate)
     requested = candidate.get('notification_context') == 'requested'
-    heading = '📋 Oferta aguardando confirmação' if requested else '🔎 Nova oferta no seu monitoramento'
+    heading = '🚨 Confirme para acompanhar esta oferta'
     reason = ('Você solicitou as ofertas pendentes.' if requested else
               'Encontrada durante a verificação do seu monitoramento.')
     query = candidate.get('monitor_query', '')
@@ -45,12 +46,13 @@ async def send_card(bot, chat, candidate):
     condition = '\n⚠️ Open Box: confira a condição na loja.\n' if 'open box' in box or 'openbox' in box else ''
     text = (
         f"{heading}\n\n{reason}\n"
-        f"Aguarda confirmação; sem mudança de preço confirmada.\n\n"
+        f"⏸️ Esta oferta ainda NÃO está confirmada para acompanhamento.\n\n"
         f"🔔 Monitoramento {candidate['product']}\n{context}\n"
         f"{title}\n🏪 Loja: {candidate['store'][:60]}\n"
         f"🆔 Anúncio: {candidate.get('ad_id') or 'não atribuído'} · Oferta: {candidate['id']}\n"
-        f"{condition}\nÉ o modelo e a condição que você deseja?\n"
-        f"Confirme para acompanhar ou ignore a sugestão.\n\n"
+        f"{condition}\n👇 É o produto certo? Escolha um botão abaixo.\n"
+        f"✅ Sim: incluir esta oferta no acompanhamento.\n"
+        f"✖️ Agora não: deixar pendente, sem ativar alertas desta oferta.\n\n"
         f"✅ Confirmar: /confirmar {candidate['id']}"
     )
     photo_failed = not candidate['image']
@@ -77,10 +79,12 @@ async def handle_choice(update, config, db, send, on_confirm=None):
         )
         return
     parts = (query.data or "").split(":")
-    if len(parts) != 3 or parts[0] != "choose" or not parts[1].isdigit():
+    skipping = len(parts) == 4 and parts[3] == 'skip'
+    if (len(parts) != 3 and not skipping) or parts[0] != "choose" or not parts[1].isdigit():
         await query.answer("Essa escolha não é válida. Atualize as opções com /opcoes PRODUTO_ID.", show_alert=True)
         return
-    candidate = db.confirm_candidate(int(parts[1]), parts[2])
+    candidate = (db.defer_candidate(int(parts[1]), parts[2]) if skipping else
+                 db.confirm_candidate(int(parts[1]), parts[2]))
     if candidate is None:
         await query.answer(
             'Esta oferta foi removida ou alterada. Use /opcoes PRODUTO_ID para ver as opções atuais.', show_alert=True
@@ -88,6 +92,16 @@ async def handle_choice(update, config, db, send, on_confirm=None):
         return
     if candidate["confirmed"]:
         await query.answer('Esta oferta já foi selecionada.')
+        return
+    if skipping:
+        await query.answer('Oferta deixada para depois.')
+        try:
+            await query.edit_message_reply_markup(reply_markup=None)
+        except Exception:
+            pass
+        await send(f"✖️ Oferta {candidate['id']} deixada pendente.\n"
+                   f"Para escolher depois: /opcoes {candidate['product']}\n"
+                   'As ofertas já confirmadas continuam sendo acompanhadas.')
         return
     await query.answer('✅ Oferta selecionada.')
     try:

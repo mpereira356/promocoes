@@ -1,3 +1,13 @@
+# Confirmacao destacada - 2026.10.18-confirm-choice.1
+
+472 testes passaram (tres avisos PTB preexistentes). Cartao de confirmacao com
+chamada destacada e botoes Sim/Agora nao. Adiar mantem candidato pendente e marca
+o aviso como apresentado, sem criar alertas ou agendar consulta. /opcoes permite
+escolher depois. Confirmar continua sujeito aos dados comparaveis da oferta.
+Tres casos novos cobrem adiamento, confirmacao posterior e rejeicao de outro
+usuario ou cartao alterado. Suite executada localmente com simulacoes/fixtures;
+sem envio real ao Telegram ou execucao na VPS. Outros comandos continuam disponiveis.
+
 # Textos simplificados - 2026.10.18-clean-messages.1
 
 469 testes passaram (tres avisos PTB preexistentes). Validacao local com dados

@@ -172,6 +172,17 @@ class DB:
             )
         return pid, created
 
+    def defer_candidate(self, cid, fingerprint):
+        from .selection import identity
+
+        rows = self.rows('SELECT * FROM candidates WHERE id=?', (cid,))
+        if not rows or not rows[0]['title'] or identity(rows[0]) != fingerprint:
+            return None
+        candidate = rows[0]
+        if not candidate['confirmed']:
+            self.run('UPDATE candidates SET notified=1 WHERE id=?', (cid,))
+        return candidate
+
     def confirm_candidate(self, cid, fingerprint=None):
         from .selection import identity
 

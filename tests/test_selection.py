@@ -158,6 +158,45 @@ def test_stale_card_and_removed_offer(tmp_path):
     asyncio.run(run())
 
 
+def test_defer_keeps_offer_pending_and_can_confirm_later(tmp_path):
+    async def run():
+        db, config, c = candidate_db(tmp_path)
+        try:
+            update = update_for(c)
+            update.callback_query.data += ':skip'
+            send, scheduled = AsyncMock(), []
+            await handle_choice(update, config, db, send, scheduled.append)
+            current = db.rows('SELECT * FROM candidates WHERE id=?', (c['id'],))[0]
+            assert not current['confirmed'] and current['notified']
+            assert scheduled == [] and not db.rows('SELECT * FROM alerts')
+            assert f"/opcoes {c['product']}" in send.await_args.args[0]
+            await handle_choice(update_for(current), config, db, send, scheduled.append)
+            assert db.rows('SELECT confirmed FROM candidates WHERE id=?', (c['id'],))[0]['confirmed']
+            assert scheduled == [c['product']]
+        finally:
+            db.conn.close()
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize('unauthorized,stale', [(True, False), (False, True)])
+def test_defer_rejects_other_user_and_changed_offer(tmp_path, unauthorized, stale):
+    async def run():
+        db, config, c = candidate_db(tmp_path)
+        try:
+            update = update_for(c, user=99 if unauthorized else 42)
+            update.callback_query.data += ':skip'
+            if stale:
+                db.run('UPDATE candidates SET title=? WHERE id=?', ('Outro modelo', c['id']))
+            send = AsyncMock()
+            await handle_choice(update, config, db, send)
+            current = db.rows('SELECT * FROM candidates WHERE id=?', (c['id'],))[0]
+            assert not current['confirmed'] and not current['notified']
+            send.assert_not_awaited()
+        finally:
+            db.conn.close()
+    asyncio.run(run())
+
+
 def test_old_database_migration_preserves_products(tmp_path):
     path = str(tmp_path / "old.sqlite")
     conn = sqlite3.connect(path)
@@ -205,12 +244,12 @@ def test_new_offer_card_explains_origin_next_action_and_open_box(tmp_path):
             bot = SimpleNamespace(send_photo=AsyncMock(), send_message=AsyncMock())
             await send_card(bot, config.chat, c)
             text = bot.send_photo.await_args.kwargs['caption']
-            assert 'Nova oferta no seu monitoramento' in text
+            assert 'Confirme para acompanhar esta oferta' in text
             assert 'durante a verificação' in text
-            assert 'sem mudança de preço confirmada' in text
+            assert 'NÃO está confirmada' in text
             assert 'Minha placa &lt;Wi-Fi&gt;' in text
             assert 'Open Box: confira a condição' in text
-            assert 'ignore a sugestão' in text
+            assert 'Agora não: deixar pendente' in text
             c['notification_context'] = 'requested'
             await send_card(bot, config.chat, c)
             assert 'Você solicitou as ofertas pendentes' in bot.send_photo.await_args.kwargs['caption']
@@ -228,7 +267,7 @@ def test_long_candidate_context_uses_text_without_exceeding_photo_caption(tmp_pa
             bot = SimpleNamespace(send_photo=AsyncMock(), send_message=AsyncMock())
             await send_card(bot, config.chat, c)
             bot.send_photo.assert_not_awaited()
-            assert 'Nova oferta no seu monitoramento' in bot.send_message.await_args.args[1]
+            assert 'Confirme para acompanhar esta oferta' in bot.send_message.await_args.args[1]
             assert 'Foto indisponível' not in bot.send_message.await_args.args[1]
         finally:
             db.conn.close()
