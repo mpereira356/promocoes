@@ -1,6 +1,7 @@
 """Amazon: oferta estruturada ou painel publico AOD observado em pagina real."""
 import re
-from urllib.parse import urlsplit, urljoin, parse_qs
+from urllib.parse import urlsplit, urljoin, parse_qs, urlencode
+from html import escape
 from .base import StructuredAdapter, ReadError
 from bs4 import BeautifulSoup
 from ..models import Reading, normalize
@@ -10,6 +11,39 @@ from ..display_money import display_money
 class AmazonAdapter(StructuredAdapter):
     name = 'Amazon Brasil'
     external_discovery = True
+
+    def public_offers_url(self, html, url):
+        """Consulta GET observada no JS AOD da Amazon e validada em resposta real."""
+        if not self.is_product_url(url):
+            return None
+        asin = re.search(r'/(?:dp|gp/product)/([A-Z0-9]{10})(?:/|$)', urlsplit(url).path)[1]
+        soup = BeautifulSoup(html, 'html.parser')
+        if {n.get('value') for n in soup.select('input#ASIN')} != {asin}:
+            return None
+        datasets = soup.select('#all-offers-display-params[data-asin]')
+        if not datasets or {n.get('data-asin') for n in datasets} != {asin}:
+            return None
+        keys = ('asin', 'm', 'qid', 'smid', 'sourcecustomerorglistid', 'sourcecustomerorglistitemid', 'sr')
+        values = {tuple((key, n.get('data-' + key, '')) for key in keys) for n in datasets}
+        if len(values) != 1:
+            return None
+        params = dict(next(iter(values)))
+        if any(not isinstance(v, str) or len(v) > 200 for v in params.values()):
+            return None
+        params['pc'] = 'dp'
+        return urljoin(url, '/gp/product/ajax/aodAjaxMain') + '?' + urlencode(params)
+
+    def offers_fragment(self, main_readings, fragment, url):
+        soup = BeautifulSoup(fragment, 'html.parser')
+        if not soup.select('#aod-offer-list #aod-offer'):
+            raise ReadError('amazon_offers_unavailable')
+        title = main_readings[0].title
+        combined = '<span id="productTitle">' + escape(title) + '</span>' + fragment
+        readings = self.parse(combined, url)
+        if {normalize(r.title) for r in readings} != {normalize(title)}:
+            raise ReadError('conflicting_product_title')
+        readings = self.enrich_identifiers(readings, main_readings[0].identifiers)
+        return readings, combined
 
     def details_identifiers(self, soup, url):
         asin = re.search(r'/(?:dp|gp/product)/([A-Z0-9]{10})(?:/|$)', urlsplit(url).path)

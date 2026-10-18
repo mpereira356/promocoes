@@ -100,13 +100,20 @@ def same_product(seed, candidate):
     if model_conflict(seed.title, candidate.title):
         return False
     left, right = seed.identifiers, candidate.identifiers
-    for key in ("gtin", "mpn", "generation"):
+    for key in ("gtin", "generation"):
         if left.get(key) and right.get(key) and left[key] != right[key]:
             return False
+    def specific_mpn(value):
+        return bool(value) and not re.fullmatch(r'[bxyz]\d{3}[a-z]?', normalize(value))
+    left_mpn, right_mpn = left.get('mpn', ''), right.get('mpn', '')
+    if model_conflict(left_mpn, right_mpn):
+        return False
+    if specific_mpn(left_mpn) and specific_mpn(right_mpn) and left_mpn != right_mpn:
+        return False
     if left.get("gtin") and left.get("gtin") == right.get("gtin"):
         return True
     if (
-        left.get("mpn")
+        specific_mpn(left.get("mpn"))
         and left.get("mpn") == right.get("mpn")
         and left.get("brand")
         and left.get("brand") == right.get("brand")

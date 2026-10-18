@@ -1,1 +1,1 @@
-VERSION = "2026.10.18-store-access.1"
+VERSION = "2026.10.18-amazon-public-panel.1"

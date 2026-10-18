@@ -6,7 +6,7 @@
 
 **Categorias ampliadas:** `/promocoes` agora navega por **201 categorias/subcategorias em 33 grupos** de links observados nas lojas, com paginação. Use `/categoria monitores`, `/categoria pets` ou qualquer outro tema; também aceita link HTTPS da categoria. `/categorias atualizar` relê os menus públicos. Sem página mapeada, usa busca por termo e informa essa limitação. Nenhuma dessas consultas cria monitoramento. Preço/estoque e acesso continuam sujeitos à validação da página. Veja [PROMOCOES.md](PROMOCOES.md).
 
-**Precos Amazon:** quando nao ha preco principal e a pagina declara "Ver todas as opcoes de compra", o robo tenta o painel publico do mesmo ASIN, sem adicionar itens ao carrinho. Usa Selenium e, se houver falha tecnica de inicializacao, tenta o Chromium do Playwright instalado por `bash deploy/update.sh`. A leitura individual do painel AK820 B0CYGT9CWW ainda nao foi confirmada no teste local; a pagina publicou apenas uma referencia a partir de R$ 369,00. Veja [STATUS-LOJAS.md](STATUS-LOJAS.md) para distinguir simulacao, capturas reais e limitacoes.
+**Precos Amazon:** o robo le primeiro a pagina e, quando necessario, consulta o painel publico usado pelo frontend da loja com parametros do mesmo ASIN. Essa leitura HTTP foi validada localmente para B08KGVH7YC, sem ChromeDriver, com preco, vendedor e condicao. Selenium/Playwright permanecem para formatos sem painel reconhecido; recusas e limites nao sao contornados. Estoque e pagamento ausentes continuam desconhecidos. Consulte [STATUS-LOJAS.md](STATUS-LOJAS.md) para os testes reais e as limitacoes; a Pichau continua retornando 403 no ambiente testado.
 
 Para publicar no GitHub e atualizar o servidor com Git, veja [GITHUB.md](GITHUB.md).
 

@@ -1,3 +1,17 @@
+# Painel publico Amazon - 2026.10.18-amazon-public-panel.1
+
+Correcao funcional validada com resposta real em 18/10/2026: o JavaScript AOD usado pela propria Amazon declarou a rota GET /gp/product/ajax/aodAjaxMain e os parametros do dataset #all-offers-display-params, mais pc=dp. O script foi localizado pelo carregador aodIngressClick na pagina, sem inventar endpoint ou credenciais. O bot agora usa essa consulta antes de Selenium/Playwright e funciona tambem com navegador desativado. ASIN deve corresponder tanto ao URL quanto aos parametros da pagina; titulo do cabecalho do painel deve corresponder ao titulo original, e precos continuam limitados a cada linha de oferta/vendedor/condicao. Fragmentos sem ofertas nao viram preco zero.
+
+A consulta usa conexao HTTP isolada, mantendo identificacao PriceMonitor, verificacao DNS/publicidade de enderecos, robots, HTTPS, dominio autorizado, retentativas e limites do Fetcher. Em diagnostico, conexao reutilizada apos abrir a pagina retornou 503, enquanto consulta isolada retornou 200; nao foi atribuida uma causa definitiva a cookies ou ao servidor. Recusas 403/CAPTCHA/robots e limites nao disparam uma tentativa de contorno com navegador.
+
+Validacao real local: B08KGVH7YC retornou R$ 1.753,22, Amazon Global (ID A2EB9PYM83FCP9), NewCondition. Nao houve declaracao suficiente de pagamento ou estoque no painel; esses campos continuam desconhecidos e nao geram alerta comparavel. O fluxo completo HTTP real -> Monitor -> SQLite em memoria -> formatador foi exercitado para o link informado com ?th=1: um cartao com preco, zero falhas de leitura, pesquisa concluida. O transporte Telegram foi simulado; nao houve envio ao chat nem acesso SSH/VPS. Os valores sao capturas pontuais, nao garantias de preco atual. O AK820 B0CYGT9CWW apresentou falhas transitorias/503 ou divergencia de titulo; nao se afirma validacao desse anuncio ou de toda a Amazon.
+
+Foi corrigido tambem o tratamento do MPN generico "b550", observado na ficha tecnica Amazon. Um chipset isolado nao deve confirmar qualquer placa com o mesmo chipset nem descartar automaticamente um modelo apenas porque outra loja declara codigo mais completo. Correspondencia sem identificadores fortes permanece pendente de confirmacao; conflitos de chipset, GTIN, versao ou codigos especificos continuam recusados.
+
+397 testes passaram, com tres avisos PTB preexistentes. Quatorze novos casos cobrem parametros de mesmo ASIN, recortes reais de resposta, leitura sem navegador, recusa de titulo incorreto, preservacao de bloqueios/quotas, transporte isolado e MPN generico. Fixtures sao recortes reduzidos, sem formularios, scripts ou tokens. Testes nao consultam lojas.
+
+Pichau: produto e pagina inicial continuaram retornando HTTP 403 no teste local. Nenhum acesso funcional foi obtido e esta revisao nao resolve o bloqueio da loja. Foi verificado o atendimento oficial em https://www.pichau.com.br/atendimento para solicitar acesso permitido/liberacao do IP; nao foi enviada mensagem em nome do usuario e nao existe API/credencial Pichau configurada ou validada neste projeto.
+
 # Acesso das lojas - 2026.10.18-store-access.1
 
 Pichau: o link informado da B550 Aorus Elite AX V2 retornou HTTP 403 tambem no teste local em 18/10/2026. Nao ha acesso funcional validado para esse link/IP nesta revisao. Nao foi implementado bypass de bloqueio/CAPTCHA, mudanca de identidade ou proxy. A coleta depende de acesso permitido pela loja; a alteracao abaixo nao libera o acesso nem recupera preco atual da Pichau.

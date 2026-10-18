@@ -90,7 +90,7 @@ class Fetcher:
         if not infos or any(not ipaddress.ip_address(i[4][0]).is_global for i in infos):
             raise ReadError("non_public_address")
 
-    async def request(self, url, check_robots=False):
+    async def request(self, url, check_robots=False, client=None):
         for redirect in range(5):
             url, domain = self.canonical(url)
             if self.access_paused.get(domain, 0) > time.monotonic():
@@ -113,7 +113,7 @@ class Fetcher:
                         if self.uses_browser(domain):
                             response = await self.chromium().get(url)
                         else:
-                            response = await self.client.get(url)
+                            response = await (client or self.client).get(url)
                     except ReadError as exc:
                         if str(exc) in ('blocked_no_bypass', 'captcha_no_bypass'):
                             self.pause_access(domain)
@@ -213,14 +213,19 @@ class Fetcher:
         if not parser.can_fetch("PriceMonitor", url):
             raise ReadError("robots_disallowed")
 
-    async def html(self, url):
+    async def html(self, url, *, isolated=False):
         url, domain = self.canonical(url)
         audit = PAGE_AUDIT.get()
         entry = {'domain': domain, 'url': url, 'ok': False}
         if audit is not None:
             audit.append(entry)
         await self.allowed_by_robots(url)
-        text, final = await self.request(url, check_robots=True)
+        if isolated:
+            async with httpx.AsyncClient(timeout=30, follow_redirects=False,
+                    headers={'User-Agent': 'PriceMonitor/1.0 (+personal price monitoring)'}) as client:
+                text, final = await self.request(url, check_robots=True, client=client)
+        else:
+            text, final = await self.request(url, check_robots=True)
         if final != url:
             await self.allowed_by_robots(final)
         if is_access_challenge(text):

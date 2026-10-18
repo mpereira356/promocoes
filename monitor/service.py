@@ -84,6 +84,21 @@ class Monitor:
         parser = adapter(final_domain)
         try:
             readings = parser.parse(html, final)
+            if final_domain == 'amazon.com.br' and all(r.price is None for r in readings):
+                public_url = parser.public_offers_url(html, final)
+                if public_url:
+                    try:
+                        fragment, fragment_url = await self.fetcher.html(public_url, isolated=True)
+                        if fragment_url != public_url:
+                            raise ReadError('redirect_changed_store')
+                        public_readings, public_html = parser.offers_fragment(readings, fragment, final)
+                        if any(r.price is not None for r in public_readings):
+                            return public_readings, public_html, final
+                    except ReadError as exc:
+                        # Somente formato ausente/rota removida permite seguir
+                        # para o navegador; recusas e limites sao preservados.
+                        if str(exc) not in ('page_removed', 'amazon_offers_unavailable'):
+                            raise
             if final_domain == 'amazon.com.br' and self.config.browser and all(r.price is None for r in readings):
                 offers_url = parser.buying_options_url(html, final)
                 if not offers_url and any(r.stock != 'out_of_stock' for r in readings):
