@@ -1,4 +1,13 @@
-**Versão atual: `2026.10.18-chair-stores.1`.** Envie **/start** ou **/menu** para usar a central de botões: buscas, promoções, monitoramentos e dinheiro emprestado. Veja [MENU-TELEGRAM.md](MENU-TELEGRAM.md).
+**Versão atual: `2026.10.18-offer-context.1`.** Envie **/start** ou **/menu** para usar a central de botões: buscas, promoções, monitoramentos e dinheiro emprestado. Veja [MENU-TELEGRAM.md](MENU-TELEGRAM.md).
+
+**Sugestões de novas ofertas:** os cartões identificam o monitoramento e o
+produto acompanhado, explicam que a verificação encontrou uma oferta para
+conferência e distinguem esse pedido de um alerta de mudança de preço.
+O botão **Confirmar e acompanhar** inclui a oferta no monitoramento existente;
+você pode ignorar a sugestão. `/opcoes ID` informa que as pendências foram
+solicitadas manualmente. Open Box é destacado quando consta no título, sem
+inferir uma condição diferente. Textos longos usam mensagem sem foto para
+respeitar o limite de legenda do Telegram.
 
 **Lojas de cadeiras:** buscas por nome e links agora incluem **Sensetup**,
 **Elements** e **Flexform**. Exemplos: `/buscar Cadeira A08 Premium`,

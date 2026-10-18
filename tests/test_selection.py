@@ -187,7 +187,49 @@ def test_cards_persist_and_resend_on_demand(tmp_path):
             assert await monitor.options(c["product"]) == 1
             assert card.await_count == 2
             assert card.await_args.args[0]["image"] == c["image"]
+            assert card.await_args_list[0].args[0]['notification_context'] == 'check'
+            assert card.await_args.args[0]['notification_context'] == 'requested'
+            assert card.await_args.args[0]['monitor_query'] == 'B550-F GAMING WIFI II'
         finally:
             db.conn.close()
 
+    asyncio.run(run())
+
+
+def test_new_offer_card_explains_origin_next_action_and_open_box(tmp_path):
+    async def run():
+        db, config, row = candidate_db(tmp_path)
+        try:
+            c = dict(row, monitor_query='Minha placa <Wi-Fi>', notification_context='check')
+            c['title'] += ' - Open Box'
+            bot = SimpleNamespace(send_photo=AsyncMock(), send_message=AsyncMock())
+            await send_card(bot, config.chat, c)
+            text = bot.send_photo.await_args.kwargs['caption']
+            assert 'Nova oferta no seu monitoramento' in text
+            assert 'Durante a verificação' in text
+            assert 'não é um alerta de mudança de preço' in text
+            assert 'Minha placa &lt;Wi-Fi&gt;' in text
+            assert 'O título indica Open Box' in text
+            assert 'ignorar a sugestão' in text
+            c['notification_context'] = 'requested'
+            await send_card(bot, config.chat, c)
+            assert 'Você solicitou as ofertas pendentes' in bot.send_photo.await_args.kwargs['caption']
+        finally:
+            db.conn.close()
+    asyncio.run(run())
+
+
+def test_long_candidate_context_uses_text_without_exceeding_photo_caption(tmp_path):
+    async def run():
+        db, config, row = candidate_db(tmp_path)
+        try:
+            c = dict(row, monitor_query='Modelo ' * 40, notification_context='check')
+            c['title'] = '🪑' * 500
+            bot = SimpleNamespace(send_photo=AsyncMock(), send_message=AsyncMock())
+            await send_card(bot, config.chat, c)
+            bot.send_photo.assert_not_awaited()
+            assert 'Nova oferta no seu monitoramento' in bot.send_message.await_args.args[1]
+            assert 'Foto indisponível' not in bot.send_message.await_args.args[1]
+        finally:
+            db.conn.close()
     asyncio.run(run())

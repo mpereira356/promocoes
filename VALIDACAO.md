@@ -1,3 +1,16 @@
+# Contexto dos pedidos de confirmacao - 2026.10.18-offer-context.1
+
+442 testes passaram, com tres avisos PTB preexistentes. Cartoes de ofertas
+pendentes agora recebem o nome do produto monitorado e a origem da mensagem:
+encontrada durante verificacao ou opcoes solicitadas manualmente. A descricao
+explica o motivo do envio, distingue sugestao de alerta de preco e indica o
+efeito de confirmar ou ignorar. Titulo Open Box recebe destaque proprio.
+
+Testes simulados verificam contexto manual/automatico, preservacao do controle
+notified (sem reenvio a cada ciclo), escape HTML, foto com fallback e mensagem
+longa em UTF-16 acima do limite de legenda. Callback e identidade das ofertas
+permanecem compativeis com cartoes antigos. Sem envio real ao Telegram/VPS.
+
 # Lojas de cadeiras - 2026.10.18-chair-stores.1
 
 440 testes passaram, com tres avisos PTB preexistentes. Os 21 novos casos

@@ -28,18 +28,25 @@ class Monitor:
     async def options(self, pid, only_new=False):
         extra = " AND c.notified=0 AND p.active=1" if only_new else ""
         pending = self.db.rows(
-            """SELECT c.* FROM candidates c JOIN products p ON p.id=c.product
+            """SELECT c.*,p.query AS monitor_query FROM candidates c JOIN products p ON p.id=c.product
             WHERE c.product=? AND c.confirmed=0 AND c.title<>''"""
             + extra
             + " ORDER BY c.id",
             (pid,),
         )
         for candidate in pending:
+            card = dict(candidate)
+            card['notification_context'] = 'check' if only_new else 'requested'
             if self.send_candidate:
-                await self.send_candidate(candidate)
+                await self.send_candidate(card)
             else:
                 await self.send(
-                    f"🏷️ Oferta {candidate['id']}\n{candidate['title']}\n{candidate['url']}\n\nPara escolher esta oferta, use /confirmar {candidate['id']}."
+                    f"🔎 Oferta aguardando confirmação · Monitoramento {candidate['product']}\n"
+                    f"Você acompanha: {candidate['monitor_query']}\n\n"
+                    f"Esta oferta foi encontrada para esse monitoramento e aguarda sua escolha.\n"
+                    f"Tipo de aviso: sugestão de oferta; nenhuma mudança de preço foi confirmada neste aviso.\n\n"
+                    f"{candidate['title']}\n{candidate['url']}\n\n"
+                    f"Para incluir no acompanhamento, use /confirmar {candidate['id']}. Você pode ignorar esta sugestão."
                 )
             self.db.run(
                 "UPDATE candidates SET notified=1 WHERE id=?", (candidate["id"],)

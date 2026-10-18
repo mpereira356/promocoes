@@ -24,7 +24,7 @@ async def send_card(bot, chat, candidate):
         [
             [
                 InlineKeyboardButton(
-                    "Monitorar esta oferta",
+                    "✅ Confirmar e acompanhar",
                     callback_data=f"choose:{candidate['id']}:{identity(candidate)}",
                 )
             ],
@@ -32,26 +32,40 @@ async def send_card(bot, chat, candidate):
             [InlineKeyboardButton('🏠 Menu principal', callback_data='ui:home')],
         ]
     )
+    candidate = dict(candidate)
+    requested = candidate.get('notification_context') == 'requested'
+    heading = '📋 Oferta aguardando confirmação' if requested else '🔎 Nova oferta no seu monitoramento'
+    reason = ('Você solicitou as ofertas pendentes deste monitoramento.' if requested else
+              'Durante a verificação do seu monitoramento, encontramos esta oferta para você conferir.')
+    query = candidate.get('monitor_query', '')
+    context = f"Você acompanha: {query[:120]}\n" if query else ''
+    title = candidate['title'][:500]
+    from .models import normalize
+    box = normalize(candidate['title'])
+    condition = '\n📦 O título indica Open Box. Confira a condição antes de escolher.\n' if 'open box' in box or 'openbox' in box else ''
     text = (
-        f"🆔 ID do anúncio: {candidate['ad_id'] if 'ad_id' in candidate.keys() and candidate['ad_id'] else 'não atribuído'}\n\n"
-        f"Qual destas ofertas corresponde ao produto que você procura?\n\n"
-        f"📦 Produto {candidate['product']} · Oferta {candidate['id']}\n"
-        f"{candidate['title'][:500]}\n🏪 Loja: {candidate['store'][:100]}\n\n"
-        f"Confira o modelo, o Wi-Fi e a versão antes de escolher.\n"
-        f"A foto é ilustrativa da página; não comprova o modelo nem o estoque.\n"
-        f"Você pode escolher mais de uma oferta.\n\n"
-        f"Alternativa: /confirmar {candidate['id']}"
+        f"{heading}\n\n{reason}\n"
+        f"Este cartão pede sua confirmação; não é um alerta de mudança de preço.\n\n"
+        f"🔔 Monitoramento {candidate['product']}\n{context}\n"
+        f"{title}\n🏪 Loja: {candidate['store'][:60]}\n"
+        f"🆔 Anúncio: {candidate.get('ad_id') or 'não atribuído'} · Oferta: {candidate['id']}\n"
+        f"{condition}\nConfira modelo, versão e condição. Para incluir esta oferta no acompanhamento, confirme abaixo. "
+        f"Você pode escolher várias ou ignorar a sugestão.\n"
+        f"A foto não confirma o modelo nem o estoque.\n\n"
+        f"✅ Confirmar: /confirmar {candidate['id']}"
     )
-    if candidate["image"]:
+    photo_failed = not candidate['image']
+    if candidate["image"] and len(text.encode('utf-16-le')) // 2 <= 1024:
         try:
             await bot.send_photo(
-                chat, photo=candidate["image"], caption=render(text, (candidate['title'][:500],)), reply_markup=keyboard, parse_mode='HTML'
+                chat, photo=candidate["image"], caption=render(text, (heading,title)), reply_markup=keyboard, parse_mode='HTML'
             )
             return
         except Exception:
             # Imagem bloqueada, invalida ou grande: manter a escolha por texto.
-            pass
-    await send_text(lambda t, **kw: bot.send_message(chat, t, **kw), text + "\n📷 Foto indisponível; você ainda pode escolher pelos botões acima.", bold_lines=(candidate['title'][:500],), reply_markup=keyboard)
+            photo_failed = True
+    note = "\n📷 Foto indisponível; você ainda pode escolher pelos botões acima." if photo_failed else ''
+    await send_text(lambda t, **kw: bot.send_message(chat, t, **kw), text + note, bold_lines=(heading,title), reply_markup=keyboard)
 
 
 async def handle_choice(update, config, db, send, on_confirm=None):
