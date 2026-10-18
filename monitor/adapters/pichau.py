@@ -1,8 +1,10 @@
-from .base import StructuredAdapter
+from .base import StructuredAdapter, ReadError, nodes
 from bs4 import BeautifulSoup
 from dataclasses import replace
 import re
-from ..models import normalize
+import json
+from urllib.parse import urlsplit
+from ..models import normalize, Reading
 from ..display_money import display_money
 
 
@@ -11,7 +13,43 @@ class PichauAdapter(StructuredAdapter):
     sitemap_urls = ("https://www.pichau.com.br/media/sitemap.xml",)
 
     def parse(self, html, url):
-        readings = super().parse(html, url)
+        try:
+            readings = super().parse(html, url)
+        except ReadError as exc:
+            if str(exc) != 'structured_product_missing_or_ambiguous':
+                raise
+            # Fallback validado no DOM fornecido pelo usuario. Nunca substituir
+            # um Product ambiguo ou malformado por dados de outro bloco.
+            soup = BeautifulSoup(html, 'html.parser')
+            for script in soup.select('script[type="application/ld+json"]'):
+                try:
+                    data = json.loads(script.string or script.get_text())
+                except (ValueError, TypeError):
+                    raise exc
+                for node in nodes(data):
+                    types = node.get('@type', [])
+                    if isinstance(types, str):
+                        types = [types]
+                    if not isinstance(types, list):
+                        raise exc
+                    if any(str(t).rstrip('/').split('/')[-1] == 'Product' for t in types):
+                        raise exc
+            headings = soup.select('h1[data-cy="product-page-title"]')
+            if (urlsplit(url).hostname not in ('pichau.com.br', 'www.pichau.com.br')
+                    or not self.is_product_url(url) or len(headings) != 1
+                    or len(soup.find_all('h1')) != 1):
+                raise exc
+            title = headings[0].get_text(' ', strip=True)
+            if not title:
+                raise exc
+            readings = [Reading(title, '', '', '', None)]
+            result = self._pix_price(readings, html)
+            if result[0].price is None:
+                raise exc
+            return result
+        return self._pix_price(readings, html)
+
+    def _pix_price(self, readings, html):
         if len(readings) != 1 or readings[0].currency != "BRL":
             return readings
         reading = readings[0]

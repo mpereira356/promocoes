@@ -1,3 +1,17 @@
+# Pichau: DOM fornecido pelo usuario em 18/10/2026
+
+O trecho fornecido pelo usuario contem titulo `h1[data-cy="product-page-title"]`
+e preco total Pix de R$ 1.249,99, mas nao contem Schema.org Product.
+Foi adicionado fallback restrito ao bloco de preco observado, associado ao unico
+titulo do produto. Produto estruturado ambiguo ou JSON malformado nao aciona o
+fallback. Vendedor, condicao e estoque permanecem desconhecidos sem evidencia.
+
+Validacao offline: 404 testes passaram (tres avisos PTB preexistentes), incluindo
+sete casos novos. A fixture e um recorte do DOM enviado pelo usuario, nao uma
+nova coleta automatizada. O diagnostico HTTP anterior retornou 403 na Pichau.
+Esta mudanca corrige a extracao quando o HTML esta disponivel; nao resolve o
+bloqueio de acesso e nao foi validada na VPS ou com envio real ao Telegram.
+
 # Painel publico Amazon - 2026.10.18-amazon-public-panel.1
 
 Correcao funcional validada com resposta real em 18/10/2026: o JavaScript AOD usado pela propria Amazon declarou a rota GET /gp/product/ajax/aodAjaxMain e os parametros do dataset #all-offers-display-params, mais pc=dp. O script foi localizado pelo carregador aodIngressClick na pagina, sem inventar endpoint ou credenciais. O bot agora usa essa consulta antes de Selenium/Playwright e funciona tambem com navegador desativado. ASIN deve corresponder tanto ao URL quanto aos parametros da pagina; titulo do cabecalho do painel deve corresponder ao titulo original, e precos continuam limitados a cada linha de oferta/vendedor/condicao. Fragmentos sem ofertas nao viram preco zero.
