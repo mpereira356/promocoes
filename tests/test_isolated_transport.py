@@ -26,7 +26,7 @@ def test_isolated_transport_does_not_reuse_product_session_or_bypass_refusals(mo
             if status==200:
                 assert (await f.html(url,isolated=True))[0]=='<div>public panel</div>'
             else:
-                with pytest.raises(ReadError,match='blocked_no_bypass' if status==403 else 'network_or_rate_limit'):
+                with pytest.raises(ReadError,match='blocked_no_bypass' if status==403 else 'rate_limit_deferred'):
                     await f.html(url,isolated=True)
             assert isolated.get.await_count==expected_calls
             shared.assert_not_awaited()

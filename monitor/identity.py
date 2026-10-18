@@ -39,7 +39,7 @@ def monitoring_search_terms(title, identifiers=None):
     identifiers = identifiers or {}
     text = normalize(title)
     brands = (set(text.split()) | set(normalize(identifiers.get('brand', '')).split())) & (
-        BRANDS | {'epomaker'})
+        BRANDS | {'epomaker', 'sensetup'})
     brand = next(iter(brands)) if len(brands) == 1 else ''
     patterns = {
         'gigabyte': r'\b[bxyz]\d{3}m? aorus (?:elite|pro|master)(?: (?:ax|wifi))?(?: v\d+)?\b',
@@ -47,6 +47,7 @@ def monitoring_search_terms(title, identifiers=None):
         'ajazz': r'\bak\d{2,4}[a-z]*(?: (?:pro|max|plus|mini|lite))?\b',
         'epomaker': r'\b(?:he|th|rt|ep)\d{2,4}[a-z]*(?: (?:pro|max|plus|mini|lite))?\b',
         'hyperx': r'\bmars\b',
+        'sensetup': r'\ba\d{2,3}(?: premium)?\b',
     }
     match = re.search(patterns[brand], text) if brand in patterns else None
     if match:
@@ -54,7 +55,8 @@ def monitoring_search_terms(title, identifiers=None):
         if len(revisions) > 1:
             return search_terms(title, identifiers)
         revision = ' rev ' + next(iter(revisions)) if revisions else ''
-        return brand + ' ' + match[0] + revision
+        prefix = 'cadeira ' if brand == 'sensetup' else ''
+        return prefix + brand + ' ' + match[0] + revision
     model = identifiers.get('model')
     brand = brand or normalize(identifiers.get('brand', ''))
     if (brand and len(brand) <= 60 and isinstance(model, str) and 2 <= len(normalize(model).split()) <= 12

@@ -345,7 +345,8 @@ def test_monitor_defers_repeated_store_failures_but_checks_other_stores_each_cyc
         monitor.read=AsyncMock(side_effect=read)
         for _ in range(2):
             text=await monitor.check(pid)
-            assert text.count('Pichau:')==1
+            assert text.count('⚠️ Pichau:')==1
+            assert 'Pichau: 0 leitura(s), 0 com preço, 1 falha(s), 2 adiada(s).' in text
             assert 'suspensa nesta verifica\u00e7\u00e3o: 3' in text
         visited=[c.args[0] for c in monitor.read.await_args_list]
         assert visited.count(urls[0])==2 and ad['url'] in visited

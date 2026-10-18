@@ -1,3 +1,23 @@
+# Rechecagem B550 AX V2 - 2026.10.18-monitor-all-stores.1
+
+KaBuM 473028: HTTP 200, R$ 1.439,00 no Pix, vendedor GIGANTEC, estoque
+disponivel. Amazon B08KGVH7YC: HTTP 503 em tres tentativas. Pichau: HTTP 403.
+Nao se afirma que todas as lojas retornam precos. Monitoramentos all recuperam
+links compativeis de anuncios conhecidos para releitura independente da
+descoberta externa, e exibem resumo por loja; isso nao contorna bloqueios.
+Teste real local, sem execucao na VPS nem envio ao Telegram.
+
+# Sensetup OpenBox - 2026.10.18-network-diagnostics.1
+
+Rechecagem local real: 13 leituras HTTP de sete produtos nas tres lojas de
+cadeiras tiveram preco. A08 Premium OpenBox respondeu cinco vezes com
+R$ 1.590,00 e estoque indisponivel. Os valores sao capturas pontuais.
+A falha de rede/limite observada na VPS nao foi reproduzida aqui.
+Foram corrigidas a falta de pausa por loja apos 429 persistente e a perda
+dos detalhes das tentativas ao esgotar as retentativas. Causa original na
+VPS permanece nao identificada; nao se afirma disponibilidade garantida.
+452 testes passaram; erros de transporte e entrega Telegram foram simulados.
+
 # Lojas de cadeiras - 2026.10.18-chair-stores.1
 
 Validacao HTTP real local em 18/10/2026, usando Fetcher/DirectSearch/Monitor,

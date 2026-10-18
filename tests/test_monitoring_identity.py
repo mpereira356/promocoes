@@ -27,6 +27,7 @@ from monitor.adapters.base import ReadError, StructuredAdapter
     ('Descricao comprida', {'brand':'kingston','model':'Fury Beast DDR4 3200'}, 'kingston fury beast ddr4 3200'),
     ('Descricao comprida', {'brand':'hoto','model':'4in1 V2'}, 'hoto 4in1 v2'),
     ('Descricao comprida', {'brand':'logitech g','mpn':'920 011902'}, 'logitech 920-011902'),
+    ('Cadeira Ergonômica Home Office A08 Premium', {'brand':'sensetup'}, 'cadeira sensetup a08 premium'),
 ])
 def test_monitoring_query_uses_model_preserving_versions(title,ids,expected):
     before=ids.copy()
@@ -62,7 +63,10 @@ def test_all_stores_use_short_model_every_cycle_and_keep_original_title():
                 if 'pichau' in url:raise ReadError('blocked_no_bypass')
                 return [replace(r,title='Gigabyte B550 AORUS ELITE AX V2 WiFi DDR4 AM4',seller=canonical(url)[1])]
             m.read=AsyncMock(side_effect=read)
-            for _ in range(2):await m.check(pid)
+            for _ in range(2):
+                result = await m.check(pid)
+                assert result.startswith(f'🔎 Verificação do monitoramento {pid}\n')
+                assert 'Você acompanha: '+title in result
             assert [c.args[0] for c in search.links.await_args_list]==['gigabyte b550 aorus elite ax v2']*2
             assert [c.args[0] for c in m.read.await_args_list]==urls*2
             assert db.get_ad(ad['id'])['url']==urls[0]

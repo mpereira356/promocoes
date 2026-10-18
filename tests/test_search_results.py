@@ -39,6 +39,7 @@ def test_search_always_finishes_and_does_not_expose_internal_errors(failure):
         assert messages[-1].startswith('⚠️ Pesquisa concluída com limitações')
         assert 'Links com falha de leitura: 1' in messages[-1]
         assert all('private detail' not in m for m in messages)
+        assert all('Pesquisa: b550' in m for m in messages)
         assert monitor.read.await_count == 1
     asyncio.run(run())
 

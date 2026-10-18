@@ -9,9 +9,20 @@ from .base import StructuredAdapter, ReadError, product_image
 from ..models import Reading, normalize
 
 
+def chair_store_supports_query(query):
+    text = normalize(query)
+    words = set(text.split())
+    if words & {'cadeira', 'cadeiras', 'mesa', 'mesas', 'poltrona', 'poltronas'}:
+        return True
+    hardware = {'teclado', 'mouse', 'headset', 'processador', 'ssd', 'memoria', 'notebook', 'gabinete'}
+    return not (words & hardware or 'placa mae' in text or
+                re.search(r'\b(?:[bxyz]\d{3}m?|rtx\s*\d{4}|ddr[345])\b', text))
+
+
 class ShopifyAdapter(StructuredAdapter):
     domain = ''
     product_selector = ''
+    supports_query = staticmethod(chair_store_supports_query)
 
     def is_product_url(self, url):
         p = urlsplit(url)

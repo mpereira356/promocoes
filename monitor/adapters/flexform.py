@@ -3,11 +3,13 @@ from urllib.parse import urlsplit, urljoin
 from bs4 import BeautifulSoup
 
 from .base import StructuredAdapter
+from .shopify import chair_store_supports_query
 
 
 class FlexformAdapter(StructuredAdapter):
     name = 'Flexform'
     search_fields = ('term',)
+    supports_query = staticmethod(chair_store_supports_query)
 
     def is_product_url(self, url):
         p = urlsplit(url)

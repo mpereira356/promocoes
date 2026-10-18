@@ -30,6 +30,8 @@ async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketpla
     async def report(text):
         nonlocal report_failed
         try:
+            heading, separator, body = text.partition('\n')
+            text = heading + '\nPesquisa: ' + query[:180] + (separator + body if separator else '')
             await send(text)
         except Exception as exc:
             report_failed += 1
@@ -93,7 +95,7 @@ async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketpla
                 else:
                     reason = 'O leitor encontrou um erro interno; consulte o tipo registrado nos logs do serviço'
                 log_search_failure('read', exc)
-                if isinstance(exc, ReadError) and str(exc) in ('blocked_no_bypass', 'captcha_no_bypass', 'domain_access_cooldown'):
+                if isinstance(exc, ReadError) and str(exc) in ('blocked_no_bypass', 'captcha_no_bypass', 'domain_access_cooldown', 'rate_limit_deferred', 'store_rate_cooldown'):
                     paused[domain_key] = {'reason': reason, 'url': url, 'skipped': 0}
                     continue
                 if external:

@@ -154,17 +154,41 @@ class Monitor:
                 Reading(**json.loads(seed_ad["reading"])) if seed_ad else None
             )
             notes = []
+            query = monitoring_search_terms(seed_reading.title, seed_reading.identifiers) if seed_reading else monitoring_search_terms(p['query'])
             try:
                 if p["query"].startswith("https://"):
                     urls = [p["query"]]
                 else:
                     try:
-                        query = monitoring_search_terms(seed_reading.title, seed_reading.identifiers) if seed_reading else monitoring_search_terms(p['query'])
                         urls = await self.search.links(query)
                         notes.extend(getattr(urls, "notices", []))
                     except ReadError as exc:
                         urls = []
                         notes.append(search_error_message(str(exc)))
+                # O indice pode estar limitado; anuncios ja conhecidos ainda sao
+                # candidatos. Nunca reaproveitar o preco salvo como leitura atual.
+                if p['scope'] == 'all':
+                    urls = list(urls)
+                    reused = 0
+                    per_domain = {}
+                    for ad in self.db.rows('SELECT * FROM ads ORDER BY observed_at DESC LIMIT 300'):
+                        if ad['url'] in urls:
+                            continue
+                        try:
+                            _, domain = self.fetcher.canonical(ad['url'])
+                            old = Reading(**json.loads(ad['reading']))
+                        except (ReadError, ValueError, TypeError):
+                            continue
+                        relation = same_product(seed_reading, old) if seed_reading else None
+                        if relation is False or (relation is None and not reading_relevance(query, old)):
+                            continue
+                        if per_domain.get(domain, 0) >= 6:
+                            continue
+                        urls.append(ad['url'])
+                        per_domain[domain] = per_domain.get(domain, 0) + 1
+                        reused += 1
+                    if reused:
+                        notes.append(f'🔗 {reused} link(s) compatível(is) recuperado(s) do banco. Preço e estoque serão lidos novamente nas lojas.')
                 if seed_ad and seed_ad["url"] not in urls:
                     urls = list(urls) + [seed_ad["url"]]
                 for url in urls:
@@ -178,18 +202,23 @@ class Monitor:
                         'Não encontramos ofertas nesta consulta. Tente um nome mais curto ou cadastre um link.'
                     )
                 unavailable_stores = {}
+                coverage = {}
                 for candidate in candidates:
+                    domain = None
                     try:
                         if not self.db.rows('SELECT id FROM candidates WHERE id=?', (candidate['id'],)):
                             continue
                         _, domain = self.fetcher.canonical(candidate['url'])
+                        stats = coverage.setdefault(domain, {'read': 0, 'priced': set(), 'failed': 0, 'deferred': 0})
                         if domain in unavailable_stores:
+                            stats['deferred'] += 1
                             unavailable_stores[domain]['count'] += 1
                             self.db.failure(candidate['id'], 'store_check_deferred')
                             continue
                         readings = await self.read(candidate["url"])
                         if not readings:
                             raise ReadError('structured_product_missing_or_ambiguous')
+                        stats['read'] += 1
                         # Produto pode ter sido removido enquanto aguardava a rede.
                         current = self.db.rows(
                             "SELECT * FROM candidates WHERE id=?", (candidate["id"],)
@@ -231,6 +260,8 @@ class Monitor:
                                 (candidate["id"],),
                             )[0]
                             info = self.db.record(fresh, reading)
+                            if type(reading.price) is int and reading.price > 0:
+                                stats['priced'].add(candidate['id'])
                             price = (
                                 'R$ ' + f'{reading.price // 100:,}'.replace(',', '.') + f',{reading.price % 100:02d}'
                                 if reading.price is not None
@@ -241,6 +272,8 @@ class Monitor:
                                 f"🆔 Anúncio: {ad['id']} · Oferta {candidate['id']}\n{reading.title}\n\n💰 Preço: {price}\n📦 Estoque: {stock}\n💳 Pagamento: {reading.payment or 'não identificado'}\n{info}\n{candidate['url']}"
                             )
                     except Exception as exc:
+                        if domain in coverage:
+                            coverage[domain]['failed'] += 1
                         # Nunca colocar excecoes de bibliotecas/URLs com tokens em logs ou mensagens.
                         code = (
                             str(exc) if isinstance(exc, ReadError) else "reading_error"
@@ -250,8 +283,8 @@ class Monitor:
                         ):
                             self.db.failure(candidate["id"], code)
                         reason = REASONS.get(code, 'Não foi possível validar a leitura da página')
-                        if code in ('blocked_no_bypass', 'captcha_no_bypass', 'domain_access_cooldown',
-                                'robots_unavailable', 'robots_disallowed'):
+                        if domain is not None and code in ('blocked_no_bypass', 'captcha_no_bypass', 'domain_access_cooldown',
+                                'robots_unavailable', 'robots_disallowed', 'rate_limit_deferred', 'store_rate_cooldown'):
                             unavailable_stores[domain] = {'store': candidate['store'], 'count': 1,
                                 'reason': reason, 'url': candidate['url']}
                             continue
@@ -262,6 +295,19 @@ class Monitor:
                     notes.append(f"⚠️ {item['store']}: {item['reason']}.\n"
                         f"Ofertas com consulta suspensa nesta verificação: {item['count']}. "
                         f"Os últimos preços válidos foram preservados. As demais lojas continuam.\n{item['url']}")
+                domains = list(getattr(self.config, 'domains', ())) if p['scope'] == 'all' else []
+                domains = list(dict.fromkeys(domains + list(coverage)))
+                lines = ['🏪 Cobertura desta verificação (ofertas vinculadas)']
+                for domain in domains:
+                    stats = coverage.get(domain)
+                    name = adapter(domain).name
+                    if stats is None:
+                        lines.append(f'{name}: sem oferta compatível vinculada nesta consulta; confira os avisos de descoberta.')
+                    else:
+                        lines.append(f"{name}: {stats['read']} leitura(s), {len(stats['priced'])} com preço, "
+                                     f"{stats['failed']} falha(s), {stats['deferred']} adiada(s).")
+                if domains:
+                    notes.append('\n'.join(lines))
                 await self.options(pid, only_new=True)
                 await self.deliver()
             finally:
@@ -269,7 +315,8 @@ class Monitor:
                     "UPDATE products SET next_due=? WHERE id=?",
                     (time.time() + self.config.interval, pid),
                 )
-            return "\n\n".join(notes)
+            return (f"🔎 Verificação do monitoramento {pid}\nVocê acompanha: {p['query'][:300]}\n\n"
+                    + "\n\n".join(notes))
 
     async def deliver(self):
         async with self.alert_lock:

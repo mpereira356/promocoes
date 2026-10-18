@@ -1,4 +1,29 @@
-**Versão atual: `2026.10.18-offer-context.1`.** Envie **/start** ou **/menu** para usar a central de botões: buscas, promoções, monitoramentos e dinheiro emprestado. Veja [MENU-TELEGRAM.md](MENU-TELEGRAM.md).
+**Versão atual: `2026.10.18-monitor-all-stores.1`.** Envie **/start** ou **/menu** para usar a central de botões: buscas, promoções, monitoramentos e dinheiro emprestado. Veja [MENU-TELEGRAM.md](MENU-TELEGRAM.md).
+
+**Verificar agora em outras lojas:** monitoramentos com abrangência `all`
+descobrem novas ofertas e releem todos os links vinculados. Agora também
+recuperam anúncios compatíveis do SQLite (até 300 anúncios recentes examinados,
+até seis links recuperados por loja), inclusive quando o índice externo está
+limitado. Cada preço e estoque é consultado novamente na página; valores salvos
+não são apresentados como atuais se essa consulta falhar. O resumo informa
+leituras, preços obtidos, falhas e consultas adiadas por loja. Confirmações de
+modelos ambíguos continuam necessárias; abrangência `site` continua restrita à
+oferta escolhida. Adaptadores de cadeiras não consomem buscas externas para
+consultas claramente de hardware, como B550, SSD ou teclado.
+
+**Respostas simultâneas:** avisos e resumo de `/buscar` identificam o texto
+pesquisado; resultados de verificação identificam o número do monitoramento e
+o produto. Isso permite distinguir uma busca manual de uma consulta já em
+andamento. Monitoramentos Sensetup A08/A161 usam marca e modelo na descoberta,
+preservando o título cadastrado e a confirmação de ofertas ambíguas.
+
+**Falhas de acesso:** timeout, conexão, erro de servidor e limite HTTP 429 agora
+têm motivos separados. Os diagnósticos `scripts.diagnose_offers` e
+`scripts.diagnose_stores` mostram o status HTTP de cada tentativa e apenas o
+tipo da exceção, sem mensagens brutas ou credenciais. Após 429 persistente,
+o bot pausa novas consultas à mesma loja; respeita `Retry-After` e continua
+com as outras lojas. Sem prazo explícito, a pausa após três respostas 429 é
+de pelo menos 60 segundos. A pausa vale durante o processo atual.
 
 **Sugestões de novas ofertas:** os cartões identificam o monitoramento e o
 produto acompanhado, explicam que a verificação encontrou uma oferta para

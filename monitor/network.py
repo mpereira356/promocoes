@@ -28,6 +28,7 @@ class Fetcher:
         self.content_types = {}
         self.browser_transport = None
         self.access_paused = {}
+        self.rate_paused = {}
         self.page_access = {}
 
     def pause_access(self, domain):
@@ -95,10 +96,14 @@ class Fetcher:
             url, domain = self.canonical(url)
             if self.access_paused.get(domain, 0) > time.monotonic():
                 raise ReadError('domain_access_cooldown')
+            if self.rate_paused.get(domain, 0) > time.monotonic():
+                raise ReadError('store_rate_cooldown')
             if check_robots:
                 await self.allowed_by_robots(url)
             await self.public(url)
             lock = self.locks.setdefault(domain, asyncio.Lock())
+            attempts = []
+            retry_reason = 'network_connection_failure'
             for attempt in range(3):
                 async with lock:
                     await asyncio.sleep(
@@ -109,12 +114,17 @@ class Fetcher:
                             - time.monotonic(),
                         )
                     )
+                    response = None
+                    error_type = None
                     try:
                         if self.uses_browser(domain):
                             response = await self.chromium().get(url)
                         else:
                             response = await (client or self.client).get(url)
                     except ReadError as exc:
+                        error_type = type(exc).__name__
+                        retry_reason = ('network_timeout' if str(exc) == 'browser_navigation_failed_TimeoutError'
+                                        else 'network_connection_failure')
                         if str(exc) in ('blocked_no_bypass', 'captcha_no_bypass'):
                             self.pause_access(domain)
                         if str(exc) not in (
@@ -123,10 +133,21 @@ class Fetcher:
                         ):
                             raise
                         response = None
-                    except httpx.RequestError:
+                    except httpx.RequestError as exc:
+                        error_type = type(exc).__name__
+                        retry_reason = 'network_timeout' if isinstance(exc, httpx.TimeoutException) else 'network_connection_failure'
                         response = None
                     finally:
                         self.last[domain] = time.monotonic()
+                        attempts.append({'attempt': attempt + 1,
+                                         'http_status': response.status_code if response is not None else None,
+                                         'error_type': error_type})
+                        if urlsplit(url).path != '/robots.txt':
+                            self.page_access[domain] = {
+                                'http_status': attempts[-1]['http_status'],
+                                'transport': 'chromium' if self.uses_browser(domain) else 'http',
+                                'attempts': list(attempts),
+                            }
                 if response is not None and response.status_code not in (
                     429,
                     500,
@@ -135,8 +156,6 @@ class Fetcher:
                     504,
                 ):
                     break
-                if attempt == 2:
-                    raise ReadError("network_or_rate_limit")
                 wait = 2 ** (attempt + 1)
                 if response is not None:
                     retry = response.headers.get("Retry-After", "")
@@ -153,14 +172,23 @@ class Fetcher:
                         except (ValueError, TypeError):
                             pass
                 if wait > 60:
-                    raise ReadError("rate_limit_deferred")
+                    if response is not None and response.status_code == 429:
+                        self.rate_paused[domain] = time.monotonic() + wait
+                    raise ReadError('rate_limit_deferred' if response is not None and response.status_code == 429
+                                    else 'store_retry_deferred')
+                if attempt == 2:
+                    if response is not None:
+                        retry_reason = ('rate_limit_deferred' if response.status_code == 429
+                                        else 'store_temporarily_unavailable')
+                        if response.status_code == 429:
+                            self.rate_paused[domain] = time.monotonic() + max(60, wait)
+                    raise ReadError(retry_reason)
                 await asyncio.sleep(wait)
             if urlsplit(url).path == '/robots.txt':
                 origin = 'https://' + urlsplit(url).netloc
                 self.robots_diagnostics.setdefault(origin, {})['http_status'] = response.status_code
             else:
-                self.page_access[domain] = {'http_status': response.status_code,
-                    'transport': 'chromium' if self.uses_browser(domain) else 'http'}
+                self.page_access[domain].update(http_status=response.status_code)
             if response.status_code in (301, 302, 303, 307, 308):
                 url = urljoin(url, response.headers.get("location", ""))
                 continue

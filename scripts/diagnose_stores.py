@@ -54,6 +54,7 @@ async def diagnose(config, query):
                     )
             report["stores"].append(item)
         report['robots_diagnostics'] = fetcher.robots_diagnostics
+        report['page_access'] = fetcher.page_access
         return report
     finally:
         await fetcher.close()

@@ -204,6 +204,11 @@ REASONS = {
     "robots_disallowed": 'O robots.txt não permite esta consulta',
     "search_form_not_supported": 'O formulário de busca não é compatível e precisa de adaptação',
     "network_or_rate_limit": 'Ocorreu uma falha de rede ou foi atingido o limite de consultas',
+    'network_timeout': 'A loja não respondeu no tempo limite após três tentativas; preço não atualizado',
+    'network_connection_failure': 'A conexão com a loja falhou após três tentativas; preço não atualizado',
+    'store_temporarily_unavailable': 'A loja retornou erro temporário de servidor após três tentativas; preço não atualizado',
+    'store_retry_deferred': 'A loja pediu uma pausa antes da próxima consulta; preço não atualizado',
+    'store_rate_cooldown': 'A loja limitou as consultas recentemente; aguardando o prazo de pausa antes de tentar novamente',
     "rate_limit_deferred": 'O limite de consultas foi atingido. Tente novamente em outro ciclo',
     "page_removed": 'A página de busca está indisponível',
 }
@@ -234,6 +239,9 @@ class DirectSearch:
                 )
                 continue
             store = factory()
+            if hasattr(store, 'supports_query') and not store.supports_query(query):
+                notices.append(f'{store.name}: busca de hardware não aplicável ao adaptador de cadeiras e móveis.')
+                continue
             try:
                 if domain == 'mercadolivre.com.br' and getattr(self.config, 'mercadolivre_token', ''):
                     from .mercadolivre_api import discover

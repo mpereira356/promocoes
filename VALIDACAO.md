@@ -1,3 +1,67 @@
+# Verificacao em todas as lojas - 2026.10.18-monitor-all-stores.1
+
+456 testes passaram (tres avisos PTB preexistentes). Dois novos cenarios exercitam
+recuperacao de anuncios conhecidos quando a descoberta esta limitada, releitura
+dos links de outras lojas, rejeicao da variante B550 sem AX, preservacao de
+preco antigo numa falha, nenhuma fabricacao de alertas e restricao de escopo site.
+Outro caso impede chamadas ao indice externo e ao catalogo das tres lojas de
+cadeiras ao pesquisar uma placa-mae. Resumo por loja e avisos de bloqueio sao
+verificados tambem em ciclos consecutivos.
+
+Teste real HTTP local para a placa-mae do relato: KaBuM produto 473028 retornou
+143900 centavos, Pix, GIGANTEC e estoque disponivel; condicao nao declarada.
+Amazon B08KGVH7YC retornou 503 em tres tentativas; Pichau retornou 403 em uma.
+Essas falhas de acesso permanecem. O teste de escopo/descoberta indisponivel e
+transporte Telegram foi simulado; nenhum acesso SSH ou envio ao chat.
+
+Recuperacao usa ate 300 anuncios recentes e seis novos links conhecidos por
+loja; todos os candidatos ja vinculados continuam sendo processados. Valores
+do SQLite nunca substituem uma leitura atual da pagina. Confirmacoes pendentes
+continuam pendentes sem identidade forte. As revisoes locais anteriores de
+rede/contexto estao incluidas nesta versao.
+
+# Revisao do relato A08/V1 Connect - 2026.10.18-search-context.1
+
+453 testes passaram (tres avisos PTB preexistentes). Avisos/resumos de busca
+agora levam a consulta original; retorno de verificacao leva monitoramento e
+produto. Isso distingue respostas intercaladas de tarefas assincronas, sem
+cancelar um acompanhamento ao iniciar uma busca manual.
+Teste de monitoramento verifica cabecalho/produto em ciclos sucessivos.
+
+Consulta do monitoramento Sensetup A08 foi encurtada para marca, tipo e modelo
+(cadeira sensetup a08 premium). Teste real local da descoberta por esse termo
+retornou A08 Premium e A08 Premium OpenBox; ambas foram lidas com preco
+(210000 e 159000 centavos). O titulo original e as confirmacoes sao preservados.
+O link Amazon B0DLCGLPG6 do anexo foi consultado: estoque out_of_stock, preco
+ausente. Nao foi atribuido o preco de outro produto ou inventada uma oferta.
+
+A falha transitoria da VPS continua sem causa comprovada; melhorias de
+diagnostico e pausa 429 abaixo sao locais. Nenhum envio real ao Telegram nem
+execucao na VPS nesta revisao. A publicacao Git foi impedida por limite de uso
+da revisao automatica de aprovacao; pacote local pode conter alteracoes ainda
+nao publicadas no remoto.
+
+# Diagnostico de falhas transitorias - 2026.10.18-network-diagnostics.1
+
+452 testes passaram (tres avisos PTB preexistentes). Dez novos casos simulam
+timeout, conexao, 503 e 429 persistentes, recuperacao apos falha transitoria,
+Retry-After numerico e data HTTP inclusive na ultima tentativa, pausa por loja,
+preservacao do anuncio salvo e ausencia de alertas/preco zero em falha.
+Logs de diagnostico registram somente status/tipos, sem corpo de erro ou tokens.
+
+Separadamente: 13 consultas HTTP reais locais a sete produtos responderam com
+preco. Foram cinco leituras da Sensetup A08 Premium OpenBox (R$ 1.590,00,
+out_of_stock), A08 Premium, A161 OpenBox, Elements Galatea e EOS, Flexform Uni
+All Grey e Uni Grey n Blue. Uma bateria apos a alteracao verificou novamente
+OpenBox, EOS e Uni Grey n Blue: todos HTTP 200 na primeira tentativa.
+Fixtures OpenBox sao recortes do produto no HTML, sem configuracoes/tokens.
+
+A falha original reportada na VPS nao foi reproduzida localmente. O parser
+OpenBox ja leu o preco antes desta alteracao. A correcao trata a continuacao
+indevida de consultas apos limite 429 e melhora a identificacao da falha; nao
+comprova que a VPS recebeu 429 nem que a causa original foi eliminada.
+Sem acesso SSH ou envio real ao Telegram. Diagnostico da VPS segue necessario.
+
 # Contexto dos pedidos de confirmacao - 2026.10.18-offer-context.1
 
 442 testes passaram, com tres avisos PTB preexistentes. Cartoes de ofertas

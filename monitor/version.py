@@ -1,1 +1,1 @@
-VERSION = "2026.10.18-offer-context.1"
+VERSION = "2026.10.18-monitor-all-stores.1"

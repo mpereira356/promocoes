@@ -40,7 +40,7 @@ async def ask_scope(bot, chat, db, ad_id):
         lambda text, **kwargs: bot.send_message(chat, text, **kwargs),
         f"🆔 ID do anúncio: {ad_id}\n{ad['title'][:500]}\n{ad['url']}\n"
         "Onde deseja acompanhar este produto?\n\n"
-        "🔔 Enviarei avisos de aumentos e quedas a cada 5 horas, sem data para encerrar.\n"
+        "🔎 Verificarei o preço a cada 5 horas, sem data para encerrar. Avisarei quando houver uma mudança comparável.\n"
         "• Em outras lojas, a comparação considera somente o mesmo modelo; resultados ambíguos exigem confirmação.\n"
         "• Bloqueios das lojas ou dados insuficientes podem impedir comparações.",
         reply_markup=markup, bold_lines=(ad['title'][:500],),
