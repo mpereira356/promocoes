@@ -1,3 +1,18 @@
+# Textos simplificados - 2026.10.18-clean-messages.1
+
+469 testes passaram (tres avisos PTB preexistentes). Validacao local com dados
+simulados e fixtures salvas; sem envio real ao Telegram ou execucao na VPS.
+Cartoes compactos preservam preco, modalidade, vendedor terceiro, estoque,
+frete, IDs e impedimentos de alerta. Testes conferem escape HTML, titulos em
+negrito, preco/estoque desconhecidos e resumo de lojas com timeout separado de
+limite de consultas. As assercoes de texto existentes foram adaptadas; os testes
+de persistencia, comparacao, falhas e duplicacao continuam executados.
+
+Ajuda, pedidos de confirmacao, monitoramentos, resumos e promocoes perderam
+repeticoes. Exemplos detalhados de filtros continuam na configuracao.
+Nenhuma nova validacao de acesso a lojas reais nesta revisao editorial.
+Bloqueios e ausencia de dados continuam sendo informados.
+
 # Fila de tarefas - 2026.10.18-task-queue.1
 
 466 testes passaram (tres avisos PTB preexistentes). Dez casos novos cobrem

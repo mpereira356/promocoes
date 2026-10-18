@@ -170,11 +170,12 @@ class BotMenu:
         title=self.title(row)
         due=('Pausado' if not row['active'] else datetime.fromtimestamp(row['next_due'],ZoneInfo('America/Sao_Paulo')).strftime('%d/%m/%Y às %H:%M') if row['next_due'] else 'Aguardando a próxima consulta')
         scope={'site':'só esta oferta','all':'mesmo modelo nas lojas autorizadas'}.get(row['scope'],'cadastro legado; ofertas confirmadas')
-        text=f'🔔 Monitoramento {row["id"]}\n\n{title}\n\nStatus: {"🟢 Ativo" if row["active"] else "⏸️ Pausado"}\nAbrangência: {scope}\nAlertas: {"aumentos e quedas" if row["alert_mode"]=="all" else "somente quedas filtradas"}\nPróxima consulta: {due}\nSem data de encerramento.'
+        text=f'🔔 Monitoramento {row["id"]}\n\n{title}\n\n{"🟢 Ativo" if row["active"] else "⏸️ Pausado"} · {scope}\nAlertas: {"aumentos e quedas" if row["alert_mode"]=="all" else "quedas filtradas"}\nPróxima consulta: {due}'
         candidates=self.db.rows('SELECT * FROM candidates WHERE product=? ORDER BY id',(row['id'],))
-        text+=f'\n\nOfertas vinculadas: {len(candidates)} · aguardando escolha: {sum(not c["confirmed"] for c in candidates)}'
-        for c in candidates[:4]:
-            text+=f'\nAnúncio {c["ad_id"] or "pendente"} · Oferta {c["id"]}: {"confirmada" if c["confirmed"] else "aguarda confirmação"}'
+        pending=sum(not c['confirmed'] for c in candidates)
+        text+=f'\n\n{len(candidates)-pending} oferta(s) confirmada(s) · {pending} pendente(s)'
+        if pending:
+            text+='\nUse “Ofertas para escolher” para confirmar.'
         action='pause' if row['active'] else 'resume'
         label='⏸️ Pausar' if row['active'] else '▶️ Retomar'
         def card(action):return 'card:'+token+':'+action

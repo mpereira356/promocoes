@@ -148,7 +148,7 @@ def test_delivery_saves_price_and_finishes_without_creating_monitoring(domain, u
             assert len(db.rows('SELECT * FROM ads')) == 1
             assert not db.rows('SELECT * FROM products')
             assert bot.send_photo.await_count + bot.send_message.await_count == 1
-            assert 'Preços lidos nas ofertas enviadas: 1' in send.await_args.args[0]
+            assert 'Com preço: 1' in send.await_args.args[0]
         finally:
             await fetcher.close()
             db.conn.close()

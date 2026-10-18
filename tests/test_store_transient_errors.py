@@ -122,7 +122,7 @@ def test_exhausted_network_failure_preserves_saved_openbox_reading(monkeypatch):
             assert json.loads(db.rows('SELECT reading FROM ads')[0]['reading'])['price'] == 159000
             assert not db.rows('SELECT * FROM alerts')
             assert 'Ofertas enviadas: 0' in send.await_args.args[0]
-            assert any('tempo limite' in call.args[0] for call in send.await_args_list)
+            assert any('demorou para responder' in call.args[0] for call in send.await_args_list)
         finally:
             await f.close()
             db.conn.close()

@@ -35,23 +35,22 @@ async def send_card(bot, chat, candidate):
     candidate = dict(candidate)
     requested = candidate.get('notification_context') == 'requested'
     heading = '📋 Oferta aguardando confirmação' if requested else '🔎 Nova oferta no seu monitoramento'
-    reason = ('Você solicitou as ofertas pendentes deste monitoramento.' if requested else
-              'Durante a verificação do seu monitoramento, encontramos esta oferta para você conferir.')
+    reason = ('Você solicitou as ofertas pendentes.' if requested else
+              'Encontrada durante a verificação do seu monitoramento.')
     query = candidate.get('monitor_query', '')
     context = f"Você acompanha: {query[:120]}\n" if query else ''
     title = candidate['title'][:500]
     from .models import normalize
     box = normalize(candidate['title'])
-    condition = '\n📦 O título indica Open Box. Confira a condição antes de escolher.\n' if 'open box' in box or 'openbox' in box else ''
+    condition = '\n⚠️ Open Box: confira a condição na loja.\n' if 'open box' in box or 'openbox' in box else ''
     text = (
         f"{heading}\n\n{reason}\n"
-        f"Este cartão pede sua confirmação; não é um alerta de mudança de preço.\n\n"
+        f"Aguarda confirmação; sem mudança de preço confirmada.\n\n"
         f"🔔 Monitoramento {candidate['product']}\n{context}\n"
         f"{title}\n🏪 Loja: {candidate['store'][:60]}\n"
         f"🆔 Anúncio: {candidate.get('ad_id') or 'não atribuído'} · Oferta: {candidate['id']}\n"
-        f"{condition}\nConfira modelo, versão e condição. Para incluir esta oferta no acompanhamento, confirme abaixo. "
-        f"Você pode escolher várias ou ignorar a sugestão.\n"
-        f"A foto não confirma o modelo nem o estoque.\n\n"
+        f"{condition}\nÉ o modelo e a condição que você deseja?\n"
+        f"Confirme para acompanhar ou ignore a sugestão.\n\n"
         f"✅ Confirmar: /confirmar {candidate['id']}"
     )
     photo_failed = not candidate['image']
@@ -64,7 +63,7 @@ async def send_card(bot, chat, candidate):
         except Exception:
             # Imagem bloqueada, invalida ou grande: manter a escolha por texto.
             photo_failed = True
-    note = "\n📷 Foto indisponível; você ainda pode escolher pelos botões acima." if photo_failed else ''
+    note = "\n📷 Foto indisponível." if photo_failed else ''
     await send_text(lambda t, **kw: bot.send_message(chat, t, **kw), text + note, bold_lines=(heading,title), reply_markup=keyboard)
 
 

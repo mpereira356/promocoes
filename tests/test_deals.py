@@ -174,7 +174,7 @@ def test_manual_run_partial_failure_no_database_and_no_future_jobs(failure, reas
         assert any(reason in n for n in report.coverage[1].notices)
         output = '\n'.join(messages(report))
         assert '🏆' in output and 'concluída' in output and '01001000' in output
-        assert 'não comprova uma queda histórica' in output
+        assert 'queda histórica não comprovada' in output
         assert 'Comparação: não confirmada' in output
         assert monitor.read_snapshot.await_count == 1
         await fetcher.close()

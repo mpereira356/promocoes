@@ -1,4 +1,4 @@
-**Versão atual: `2026.10.18-task-queue.1`.** Envie **/start** ou **/menu** para usar a central de botões: buscas, promoções, monitoramentos e dinheiro emprestado. Veja [MENU-TELEGRAM.md](MENU-TELEGRAM.md).
+**Versão atual: `2026.10.18-clean-messages.1`.** Envie **/start** ou **/menu** para usar a central de botões: buscas, promoções, monitoramentos e dinheiro emprestado. Veja [MENU-TELEGRAM.md](MENU-TELEGRAM.md).
 
 **Fila de pedidos:** o bot executa uma tarefa por vez. Se uma pesquisa ou
 verificação estiver em andamento, novos comandos, mensagens e botões autorizados

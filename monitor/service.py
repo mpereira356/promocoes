@@ -5,6 +5,7 @@ from .adapters.base import ReadError
 from .search import search_error_message
 from .models import Reading, normalize
 from .identity import same_product, monitoring_search_terms
+from .message_style import short_reason, summarize_notices
 from .discovery import REASONS, reading_relevance
 import json
 
@@ -161,7 +162,7 @@ class Monitor:
                 else:
                     try:
                         urls = await self.search.links(query)
-                        notes.extend(getattr(urls, "notices", []))
+                        notes.extend(summarize_notices(getattr(urls, "notices", [])))
                     except ReadError as exc:
                         urls = []
                         notes.append(search_error_message(str(exc)))
@@ -268,9 +269,13 @@ class Monitor:
                                 else 'Preço não lido'
                             )
                             stock = {'in_stock': 'Disponível segundo a página', 'out_of_stock': 'Indisponível', 'unknown': 'Não confirmado pela página'}.get(reading.stock, 'Não confirmado pela página')
-                            notes.append(
-                                f"🆔 Anúncio: {ad['id']} · Oferta {candidate['id']}\n{reading.title}\n\n💰 Preço: {price}\n📦 Estoque: {stock}\n💳 Pagamento: {reading.payment or 'não identificado'}\n{info}\n{candidate['url']}"
-                            )
+                            if info.startswith('Preço atual:'):
+                                info = 'Menor registrado:' + info.split('Menor registrado:', 1)[-1]
+                            elif info.startswith('Nova oferta ou condição:'):
+                                info = 'Preço inicial registrado.'
+                            notes.append(f"🆔 Anúncio {ad['id']} · Oferta {candidate['id']}\n{reading.title}\n\n"
+                                         f"🏪 {candidate['store']} · {price} · {reading.payment or 'pagamento não informado'}\n"
+                                         f"{stock}\n{info}\n{candidate['url']}")
                     except Exception as exc:
                         if domain in coverage:
                             coverage[domain]['failed'] += 1
@@ -289,23 +294,24 @@ class Monitor:
                                 'reason': reason, 'url': candidate['url']}
                             continue
                         notes.append(
-                            f"⚠️ Oferta {candidate['id']} — {candidate['store']}: {reason}. O último preço válido foi preservado.\n{candidate['url']}"
+                            f"⚠️ Oferta {candidate['id']} — {candidate['store']}: {short_reason(reason)}.\n{candidate['url']}"
                         )
                 for item in unavailable_stores.values():
-                    notes.append(f"⚠️ {item['store']}: {item['reason']}.\n"
-                        f"Ofertas com consulta suspensa nesta verificação: {item['count']}. "
-                        f"Os últimos preços válidos foram preservados. As demais lojas continuam.\n{item['url']}")
+                    notes.append(f"⚠️ {item['store']}: {short_reason(item['reason'])}.\n"
+                        f"{item['count']} oferta(s) sem atualização. Preços anteriores preservados.\n{item['url']}")
                 domains = list(getattr(self.config, 'domains', ())) if p['scope'] == 'all' else []
                 domains = list(dict.fromkeys(domains + list(coverage)))
-                lines = ['🏪 Cobertura desta verificação (ofertas vinculadas)']
+                lines = ['🏪 Resumo por loja']
                 for domain in domains:
                     stats = coverage.get(domain)
                     name = adapter(domain).name
                     if stats is None:
-                        lines.append(f'{name}: sem oferta compatível vinculada nesta consulta; confira os avisos de descoberta.')
+                        lines.append(f'{name}: sem oferta nesta consulta.')
                     else:
-                        lines.append(f"{name}: {stats['read']} leitura(s), {len(stats['priced'])} com preço, "
-                                     f"{stats['failed']} falha(s), {stats['deferred']} adiada(s).")
+                        line = f"{name}: {len(stats['priced'])} preço(s)"
+                        if stats['failed']: line += f" · {stats['failed']} falha(s)"
+                        if stats['deferred']: line += f" · {stats['deferred']} adiada(s)"
+                        lines.append(line)
                 if domains:
                     notes.append('\n'.join(lines))
                 await self.options(pid, only_new=True)

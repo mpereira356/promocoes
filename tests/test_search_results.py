@@ -22,7 +22,7 @@ def test_successful_search_sends_offers_before_completion(monkeypatch):
         monkeypatch.setattr('monitor.search_results.rank_offers', lambda offers: [(reading, url, 'Pichau', 1, False)])
         await deliver_search(monitor, fetcher, db, None, 1, 'b550', send)
         assert send.await_args_list[0].args[0] == 'Oferta 7'
-        assert 'Ofertas enviadas: 1\nLinks com falha de leitura: 0' in send.await_args_list[-1].args[0]
+        assert 'Ofertas enviadas: 1\nCom preço: 0' in send.await_args_list[-1].args[0]
     asyncio.run(run())
 
 
@@ -165,7 +165,7 @@ def test_redirected_wrong_brand_is_discarded_without_save_or_read_error():
         assert send.await_count == 1
         summary = send.await_args.args[0]
         assert 'Ofertas enviadas: 0' in summary
-        assert 'Links com falha de leitura: 0' in summary
+        assert 'Links com falha de leitura:' not in summary
         assert 'Candidatos descartados por incompatibilidade: 1' in summary
     asyncio.run(run())
 
@@ -184,8 +184,8 @@ def test_refusal_skips_remaining_store_links_but_keeps_other_store(monkeypatch):
         await deliver_search(monitor, f, db, None, 0, 'Teclado Logitech G PRO RGB', send)
         assert read.await_count == 2
         text = '\n'.join(c.args[0] for c in send.await_args_list)
-        assert text.count('acesso suspenso') == 1
-        assert 'Outros links não consultados nesta busca: 5' in text
+        assert text.count('acesso bloqueado pela loja') == 1
+        assert 'Links não consultados por bloqueio da loja: 5' in text
         assert 'Ofertas enviadas: 1' in text
     asyncio.run(run())
 
@@ -199,7 +199,7 @@ def test_shared_external_quota_has_one_notice_for_affected_stores():
         send = AsyncMock()
         await deliver_search(monitor, None, None, None, 0, 'Logitech', send)
         text = '\n'.join(c.args[0] for c in send.await_args_list)
-        assert text.count('Índice externo temporariamente limitado') == 1
+        assert text.count('Busca limitada:') == 1
         assert 'Terabyte, Mercado Livre, Amazon Brasil' in text
         assert 'a descoberta falhou' not in text
     asyncio.run(run())
@@ -222,7 +222,7 @@ def test_quota_reuses_saved_matching_link_but_reads_price_again(monkeypatch):
         await deliver_search(monitor, SimpleNamespace(canonical=lambda u:(u,'terabyteshop.com.br')), db, None, 0, 'Teclado Logitech G PRO RGB', send)
         monitor.read.assert_awaited_once_with(url)
         assert offer.await_args.args[2].price == 12345
-        assert 'SQLite' in '\n'.join(c.args[0] for c in send.await_args_list)
+        assert 'Links salvos reaproveitados' in '\n'.join(c.args[0] for c in send.await_args_list)
     asyncio.run(run())
 
 
@@ -254,7 +254,7 @@ def test_failed_fourth_result_does_not_abort_remaining_or_resend_previous(monkey
         assert len(attempted) == (5 if stage=='send' else 4)
         summary=send.await_args_list[-1].args[0]
         assert 'Ofertas enviadas: 4' in summary
-        assert 'Pre\u00e7os lidos nas ofertas enviadas: 4' in summary
+        assert 'Com pre\u00e7o: 4' in summary
         assert 'Pesquisa conclu\u00edda com limita\u00e7\u00f5es' in summary
         assert 'SECRET-MARKER' not in caplog.text
         assert 'stage='+('save_ad' if stage=='save' else 'send_offer') in caplog.text

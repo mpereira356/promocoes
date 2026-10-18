@@ -130,8 +130,7 @@ def queued_handler(queue, callback, config):
                     except Exception:
                         pass
                 await send_text(update.effective_message.reply_text,
-                                '⏳ Seu pedido entrou na fila\n\nJá existe uma tarefa em andamento. '
-                                'Vou executar este pedido quando as tarefas anteriores terminarem.')
+                                '⏳ Seu pedido entrou na fila\nAvisarei quando chegar a sua vez.')
         except Exception:
             pass  # Falha no aviso nao descarta o pedido nem trava a fila.
         finally:

@@ -49,8 +49,8 @@ def test_known_ads_from_other_stores_are_reread_when_discovery_is_limited(scope)
                 assert read_urls == {origin, kabum, amazon}
                 assert wrong not in read_urls
                 assert search.links.await_args.args[0] == 'gigabyte b550 aorus elite ax v2'
-                assert 'KaBuM: 1 leitura(s), 1 com preço' in result
-                assert 'Amazon Brasil: 0 leitura(s), 0 com preço, 1 falha(s)' in result
+                assert 'KaBuM: 1 preço(s)' in result
+                assert 'Amazon Brasil: 0 preço(s) · 1 falha(s)' in result
                 current = db.rows('SELECT reading FROM ads WHERE url=?', (kabum,))[0]
                 assert json.loads(current['reading'])['price'] == 143900
                 old = db.rows('SELECT reading FROM ads WHERE url=?', (amazon,))[0]

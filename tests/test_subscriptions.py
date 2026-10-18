@@ -38,7 +38,7 @@ def test_id_stable_search_is_not_monitoring_and_restart(data):
     again = db.save_ad(ad["url"], ad["store"], replace(r, price=90000))
     assert ad["id"] == again["id"]
     assert not db.rows("SELECT * FROM products")
-    assert f"🆔 ID do anúncio: {ad['id']}\n" in offer_text(r, "KaBuM", ad_id=ad["id"])
+    assert f"🆔 Anúncio {ad['id']} · /monitorar {ad['id']}" in offer_text(r, "KaBuM", ad_id=ad["id"])
     token = db.request_scope(ad["id"])
     other = DB(path)
     try:
@@ -219,7 +219,7 @@ def test_monitor_failure_is_readable_and_preserves_last_price(data):
         monitor = Monitor(db, config, fetcher, None, AsyncMock())
         monitor.read = AsyncMock(side_effect=ReadError('blocked_no_bypass'))
         message = await monitor.check(pid)
-        assert 'A loja bloqueou o acesso' in message
+        assert 'acesso bloqueado pela loja' in message
         assert 'blocked_no_bypass' not in message
         assert ad['url'] in message
         assert db.rows('SELECT last FROM series')[0]['last'] == before
@@ -346,8 +346,8 @@ def test_monitor_defers_repeated_store_failures_but_checks_other_stores_each_cyc
         for _ in range(2):
             text=await monitor.check(pid)
             assert text.count('⚠️ Pichau:')==1
-            assert 'Pichau: 0 leitura(s), 0 com preço, 1 falha(s), 2 adiada(s).' in text
-            assert 'suspensa nesta verifica\u00e7\u00e3o: 3' in text
+            assert 'Pichau: 0 preço(s) · 1 falha(s) · 2 adiada(s)' in text
+            assert '3 oferta(s) sem atualiza\u00e7\u00e3o' in text
         visited=[c.args[0] for c in monitor.read.await_args_list]
         assert visited.count(urls[0])==2 and ad['url'] in visited
         assert urls[1] not in visited and urls[2] not in visited

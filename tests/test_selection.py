@@ -206,11 +206,11 @@ def test_new_offer_card_explains_origin_next_action_and_open_box(tmp_path):
             await send_card(bot, config.chat, c)
             text = bot.send_photo.await_args.kwargs['caption']
             assert 'Nova oferta no seu monitoramento' in text
-            assert 'Durante a verificação' in text
-            assert 'não é um alerta de mudança de preço' in text
+            assert 'durante a verificação' in text
+            assert 'sem mudança de preço confirmada' in text
             assert 'Minha placa &lt;Wi-Fi&gt;' in text
-            assert 'O título indica Open Box' in text
-            assert 'ignorar a sugestão' in text
+            assert 'Open Box: confira a condição' in text
+            assert 'ignore a sugestão' in text
             c['notification_context'] = 'requested'
             await send_card(bot, config.chat, c)
             assert 'Você solicitou as ofertas pendentes' in bot.send_photo.await_args.kwargs['caption']

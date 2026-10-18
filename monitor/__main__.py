@@ -22,36 +22,7 @@ from .telegram_text import send_text
 from .menu import BotMenu, navigation
 from .work_queue import WorkQueue, queued_handler
 
-HELP = """🛍️ Bot de ofertas e monitoramento
-
-/menu — abrir o menu de botões e os atalhos.
-/emprestimos — cadastrar dinheiro emprestado, consultar pendências, marcar pagamento ou prorrogar a cobrança.
-/cancelar — sair da entrada atual e voltar ao menu; não interrompe consultas já iniciadas.
-
-BUSCAS
-/buscar nome — buscar ofertas com ID, fotos e medalhas. Não ativa acompanhamento.
-/buscarml nome — encontrar links do Mercado Livre. Resultados ainda não verificados serão identificados.
-/promocoes — busca pontual por categoria, desconto e lojas. Não cria acompanhamento.
-/categoria nome ou https://link — procurar qualquer tema ou usar uma página de categoria da loja.
-/categorias — navegar por departamentos e subcategorias; /categorias atualizar relê os menus das lojas.
-/descontopromo >=30 — informar percentual personalizado na etapa de desconto.
-/ceppromo 01001000 — informar o CEP da consulta. O frete ainda não é cotado.
-
-MONITORAMENTO
-/monitorar ID_DO_ANUNCIO — escolher entre acompanhar só esta oferta ou procurar o mesmo produto em outras lojas.
-/monitorar nome ou https://link — procurar anúncios para você escolher.
-/lista — ver produtos, status e ofertas pendentes.
-/opcoes PRODUTO_ID — reenviar ofertas candidatas com foto e botão de escolha.
-/confirmar OFERTA_ID — confirmar exatamente o título e o link exibidos.
-/historico ID — ver as últimas 30 leituras e os menores preços por modalidade.
-/pausar ID — interromper o acompanhamento.
-/retomar ID — reativar e agendar uma consulta imediata.
-/remover ID — excluir o produto, o histórico e os alertas associados.
-/verificar ID — consultar agora, mesmo se estiver pausado.
-/configurar ID reais porcentagem alvo — definir filtros por produto; use - para remover o alvo.
-/alertas ID todas|quedas — avisar sobre qualquer alteração ou somente sobre quedas que atendam aos filtros.
-
-Exemplo de filtros
+CONFIGURE_HELP = """Exemplo de filtros
 /configurar 1 50 5 1500
 • 1: ID do monitoramento mostrado em /lista.
 • 50: queda de pelo menos R$ 50,00 desde o último preço válido.
@@ -69,19 +40,40 @@ Exemplos de uso
 /descontopromo >30 — exclui exatamente 30%; aceita, por exemplo, 31%.
 /descontopromo >=30 — inclui exatamente 30%. Use na etapa de desconto de /promocoes.
 Use ponto para centavos em /configurar: 50.90 significa R$ 50,90. Informe todos os valores, sem R$ ou separador de milhar.
+"""
 
-/status — ver a versão instalada e o modo de acesso às lojas.
+HELP = """🛍️ Ajuda
 
-Observações
-• A busca padrão consulta diretamente as lojas, sem chave de API.
-• Os horários seguem America/Sao_Paulo.
-• O frete não está incluído.
-• Os monitoramentos não expiram. Por padrão, há avisos de aumentos e quedas quando os dados permitem comparação.
-• ID de anúncio, ID de oferta e ID de monitoramento são diferentes. Confira qual ID cada mensagem solicita.
-• Antes de confirmar uma oferta, confira o modelo, a variante e o link."""
+Use /menu para acessar os botões.
 
+BUSCAS
+/buscar nome — pesquisar preços.
+/buscarml nome — pesquisar no Mercado Livre.
+/promocoes — filtrar promoções por categoria e desconto.
+/categorias — escolher uma categoria.
+/categoria nome ou link — outra categoria.
 
-CONFIGURE_HELP = 'Exemplo de filtros\n' + HELP.split('Exemplo de filtros\n', 1)[1].split('\n/status', 1)[0]
+MONITORAMENTO
+/monitorar ID, nome ou link — iniciar acompanhamento.
+/lista — ver seus monitoramentos.
+/verificar ID — consultar agora.
+/opcoes ID — escolher ofertas do monitoramento.
+/confirmar OFERTA_ID — aprovar uma oferta.
+/historico ID — ver preços registrados.
+/pausar ID · /retomar ID · /remover ID
+/alertas ID todas|quedas — escolher avisos.
+
+Exemplo de filtros
+/configurar 1 50 5 1500
+Monitoramento 1: queda mínima de R$ 50 e 5%, até R$ 1.500.
+Os três filtros precisam ser atendidos. Use - para retirar o preço-alvo.
+
+/emprestimos — dinheiro emprestado e lembretes.
+/status — versão e diagnóstico.
+/cancelar — sair da entrada atual.
+
+Anúncio, oferta e monitoramento têm IDs diferentes. Use o ID solicitado.
+Frete não incluído. Horários de Brasília."""
 
 
 def main():

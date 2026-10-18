@@ -66,62 +66,36 @@ def offer_text(reading, store="", rank=None, provisional=False, ad_id=None):
     }.get(reading.condition, "❓ Não declarada pela página")
     parts = [reading.title[:350], '']
     if rank in MEDALS:
-        parts.insert(
-            0,
-            f"{MEDALS[rank]} {rank}º menor preço desta busca — {reading.payment[:100]}",
-        )
-        parts.insert(
-            1,
-            (
-                "⚠️ Ranking provisório: condição não declarada."
-                if provisional
-                else "Ranking entre ofertas com a mesma condição e forma de pagamento."
-            ),
-        )
-        parts.insert(
-            2, "🔎 Os modelos desta busca podem ser diferentes. Confira se a oferta corresponde ao produto desejado.\n"
-        )
+        parts.insert(0, f"{MEDALS[rank]} {rank}º menor preço desta busca")
+        parts.insert(1, '⚠️ Ranking provisório; confira modelo e condição.' if provisional else
+                     'Ranking da busca; confira o modelo.')
     if store:
-        parts.append("🏪 Loja: " + store[:80])
+        parts.append('🏪 ' + store[:80])
+    payment = ' · ' + reading.payment[:80] if reading.payment else ''
+    parts.append(f'💰 {price}{payment}')
+    if reading.seller and normalize(reading.seller) != normalize(store):
+        parts.append('Vendedor: ' + reading.seller[:100])
+    if reading.condition:
+        parts.append('📦 ' + condition)
+    parts.append(stock)
     if reading.identifiers.get('generation'):
-        parts.append('📌 Geração na ficha técnica: ' + reading.identifiers['generation'])
-    parts += [
-        ('💰 Preço da oferta principal: não divulgado' if reading.price is None and reading.starting_price is not None else f"💰 Preço: {price}"),
-        f'💳 Pagamento: {reading.payment[:100] or "❓ Não declarado para este preço"}',
-        f'👤 Vendedor: {reading.seller[:100] or "❓ Não declarado pela página"}',
-        f"📦 Condição: {condition}",
-        f"📊 Estoque: {stock}",
-        "🚚 Frete não incluído.",
-        '',
-    ]
+        parts.append('Modelo: ' + reading.identifiers['generation'])
+    parts.append('🚚 Frete não incluído.')
     if reading.starting_price is not None and reading.price is None:
         amount = 'R$ ' + f'{reading.starting_price // 100:,}'.replace(',', '.') + f',{reading.starting_price % 100:02d}'
-        parts += [
-            '\U0001f4b0 Outras ofertas a partir de: ' + amount,
-            'Valor publicado na p\u00e1gina para outras ofertas; vendedor, pagamento e estoque dessa op\u00e7\u00e3o n\u00e3o confirmados.',
-            'O vendedor acima, quando exibido, pertence \u00e0 oferta principal, cujo pre\u00e7o n\u00e3o foi divulgado.',
-            'Essa refer\u00eancia n\u00e3o entra no ranking, no hist\u00f3rico de pre\u00e7os v\u00e1lidos ou nos alertas.',
-            '\U0001f517 Consultar outras ofertas: ' + reading.starting_price_url, '',
-        ]
+        parts += ['Outras ofertas a partir de: ' + amount,
+                  'Referência: vendedor, pagamento e estoque não confirmados; sem alertas.',
+                  reading.starting_price_url]
     if not reading.comparable:
         missing = []
-        if not reading.condition:
-            missing.append("condição")
-        if not reading.payment:
-            missing.append("pagamento")
-        if not reading.seller:
-            missing.append("vendedor")
-        if reading.price is None:
-            missing.append("preço")
-        if reading.currency != "BRL":
-            missing.append("moeda BRL")
-        parts.append(
-            "⏸️ Alertas de preço suspensos: faltam dados confirmados — " + ", ".join(missing) + "."
-        )
-    parts.append("🔎 Confira o modelo exato antes de monitorar.")
+        if not reading.condition: missing.append('condição')
+        if not reading.payment: missing.append('pagamento')
+        if not reading.seller: missing.append('vendedor')
+        if reading.price is None: missing.append('preço')
+        if reading.currency != 'BRL': missing.append('moeda BRL')
+        parts.append('\n⏸️ Alertas suspensos: dados pendentes — ' + ', '.join(missing) + '.')
     if ad_id is not None:
-        parts.append(f"\n🆔 ID do anúncio: {ad_id}")
-        parts.append(f"🔔 Monitorar: /monitorar {ad_id}")
+        parts.append(f'\n🆔 Anúncio {ad_id} · /monitorar {ad_id}')
     return "\n".join(parts)
 
 

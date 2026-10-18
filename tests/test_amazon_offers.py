@@ -204,7 +204,7 @@ def test_search_delivers_primary_price_through_actual_formatter():
         body = '\n'.join(c.args[1] for c in bot.send_message.await_args_list)
         assert 'R$ 242,96' in body and 'não lido' not in body
         assert 'Ofertas enviadas: 1' in send.await_args_list[-1].args[0]
-        assert 'Preços lidos nas ofertas enviadas: 1' in send.await_args_list[-1].args[0]
+        assert 'Com preço: 1' in send.await_args_list[-1].args[0]
     asyncio.run(run())
 
 
@@ -260,7 +260,7 @@ def test_search_delivers_real_page_minimum_without_counting_individual_price():
         await deliver_search(m,f,db,bot,1,url,send)
         assert any('145,90' in str(c) and 'Outras ofertas a partir de' in str(c) for c in bot.send_message.await_args_list)
         assert any('a partir de' in c.args[0] for c in send.await_args_list)
-        assert 'Pre\u00e7os lidos nas ofertas enviadas: 0' in send.await_args_list[-1].args[0]
+        assert 'Com pre\u00e7o: 0' in send.await_args_list[-1].args[0]
     asyncio.run(run())
 
 

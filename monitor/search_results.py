@@ -8,6 +8,7 @@ from .adapters.base import ReadError
 from .discovery import REASONS, relevance, reading_relevance, SearchLinks
 from .presentation import rank_offers, send_offer
 from .search import search_error_message
+from .message_style import short_reason, summarize_notices
 
 
 def log_search_failure(stage, exc):
@@ -123,19 +124,14 @@ async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketpla
             priced += int(getattr(r, 'price', None) is not None and getattr(r, 'price', 0) > 0)
         if failures:
             await report('⚠️ Ofertas não verificadas\n\n' + '\n\n'.join(
-                reason + '.\n' + url for url, reason in failures))
+                short_reason(reason) + '.\n' + url for url, reason in failures))
         for domain, item in paused.items():
             store = adapter(domain).name
-            await report(f'⚠️ {store} — acesso suspenso\n\n{item["reason"]}.\n'
-                f'Outros links não consultados nesta busca: {item["skipped"]}. As demais lojas continuam.\n{item["url"]}')
+            await report(f'⚠️ {store}\n\n{short_reason(item["reason"])}.\n{item["url"]}')
         for text in grouped_unverified(unverified_links):
             await report(text)
+        notices = summarize_notices(notices)
         if notices:
-            limited = [n for n in notices if 'limite da busca externa' in n.casefold()]
-            if limited:
-                stores = ', '.join(dict.fromkeys(n.split(':', 1)[0] for n in limited))
-                notices = [n for n in notices if n not in limited and 'Mercado Livre: a descoberta falhou' not in n]
-                notices.append(f'Índice externo temporariamente limitado. Lojas afetadas: {stores}. Consultas à fonte foram suspensas respeitando o limite. Links conhecidos podem ser consultados diretamente; não há descoberta nova garantida durante a pausa.')
             await report('⚠️ Avisos da pesquisa\n\n' + '\n'.join(notices))
     except ReadError as exc:
         interrupted = True
@@ -156,7 +152,12 @@ async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketpla
                 f'\nCartões com entrega incompleta ou não confirmada: {delivery_failed}'
                 f'\nAvisos com entrega não confirmada: {report_failed}'
                 '\nOs resultados já entregues foram preservados. Cartões não confirmados não foram reenviados para evitar duplicação.')
-        await report(f'{status}\n\nOfertas enviadas: {sent}\nLinks com falha de leitura: {failed}\nAvisos das lojas: {len(notices)}\nLinks para conferência: {unverified}\nPreços lidos nas ofertas enviadas: {priced}\nCandidatos descartados por incompatibilidade: {rejected}\nLinks não consultados por bloqueio da loja: {skipped}' + extra)
+        summary = f'{status}\n\nOfertas enviadas: {sent}\nCom preço: {priced}'
+        if failed: summary += f'\nLinks com falha de leitura: {failed}'
+        if unverified: summary += f'\nLinks para conferência: {unverified}'
+        if rejected: summary += f'\nCandidatos descartados por incompatibilidade: {rejected}'
+        if skipped: summary += f'\nLinks não consultados por bloqueio da loja: {skipped}'
+        await report(summary + extra)
 
 
 def grouped_unverified(entries):
@@ -168,11 +169,9 @@ def grouped_unverified(entries):
         groups.setdefault(domain, []).append((candidate, reason))
     for domain, candidates in groups.items():
         text = (f'🔎 {adapter(domain).name} — links sem preço confirmado\n\n'
-            'Fonte: índice externo Tavily Search. Título e oferta ainda não conferidos na página.\n'
-            'Preço, estoque, vendedor, condição e pagamento não foram verificados.\n'
-            'Este grupo não ativa monitoramento nem alertas.\n\n')
+            'Links de busca externa, sem oferta ou preço verificado. Não geram alertas.\n\n')
         text += '\n\n'.join(f'{i}. {c.title[:200]}\n{c.url}' for i, (c, _) in enumerate(candidates, 1))
-        text += '\n\nLeitura da página: ' + '; '.join(dict.fromkeys(reason for _, reason in candidates)) + '.'
+        text += '\n\nMotivo: ' + '; '.join(dict.fromkeys(short_reason(reason) for _, reason in candidates)) + '.'
         yield text
 
 
@@ -183,9 +182,7 @@ def discovered_text(candidate):
     return (
         '🔎 ' + store + ' — link encontrado\n\n'
         + candidate.title[:350] + '\n\n'
-        + '📌 Fonte: índice externo Tavily Search. O título ainda não foi conferido na página.\n'
-        + '❓ Preço, estoque, vendedor, condição e forma de pagamento não foram verificados.\n'
-        + '⚠️ Ao abrir, confira o modelo, a oferta e o vendedor. Catálogos podem alternar vendedores.\n'
-        + '⏸️ Este resultado não ativa monitoramento nem alertas.\n\n'
+        + '⚠️ Link de busca externa; título, preço e oferta não verificados.\n'
+        + '⏸️ Sem monitoramento ou alertas.\n\n'
         + '🔗 ' + candidate.url
     )
