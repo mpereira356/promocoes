@@ -1,4 +1,18 @@
-**Versão atual: `2026.10.18-monitor-all-stores.1`.** Envie **/start** ou **/menu** para usar a central de botões: buscas, promoções, monitoramentos e dinheiro emprestado. Veja [MENU-TELEGRAM.md](MENU-TELEGRAM.md).
+**Versão atual: `2026.10.18-task-queue.1`.** Envie **/start** ou **/menu** para usar a central de botões: buscas, promoções, monitoramentos e dinheiro emprestado. Veja [MENU-TELEGRAM.md](MENU-TELEGRAM.md).
+
+**Fila de pedidos:** o bot executa uma tarefa por vez. Se uma pesquisa ou
+verificação estiver em andamento, novos comandos, mensagens e botões autorizados
+recebem **⏳ Seu pedido entrou na fila** e aguardam na ordem de chegada. O trabalho
+e os resultados iniciados por um comando terminam antes do próximo pedido.
+Os comandos continuam sendo recebidos enquanto o bot consulta as lojas.
+Verificações automáticas e envio de lembretes também usam a fila, evitando
+misturar resultados. Um lembrete pode chegar após o horário se houver uma
+tarefa em andamento. Menus, pausa e cancelamento também aguardam sua vez;
+`/cancelar` não interrompe uma consulta em andamento.
+
+A fila é mantida em memória: reiniciar o serviço descarta pedidos ainda não
+executados. Produtos, empréstimos, histórico e agendamentos continuam persistidos
+no SQLite. Uma falha de um pedido permite continuar com o próximo.
 
 **Verificar agora em outras lojas:** monitoramentos com abrangência `all`
 descobrem novas ofertas e releem todos os links vinculados. Agora também

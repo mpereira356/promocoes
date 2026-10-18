@@ -1,3 +1,24 @@
+# Fila de tarefas - 2026.10.18-task-queue.1
+
+466 testes passaram (tres avisos PTB preexistentes). Dez casos novos cobrem
+ordem FIFO sem sobreposicao, resultados/subtarefas antes do proximo comando,
+recuperacao apos excecao, chamada aninhada sem deadlock, cancelamento e fechamento
+de corrotinas pendentes, recepcao de 20 pedidos sem ocupar slots de atualizacoes,
+aviso de fila, reconhecimento imediato de botao e execucao posterior sem reutilizar
+o callback expirado, falha no aviso sem perda de pedido, rechecagem de pausa do
+produto e rechecagem de pagamento/prorrogacao do emprestimo apos aguardar.
+A ultima alteracao da ordem de subtarefas foi retestada nos dez casos da fila.
+
+Todos os handlers autorizados de comandos, textos e botoes entram na mesma fila.
+Pesquisas, verificacoes, promocoes e atualizacao de categorias concluem seus
+resultados antes do proximo pedido. Agendamentos automaticos e emprestimos tambem
+usam a fila. Emprestimos pagos/prorrogados enquanto o lembrete espera nao recebem
+um aviso baseado no estado antigo. A fila e em memoria; reiniciar descarta pedidos
+pendentes, mas nao apaga dados nem agendamentos persistidos.
+
+Transporte Telegram simulado; sem envio real ao chat ou execucao na VPS.
+Nenhuma mudanca na extracao de precos ou nas regras de bloqueio das lojas.
+
 # Verificacao em todas as lojas - 2026.10.18-monitor-all-stores.1
 
 456 testes passaram (tres avisos PTB preexistentes). Dois novos cenarios exercitam

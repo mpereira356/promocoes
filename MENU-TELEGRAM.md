@@ -1,5 +1,9 @@
 # Menu de botões no Telegram
 
+Se houver uma tarefa em andamento, novos pedidos entram em fila, inclusive
+cliques em botões. O bot confirma o recebimento e executa cada pedido após
+concluir os resultados do anterior. A fila não sobrevive ao reinício do bot.
+
 Envie **/start** para ativar os atalhos fixos do teclado e abrir a central. **/menu** abre a central novamente. Os comandos antigos continuam disponíveis. A lista nativa de comandos do Telegram também é configurada ao iniciar, quando a API permite.
 
 ## Central de ofertas

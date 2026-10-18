@@ -89,10 +89,13 @@ class Loans:
                                 (row['id'], row['revision'], slot, now))
                     break
 
-    async def scheduler(self, send):
+    async def scheduler(self, send, runner=None):
         while True:
             try:
-                await self.tick(send)
+                if runner:
+                    await runner(lambda: self.tick(send))
+                else:
+                    await self.tick(send)
             except Exception:
                 pass  # Uma falha nao encerra os proximos lembretes.
             await asyncio.sleep(30)

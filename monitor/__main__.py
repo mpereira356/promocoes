@@ -20,6 +20,7 @@ from .deals.service import Deals
 from .deals.telegram import PromotionsTelegram
 from .telegram_text import send_text
 from .menu import BotMenu, navigation
+from .work_queue import WorkQueue, queued_handler
 
 HELP = """🛍️ Bot de ofertas e monitoramento
 
@@ -91,6 +92,7 @@ def main():
     db = DB(config.db)
     fetcher = Fetcher(config)
     tasks = set()
+    work = WorkQueue()
 
     async def send(text):
         await send_text(lambda t, **kw: app.bot.send_message(config.chat, t, **kw), text, reply_markup=navigation())
@@ -106,8 +108,9 @@ def main():
         print(search_error_message(search_configuration_error), flush=True)
 
     async def start(app):
-        app.bot_data["scheduler"] = asyncio.create_task(monitor.scheduler())
-        app.bot_data['loans_scheduler'] = asyncio.create_task(ui.loans.loans.scheduler(send))
+        work.start()
+        app.bot_data["scheduler"] = asyncio.create_task(monitor.scheduler(work.run))
+        app.bot_data['loans_scheduler'] = asyncio.create_task(ui.loans.loans.scheduler(send, work.run))
         try:
             await app.bot.set_my_commands([
                 BotCommand('menu','Abrir menu de botões'), BotCommand('promocoes','Promoções por categoria'),
@@ -123,6 +126,7 @@ def main():
         for task in running:
             task.cancel()
         await asyncio.gather(*running, return_exceptions=True)
+        await work.close()
         snapshots = list(monitor.snapshot_inflight.values())
         for task in snapshots:
             task.cancel()
@@ -140,7 +144,7 @@ def main():
     )
 
     def background(coro):
-        task = asyncio.create_task(coro)
+        task = work.submit(lambda: coro, cleanup=coro.close)
         tasks.add(task)
 
         def done(completed):
@@ -240,7 +244,7 @@ def main():
                         'Não há ofertas pendentes de escolha. Use /verificar ID para buscar novamente.'
                     )
             elif name == "/verificar":
-                await reply('🔎 Verificação solicitada. Avisarei quando a consulta terminar.')
+                await reply(f'🔎 Verificação do monitoramento {pid} iniciada. Avisarei quando a consulta terminar.')
                 background(check_send(pid))
             elif name == "/pausar":
                 db.run("UPDATE products SET active=0 WHERE id=?", (pid,))
@@ -334,10 +338,10 @@ def main():
         await promotions.callback(update,context)
 
     for name in ('promocoes', 'categoria', 'categorias', 'descontopromo', 'ceppromo'):
-        app.add_handler(CommandHandler(name, promotion_command))
-    app.add_handler(CallbackQueryHandler(promotion_callback, pattern=r'^promo:'))
-    app.add_handler(CallbackQueryHandler(ui.callback, pattern=r'^ui:'))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND,ui.text))
+        app.add_handler(CommandHandler(name, queued_handler(work,promotion_command,config)))
+    app.add_handler(CallbackQueryHandler(queued_handler(work,promotion_callback,config), pattern=r'^promo:'))
+    app.add_handler(CallbackQueryHandler(queued_handler(work,ui.callback,config), pattern=r'^ui:'))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND,queued_handler(work,ui.text,config)))
 
     for name in (
         "start",
@@ -360,21 +364,21 @@ def main():
         "configurar",
         "alertas",
     ):
-        app.add_handler(CommandHandler(name, command))
+        app.add_handler(CommandHandler(name, queued_handler(work,command,config)))
 
     async def choose(update, context):
         await handle_choice(
             update, config, db, send, lambda pid: background(check_send(pid))
         )
 
-    app.add_handler(CallbackQueryHandler(choose, pattern=r"^choose:"))
+    app.add_handler(CallbackQueryHandler(queued_handler(work,choose,config), pattern=r"^choose:"))
 
     async def subscription(update, context):
         await handle_subscription(
             update, config, db, app.bot, send, lambda pid: background(check_send(pid))
         )
 
-    app.add_handler(CallbackQueryHandler(subscription, pattern=r"^(?:watch|scope):"))
+    app.add_handler(CallbackQueryHandler(queued_handler(work,subscription,config), pattern=r"^(?:watch|scope):"))
 
     async def error_handler(update, context):
         # Excecoes omitidas intencionalmente para nao expor credenciais.

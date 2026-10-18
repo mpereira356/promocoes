@@ -334,11 +334,19 @@ class Monitor:
                     "UPDATE alerts SET sent_at=? WHERE id=?", (time.time(), row["id"])
                 )
 
-    async def scheduler(self):
+    async def scheduler(self, runner=None):
+        async def inline(factory):
+            return await factory()
+        run = runner or inline
+
+        async def active_check(pid):
+            # A situacao pode mudar enquanto o agendamento aguarda na fila.
+            if self.db.rows('SELECT id FROM products WHERE id=? AND active=1', (pid,)):
+                await self.check(pid)
         # next_due persistido: atrasados rodam uma vez ao reiniciar, sem tempestade de catch-up.
         while True:
             try:
-                await self.deliver()
+                await run(self.deliver)
                 due = self.db.rows(
                     "SELECT id FROM products WHERE active=1 AND next_due<=?",
                     (time.time(),),
@@ -348,7 +356,7 @@ class Monitor:
                     if self.db.rows(
                         "SELECT id FROM products WHERE id=? AND active=1", (row["id"],)
                     ):
-                        await self.check(row["id"])
+                        await run(lambda pid=row['id']: active_check(pid))
             except asyncio.CancelledError:
                 raise
             except Exception:

@@ -10,6 +10,7 @@ HEADINGS = {
     'Cobertura parcial — não representa o site inteiro:',
 }
 PREFIXES = (
+    '⏳ Seu pedido entrou na fila',
     '💸 ', '✅ Empréstimos pagos',
     '🛍️ Bot de ofertas', 'ℹ️ Status do bot', '🏆 ', '🥇 ', '🥈 ', '🥉 ',
     '🔔 Monitoramento ', '✅ Monitoramento ', '✅ Oferta ', '✅ Modelo confirmado',
