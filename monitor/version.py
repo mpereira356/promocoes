@@ -1,1 +1,1 @@
-VERSION = "2026.10.17-amazon-options.1"
+VERSION = "2026.10.18-model-monitoring.1"

@@ -4,7 +4,7 @@ from .adapters import adapter
 from .adapters.base import ReadError
 from .search import search_error_message
 from .models import Reading, normalize
-from .identity import same_product, search_terms
+from .identity import same_product, monitoring_search_terms
 from .discovery import REASONS, reading_relevance
 import json
 
@@ -137,7 +137,7 @@ class Monitor:
                     urls = [p["query"]]
                 else:
                     try:
-                        query = search_terms(seed_reading.title, seed_reading.identifiers) if seed_reading else search_terms(p['query'])
+                        query = monitoring_search_terms(seed_reading.title, seed_reading.identifiers) if seed_reading else monitoring_search_terms(p['query'])
                         urls = await self.search.links(query)
                         notes.extend(getattr(urls, "notices", []))
                     except ReadError as exc:

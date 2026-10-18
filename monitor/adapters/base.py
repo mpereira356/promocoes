@@ -107,6 +107,9 @@ class StructuredAdapter:
             brand = brand.get("name")
         if isinstance(brand, str) and brand.strip():
             identifiers["brand"] = normalize(brand)
+        model = product.get('model')
+        if isinstance(model, str) and model.strip() and len(model) <= 100:
+            identifiers['model'] = normalize(model)
         title = product.get("name")
         if not isinstance(title, str) or not title.strip():
             raise ReadError("product_title_missing")

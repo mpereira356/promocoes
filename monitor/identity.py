@@ -34,6 +34,35 @@ def search_terms(title, identifiers=None):
     return 'Logitech ' + part if part else title
 
 
+def monitoring_search_terms(title, identifiers=None):
+    """Modelo para descoberta entre lojas; nao confirma identidade da oferta."""
+    identifiers = identifiers or {}
+    text = normalize(title)
+    brands = (set(text.split()) | set(normalize(identifiers.get('brand', '')).split())) & (
+        BRANDS | {'epomaker'})
+    brand = next(iter(brands)) if len(brands) == 1 else ''
+    patterns = {
+        'gigabyte': r'\b[bxyz]\d{3}m? aorus (?:elite|pro|master)(?: (?:ax|wifi))?(?: v\d+)?\b',
+        'asus': r'\brog strix [bxyz]\d{3}(?: [a-z])? gaming(?: wifi)?(?: ii)?\b',
+        'ajazz': r'\bak\d{2,4}[a-z]*(?: (?:pro|max|plus|mini|lite))?\b',
+        'epomaker': r'\b(?:he|th|rt|ep)\d{2,4}[a-z]*(?: (?:pro|max|plus|mini|lite))?\b',
+    }
+    match = re.search(patterns[brand], text) if brand in patterns else None
+    if match:
+        revisions = set(re.findall(r'\brev(?:ision|\.)?\s*(\d+(?:\.\d+)*)', title, re.I))
+        if len(revisions) > 1:
+            return search_terms(title, identifiers)
+        revision = ' rev ' + next(iter(revisions)) if revisions else ''
+        return brand + ' ' + match[0] + revision
+    model = identifiers.get('model')
+    brand = brand or normalize(identifiers.get('brand', ''))
+    if (brand and len(brand) <= 60 and isinstance(model, str) and 2 <= len(normalize(model).split()) <= 12
+            and len(model) <= 100 and any(c.isdigit() for c in model)):
+        model = normalize(model)
+        return model if model.startswith(brand + ' ') else brand + ' ' + model
+    return search_terms(title, identifiers)
+
+
 def model_conflict(left, right):
     """Conflitos explicitos de familias conhecidas, sem adivinhar sinonimos."""
     a, b = normalize(left), normalize(right)
