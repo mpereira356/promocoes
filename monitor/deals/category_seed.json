@@ -1101,6 +1101,36 @@
       "domain": "terabyteshop.com.br",
       "title": "Diversos",
       "url": "https://www.terabyteshop.com.br/diversos"
+    },
+    {
+      "domain": "sensetup.com.br",
+      "title": "Cadeiras ergonomicas",
+      "key": "cadeiras/ergonomicas",
+      "path": [
+        "Cadeiras",
+        "Ergonômicas"
+      ],
+      "url": "https://sensetup.com.br/collections/cadeiras-ergonomicas"
+    },
+    {
+      "domain": "loja.elements.com.br",
+      "title": "Cadeiras ergonomicas",
+      "key": "cadeiras/ergonomicas",
+      "path": [
+        "Cadeiras",
+        "Ergonômicas"
+      ],
+      "url": "https://loja.elements.com.br/collections/cadeiras"
+    },
+    {
+      "domain": "flexform.com.br",
+      "title": "Cadeiras ergonomicas",
+      "key": "cadeiras/ergonomicas",
+      "path": [
+        "Cadeiras",
+        "Ergonômicas"
+      ],
+      "url": "https://www.flexform.com.br/cadeiras/cadeiras-ergonomicas"
     }
   ]
 }

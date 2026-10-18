@@ -4,6 +4,8 @@ from decimal import Decimal
 from dotenv import load_dotenv
 import re
 
+DEFAULT_DOMAINS = 'kabum.com.br,pichau.com.br,terabyteshop.com.br,mercadolivre.com.br,amazon.com.br,sensetup.com.br,loja.elements.com.br,flexform.com.br'
+
 
 def normalize_domains(value):
     domains = []
@@ -57,7 +59,7 @@ class Config:
             int(os.environ["TELEGRAM_USER_ID"]),
             normalize_domains(
                 os.getenv(
-                    "ALLOWED_DOMAINS", "kabum.com.br,pichau.com.br,terabyteshop.com.br,mercadolivre.com.br,amazon.com.br"
+                    "ALLOWED_DOMAINS", DEFAULT_DOMAINS
                 )
             ),
             os.getenv("DATABASE_PATH", "data/monitor.sqlite3"),

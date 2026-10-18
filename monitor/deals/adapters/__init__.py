@@ -3,8 +3,9 @@ from .pichau import PichauCategories
 from .terabyte import TerabyteCategories
 from .amazon import AmazonCategories
 from .mercadolivre import MercadoLivreCategories
+from .chairs import SensetupCategories, ElementsCategories, FlexformCategories
 
-ADAPTERS = {a.domain: a() for a in (KabumCategories, PichauCategories, TerabyteCategories, AmazonCategories, MercadoLivreCategories)}
+ADAPTERS = {a.domain: a() for a in (KabumCategories, PichauCategories, TerabyteCategories, AmazonCategories, MercadoLivreCategories, SensetupCategories, ElementsCategories, FlexformCategories)}
 from ..catalog import CategoryCatalog
 
 _catalog = CategoryCatalog()

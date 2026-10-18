@@ -30,7 +30,8 @@ def relevance(query, title):
         text = re.sub(r'(\d+)\s*[ªº°]', r'\1', text)
         text = normalize(text)
         text = re.sub(r'\b(\d+)\s+(gb|tb|mhz|hz|w)\b', r'\1\2', text)
-        return set(text.split())
+        aliases = {'cadeiras': 'cadeira', 'ergonomicas': 'ergonomica', 'ergonomicos': 'ergonomico'}
+        return {aliases.get(word, word) for word in text.split()}
     wanted = terms(query) - stop
     found = terms(title)
     if 'echo dot' in normalize(query) and 'echo dot' not in normalize(title):
@@ -43,7 +44,7 @@ def relevance(query, title):
     if 'aspirador' in wanted and not wanted & vacuum_parts and re.match(
             r'^(?:copo|filtro|escova|bico|bateria|carregador|peca)s?\b', normalize(title)) and found & {'para', 'substituicao'}:
         return 0
-    for category in ({'teclado', 'keyboard'}, {'mouse', 'mice'}, {'headset', 'headphone', 'fone'}, {'monitor', 'monitores'}):
+    for category in ({'teclado', 'keyboard'}, {'mouse', 'mice'}, {'headset', 'headphone', 'fone'}, {'monitor', 'monitores'}, {'cadeira', 'cadeiras', 'chair'}):
         if wanted & category and not found & category:
             return 0
     if not (wanted & BRANDS) <= found:
@@ -63,6 +64,14 @@ def relevance(query, title):
         return 1 if part == candidate_part else 0
     if not wanted or not found:
         return 0
+    chair_brands = {'sensetup', 'elements', 'flexform'}
+    if wanted & ({'cadeira', 'cadeiras', 'chair'} | chair_brands):
+        generic = {'cadeira', 'cadeiras', 'chair', 'gamer', 'ergonomica', 'ergonomicas',
+                   'ergonomico', 'escritorio', 'presidente', 'home', 'office', 'premium'}
+        # Galatea nao e Sophy; Uni All Grey nao e Uni Pro Grey n Blue.
+        specific = wanted - generic - chair_brands
+        if not specific <= found:
+            return 0
     # Nunca sugerir B650/X870 quando foi pedido B550, ou RTX 4060 para RTX 4070.
     models = {t for t in wanted if any(c.isdigit() for c in t)}
     if not models <= found:
@@ -72,6 +81,10 @@ def relevance(query, title):
 
 
 def candidate_relevance(query, candidate):
+    store_brand = {'sensetup.com.br': 'sensetup', 'loja.elements.com.br': 'elements',
+                   'flexform.com.br': 'flexform'}.get((urlsplit(candidate.url).hostname or '').removeprefix('www.'))
+    if store_brand:
+        return relevance(query, candidate.title + ' ' + store_brand)
     score = relevance(query, candidate.title)
     if score:
         return score
@@ -89,8 +102,14 @@ def candidate_relevance(query, candidate):
 
 
 def reading_relevance(query, reading):
+    requested = set(normalize(query).split()) & {'sensetup', 'elements', 'flexform'}
+    declared = set(normalize(getattr(reading, 'identifiers', {}).get('brand', '')).split())
+    if requested and declared and not requested <= declared:
+        return 0
     generation = getattr(reading, 'identifiers', {}).get('generation', '')
     title = reading.title
+    if requested and declared:
+        title += ' ' + ' '.join(declared)
     if generation:
         title += ' ' + generation
     return relevance(query, title)
@@ -232,7 +251,7 @@ class DirectSearch:
                         if str(exc) in ('robots_disallowed', 'robots_unavailable', 'blocked_no_bypass', 'captcha_no_bypass'):
                             raise
                         candidates = []
-                    if not any(relevance(query, c.title) for c in candidates):
+                    if not any(candidate_relevance(query, c) for c in candidates):
                         candidates = await self.external_candidates(query, domain)
                 else:
                     url = store.search_url(query)

@@ -6,7 +6,7 @@ import json
 import os
 from types import SimpleNamespace
 from dotenv import load_dotenv
-from monitor.config import normalize_domains
+from monitor.config import normalize_domains, DEFAULT_DOMAINS
 from monitor.network import Fetcher
 from monitor.discovery import DirectSearch
 from monitor.adapters import adapter
@@ -79,7 +79,7 @@ def main():
         browser=browser,
         delay=max(1, float(os.getenv("REQUEST_DELAY", "3"))),
         domains=normalize_domains(
-            args.store or os.getenv("ALLOWED_DOMAINS", "pichau.com.br,terabyteshop.com.br,mercadolivre.com.br")
+            args.store or os.getenv("ALLOWED_DOMAINS", DEFAULT_DOMAINS)
         ),
         mercadolivre_token=os.getenv('MERCADOLIVRE_ACCESS_TOKEN', '').strip(),
         mercadolivre_discovery=os.getenv('MERCADOLIVRE_DISCOVERY', 'external'),

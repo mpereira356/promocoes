@@ -1,3 +1,40 @@
+# Lojas de cadeiras - 2026.10.18-chair-stores.1
+
+Validacao HTTP real local em 18/10/2026, usando Fetcher/DirectSearch/Monitor,
+sem cookies de conta, sem navegador e respeitando robots e intervalos:
+
+| Loja | Produto testado | Preco capturado | Descoberta | Categoria consultada |
+| --- | --- | --- | --- | --- |
+| Sensetup | A08 Premium | R$ 2.100,00 | Sitemap publicado | 1 pagina, 13 links de produtos |
+| Elements | Galatea | R$ 2.887,78 | Sitemap publicado | 1 pagina, 18 links; proxima pagina detectada |
+| Flexform | Uni All Grey | R$ 1.030,50 | Formulario GET term | 1 pagina, 16 links de produtos |
+
+Esses valores sao capturas pontuais, nao garantias de preco atual. As buscas
+foram limitadas ao sitemap configurado (ate 4 documentos) ou a uma pagina de
+busca; nao se afirma cobertura de todo o catalogo. Na Sensetup tambem foi
+descoberto o link OpenBox, sem classificar automaticamente sua condicao.
+
+Sensetup/Elements publicam variants com cores e estoques diferentes: preco
+unico somente quando todas as variantes selecionadas tem o mesmo preco.
+Parametro variant seleciona apenas o ID existente no proprio produto. Sem
+selecao, estoques divergentes sao desconhecidos; precos divergentes ficam
+como referencia a partir de e nao como preco individual confirmado.
+
+Pagamento, condicao e vendedor nao foram declarados suficientemente nas
+capturas Shopify e permanecem desconhecidos. Na Flexform, estoque e condicao
+vieram do Product, mas pagamento/vendedor nao. Isso limita alertas comparaveis.
+Frete nao cotado. Promocoes usam compare_at_price apenas das mesmas variantes;
+referencia ausente, divergente ou inferior ao preco atual nao inventa desconto.
+
+Foi corrigido o falso CAPTCHA causado por nomes de bibliotecas de protecao
+de formularios Shopify em paginas publicas completas. Desafios reais,
+recusas HTTP, robots e widgets ativos continuam recusados.
+
+440 testes passaram (3 avisos PTB preexistentes), incluindo 21 novos casos.
+Entrega Telegram/SQLite de anuncios foi simulada; sem envio real ao chat
+nem execucao na VPS. Flexform esta limitada a URLs /cadeiras/tipo/produto;
+outros departamentos ainda nao tem parser de descoberta validado.
+
 # Painel publico Amazon - 2026.10.18-amazon-public-panel.1
 
 Correcao funcional validada com resposta real em 18/10/2026: o JavaScript AOD usado pela propria Amazon declarou a rota GET /gp/product/ajax/aodAjaxMain e os parametros do dataset #all-offers-display-params, mais pc=dp. O script foi localizado pelo carregador aodIngressClick na pagina, sem inventar endpoint ou credenciais. O bot agora usa essa consulta antes de Selenium/Playwright e funciona tambem com navegador desativado. ASIN deve corresponder tanto ao URL quanto aos parametros da pagina; titulo do cabecalho do painel deve corresponder ao titulo original, e precos continuam limitados a cada linha de oferta/vendedor/condicao. Fragmentos sem ofertas nao viram preco zero.

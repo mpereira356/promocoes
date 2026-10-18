@@ -1,6 +1,7 @@
 ﻿"""Distingue uma barreira de acesso de um widget opcional de avaliacoes."""
 
 import json
+import re
 from bs4 import BeautifulSoup
 
 MARKERS = ("cf-chl-", "g-recaptcha", "hcaptcha", "verify you are human")
@@ -31,6 +32,17 @@ def is_access_challenge(html):
         )
     ):
         return True
+    # Shopify inclui protecao de formularios em paginas publicas completas.
+    # Nao confundir o nome da biblioteca dentro de scripts com um desafio ativo.
+    if (re.search(r'Shopify\.shop\s*=', html)
+            and soup.select('form[action="/search"]')
+            and soup.select('a[href*="/products/"]')
+            and not any(m in lower for m in ('cf-chl-', 'verify you are human'))):
+        visible = BeautifulSoup(html, 'html.parser')
+        for script in visible.select('script, style'):
+            script.decompose()
+        if not any(marker in str(visible).lower() for marker in MARKERS):
+            return False
     # Ler dados publicos ja entregues nao exige interagir com CAPTCHA de comentario.
     for script in soup.find_all("script", type="application/ld+json"):
         try:

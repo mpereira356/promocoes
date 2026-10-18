@@ -1,1 +1,1 @@
-VERSION = "2026.10.18-loans.1"
+VERSION = "2026.10.18-chair-stores.1"

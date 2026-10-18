@@ -1,3 +1,23 @@
+# Lojas de cadeiras - 2026.10.18-chair-stores.1
+
+440 testes passaram, com tres avisos PTB preexistentes. Os 21 novos casos
+cobrem fixtures reduzidas reais, valores em centavos, moeda BRL, titulo/handle,
+rejeicao de modelos divergentes, selecao de variante, estoques divergentes,
+precos variaveis, valor zero invalido, referencia compare_at_price, descoberta
+por sitemap sem API externa, formulario GET Flexform, links de categoria e
+distincao entre scripts opcionais Shopify e desafios ativos.
+
+Fluxo de entrega de cada nova loja foi testado com Monitor, SQLite e transporte
+Telegram simulado: um anuncio salvo com preco, resumo concluido e nenhum
+monitoramento cadastrado. Nao houve envio real ao Telegram nem acesso a VPS.
+
+Separadamente, testes HTTP reais locais de nome -> descoberta -> pagina -> preco
+funcionaram para Sensetup A08 Premium (210000 centavos), Elements Galatea
+(288778 centavos) e Flexform Uni All Grey (103050 centavos). Uma pagina de
+categoria real por loja forneceu respectivamente 13, 18 e 16 links. Sao capturas
+pontuais; pagamento, vendedor e condicao ausentes nao foram inferidos.
+Detalhes e limitacoes em STATUS-LOJAS.md. A mudanca nao resolve o 403 da Pichau.
+
 # Pichau: DOM fornecido pelo usuario em 18/10/2026
 
 O trecho fornecido pelo usuario contem titulo `h1[data-cy="product-page-title"]`

@@ -1,4 +1,24 @@
-**Versão atual: `2026.10.18-loans.1`.** Envie **/start** ou **/menu** para usar a central de botões: buscas, promoções, monitoramentos e dinheiro emprestado. Veja [MENU-TELEGRAM.md](MENU-TELEGRAM.md).
+**Versão atual: `2026.10.18-chair-stores.1`.** Envie **/start** ou **/menu** para usar a central de botões: buscas, promoções, monitoramentos e dinheiro emprestado. Veja [MENU-TELEGRAM.md](MENU-TELEGRAM.md).
+
+**Lojas de cadeiras:** buscas por nome e links agora incluem **Sensetup**,
+**Elements** e **Flexform**. Exemplos: `/buscar Cadeira A08 Premium`,
+`/buscar Cadeira Elements Galatea`, `/buscar Cadeira Uni All Grey`.
+Sensetup e Elements usam sitemaps publicados para descobrir produtos, e dados
+Shopify presentes no HTML para ler preços; Flexform usa o formulário GET da loja
+e Schema.org Product. Não exigem navegador nem nova chave de busca nesses fluxos.
+
+Os testes reais locais confirmaram descoberta e preço de um produto por loja,
+além de uma página de categoria por loja. Isso não garante cobertura de todo o
+catálogo. Variantes com preços diferentes aparecem apenas como referência
+"a partir de" até informar um link com `?variant=ID`; não se misturam cores ou
+estoques diferentes. Campos não declarados, como condição, vendedor e pagamento,
+permanecem desconhecidos e podem impedir alertas de comparação.
+
+Na VPS, `bash deploy/update.sh` amplia automaticamente a lista padrão antiga de
+domínios. Se você personalizou `ALLOWED_DOMAINS`, mantenha sua seleção e acrescente
+`sensetup.com.br,loja.elements.com.br,flexform.com.br`, depois reinicie o serviço.
+As novas lojas também aparecem na seleção de promoções; há uma categoria inicial
+**Cadeiras > Ergonômicas**, com limites de páginas e produtos como nas demais lojas.
 
 **💸 Dinheiro emprestado:** no menu principal, toque nesse botão ou envie
 `/emprestimos`. Use **➕ Emprestar** e informe o nome, o valor (ex.: `150`
