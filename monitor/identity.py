@@ -46,6 +46,7 @@ def monitoring_search_terms(title, identifiers=None):
         'asus': r'\brog strix [bxyz]\d{3}(?: [a-z])? gaming(?: wifi)?(?: ii)?\b',
         'ajazz': r'\bak\d{2,4}[a-z]*(?: (?:pro|max|plus|mini|lite))?\b',
         'epomaker': r'\b(?:he|th|rt|ep)\d{2,4}[a-z]*(?: (?:pro|max|plus|mini|lite))?\b',
+        'hyperx': r'\bmars\b',
     }
     match = re.search(patterns[brand], text) if brand in patterns else None
     if match:

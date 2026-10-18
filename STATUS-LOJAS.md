@@ -1,3 +1,9 @@
+# HyperX Mars - 2026.10.18-model-monitoring.2
+
+O anexo mostrou que a consulta manual "hyperx mars" encontrava outras lojas, mas o monitoramento podia reutilizar o titulo comercial ou MPN longo. A versao anterior ainda nao reconhecia essa familia. O extrator agora usa "hyperx mars" para a descoberta dos monitoramentos desse modelo, mantendo titulo e identificadores originais para verificar a oferta e suas variantes. Monitoramentos existentes passam a usar os novos termos sem recadastro.
+
+30 testes focados passaram, incluindo tres novos casos com os titulos do anexo e monitoramento existente consultando a oferta original e outra loja por "hyperx mars". Nao se liberam alertas quando a condicao continua ausente. Consulta real local ao anuncio KaBuM 219729 confirmou marca estruturada "hyperx" e termo resultante "hyperx mars". Nao houve verificacao real das demais lojas ou da VPS nesta revisao. Links Amazon duplicados, preco oculto e restricoes Mercado Livre vistos no anexo sao problemas separados e nao se afirmam resolvidos aqui.
+
 # Busca por modelo no monitoramento - 2026.10.18-model-monitoring.1
 
 Auditoria do modo "Outras lojas tambem": a cada verificacao ele ja executava a descoberta nas lojas autorizadas e relia todos os candidatos persistidos, inclusive os de outras lojas. O titulo integral e guardado para exibicao/referencia; antes, quando nao havia identificador util, ele tambem podia virar a consulta inteira. MPN comercial numerico podia produzir descoberta excessivamente restrita.

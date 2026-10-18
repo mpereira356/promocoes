@@ -21,6 +21,8 @@ from monitor.adapters.base import ReadError, StructuredAdapter
     ('Placa Mae Asus ROG STRIX B550-F GAMING WIFI II, AM4, DDR4, HDMI', {}, 'asus rog strix b550 f gaming wifi ii'),
     ('Teclado EPOMAKER HE68 Lite Hall Effect 8K RGB Preto', {}, 'epomaker he68 lite'),
     ('Teclado AJAZZ AK820 Pro RGB Switch Flyfish', {}, 'ajazz ak820 pro'),
+    ('Teclado Gamer, Hyperx Mars, Rgb, Mecanico Us, Switch Outemu Blue - HX-KB3BL3-US/R4.', {}, 'hyperx mars'),
+    ('Teclado Mecanico Gamer Hyperx Mars RGB, Switch Outemu Blue, HX-KB3BL3-US/R4', {'brand':'hyperx','mpn':'hx kb3bl3 us r4'}, 'hyperx mars'),
     ('Nome de produto desconhecido', {}, 'Nome de produto desconhecido'),
     ('Descricao comprida', {'brand':'kingston','model':'Fury Beast DDR4 3200'}, 'kingston fury beast ddr4 3200'),
     ('Descricao comprida', {'brand':'hoto','model':'4in1 V2'}, 'hoto 4in1 v2'),
@@ -78,3 +80,27 @@ def test_short_query_never_approves_variant_without_identity_evidence():
     assert monitoring_search_terms(seed.title)==monitoring_search_terms(other.title)
     assert same_product(seed,other) is None
     assert same_product(seed,replace(other,title='Gigabyte B550 Aorus Elite V2')) is False
+
+
+def test_existing_hyperx_monitor_uses_same_short_query_as_successful_manual_search():
+    async def run():
+        db=DB(':memory:')
+        title='Teclado Gamer, Hyperx Mars, Rgb, Mecanico Us, Switch Outemu Blue - HX-KB3BL3-US/R4.'
+        config=SimpleNamespace(minimum=0,percent=0,target=None,interval=18000)
+        r=Reading(title,'KaBuM','','Pix',49334,'in_stock',identifiers={'brand':'hyperx','mpn':'hx kb3bl3 us r4'})
+        origin='https://www.kabum.com.br/produto/219729/teclado'
+        other='https://www.terabyteshop.com.br/produto/123/hyperx-mars'
+        try:
+            ad=db.save_ad(origin,'KaBuM',r)
+            pid,_=db.subscribe(db.request_scope(ad['id']),'all',config)
+            search=SimpleNamespace(links=AsyncMock(return_value=[other]))
+            fetch=SimpleNamespace(canonical=lambda u:(u,urlsplit(u).hostname.removeprefix('www.')))
+            m=Monitor(db,config,fetch,search,AsyncMock())
+            m.read=AsyncMock(return_value=[replace(r,title='Teclado Mecanico Gamer HyperX Mars RGB Outemu Blue US')])
+            await m.check(pid)
+            search.links.assert_awaited_once_with('hyperx mars')
+            assert {x.args[0] for x in m.read.await_args_list}=={origin,other}
+            assert len(db.rows('SELECT * FROM candidates WHERE product=?',(pid,)))==2
+            assert not db.rows('SELECT * FROM alerts')  # Condicao continua ausente.
+        finally:db.conn.close()
+    asyncio.run(run())
