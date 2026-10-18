@@ -325,3 +325,32 @@ def test_legacy_schema_migration_keeps_schedule_and_enables_all(tmp_path):
         assert p["alert_mode"] == "all" and p["scope"] == "legacy"
     finally:
         db.conn.close()
+
+
+
+@pytest.mark.parametrize('failure', ['blocked_no_bypass','robots_unavailable','captcha_no_bypass'])
+def test_monitor_defers_repeated_store_failures_but_checks_other_stores_each_cycle(data,failure):
+    from monitor.adapters.base import ReadError
+    from urllib.parse import urlsplit
+    async def run():
+        db,config,r,ad,_=data
+        pid,_=db.subscribe(db.request_scope(ad['id']),'all',config)
+        urls=[f'https://www.pichau.com.br/offer-{i}' for i in range(3)]+[ad['url']]
+        search=SimpleNamespace(links=AsyncMock(return_value=urls))
+        fetch=SimpleNamespace(canonical=lambda u:(u,urlsplit(u).hostname.removeprefix('www.')))
+        monitor=Monitor(db,config,fetch,search,AsyncMock())
+        async def read(url):
+            if 'pichau.com.br' in url:raise ReadError(failure)
+            return [r]
+        monitor.read=AsyncMock(side_effect=read)
+        for _ in range(2):
+            text=await monitor.check(pid)
+            assert text.count('Pichau:')==1
+            assert 'suspensa nesta verifica\u00e7\u00e3o: 3' in text
+        visited=[c.args[0] for c in monitor.read.await_args_list]
+        assert visited.count(urls[0])==2 and ad['url'] in visited
+        assert urls[1] not in visited and urls[2] not in visited
+        assert db.rows("SELECT COUNT(*) n FROM checks WHERE status='store_check_deferred'")[0]['n']==4
+        assert db.rows('SELECT last FROM series')[0]['last']==r.price
+        assert not db.rows('SELECT * FROM alerts')
+    asyncio.run(run())

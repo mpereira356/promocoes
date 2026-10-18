@@ -1,3 +1,13 @@
+# Acesso das lojas - 2026.10.18-store-access.1
+
+Pichau: o link informado da B550 Aorus Elite AX V2 retornou HTTP 403 tambem no teste local em 18/10/2026. Nao ha acesso funcional validado para esse link/IP nesta revisao. Nao foi implementado bypass de bloqueio/CAPTCHA, mudanca de identidade ou proxy. A coleta depende de acesso permitido pela loja; a alteracao abaixo nao libera o acesso nem recupera preco atual da Pichau.
+
+Amazon: no HTML real recebido para B08KGVH7YC?th=1, havia aviso de carrinho mas nenhum link de opcoes de compra. O bot agora tambem tenta o painel publico do mesmo ASIN nesse caso, usando a rota AOD ja observada e usada pelo projeto, antes de encerrar a leitura. Nao adiciona itens ao carrinho. O teste real do painel publico B08KGVH7YC terminou em amazon_offers_panel_timeout; portanto a obtencao de preco individual continua nao validada para essa consulta. A captura reduzida nova documenta a variacao sem botao. O teste de preco 172711 usa uma fixture historica, sem representar preco atual.
+
+Monitoramento: uma falha de acesso/robots/CAPTCHA suspende apenas os demais links daquela loja durante a verificacao atual. Gera um unico aviso por loja, conta as ofertas afetadas, registra consultas adiadas e preserva os precos validos; as outras lojas seguem. No ciclo seguinte volta a tentar, respeitando o intervalo de acesso do Fetcher. Nao ha suspensao definitiva do produto ou do agendamento.
+
+383 testes passaram, com tres avisos PTB de depreciacao preexistentes. Os testes simulam abertura do painel mesmo com preco oculto/sem botao e dois ciclos com falhas de acesso, robots e CAPTCHA, mantendo consulta das outras lojas e ultimos precos. Nao houve acesso SSH, envio real Telegram ou validacao pela VPS. Nao se afirma que Pichau ou todos os precos Amazon estejam funcionando.
+
 # HyperX Mars - 2026.10.18-model-monitoring.2
 
 O anexo mostrou que a consulta manual "hyperx mars" encontrava outras lojas, mas o monitoramento podia reutilizar o titulo comercial ou MPN longo. A versao anterior ainda nao reconhecia essa familia. O extrator agora usa "hyperx mars" para a descoberta dos monitoramentos desse modelo, mantendo titulo e identificadores originais para verificar a oferta e suas variantes. Monitoramentos existentes passam a usar os novos termos sem recadastro.

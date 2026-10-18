@@ -150,6 +150,7 @@ def form_search_url(html, base, query, fields=None):
 
 
 REASONS = {
+    'store_check_deferred': 'Consulta suspensa nesta verificação após falha de acesso a outra oferta da mesma loja',
     'individual_listing_required': 'É necessário um link de produto individual; categorias não são ofertas com preço validado',
     'conflicting_product_identifiers': 'A página apresenta códigos de produto conflitantes; a comparação foi recusada',
     'domain_access_cooldown': 'A loja recusou acesso recentemente. Novas consultas a ela ficam suspensas por até 15 minutos; as outras lojas continuam',

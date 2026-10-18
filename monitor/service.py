@@ -86,12 +86,12 @@ class Monitor:
             readings = parser.parse(html, final)
             if final_domain == 'amazon.com.br' and self.config.browser and all(r.price is None for r in readings):
                 offers_url = parser.buying_options_url(html, final)
+                if not offers_url and any(r.stock != 'out_of_stock' for r in readings):
+                    offers_url = parser.hidden_price_panel_url(html, final)
                 if parser.price_requires_cart(html) and not offers_url:
                     if any(r.starting_price is not None for r in readings):
                         return readings, html, final
                     raise ReadError('amazon_price_requires_cart')
-                if not offers_url and any(r.stock != 'out_of_stock' for r in readings):
-                    offers_url = parser.hidden_price_panel_url(html, final)
                 if offers_url:
                     from .amazon_offers import AmazonOffersReader
                     if self.amazon_offers is None:
@@ -155,8 +155,16 @@ class Monitor:
                     notes.append(
                         'Não encontramos ofertas nesta consulta. Tente um nome mais curto ou cadastre um link.'
                     )
+                unavailable_stores = {}
                 for candidate in candidates:
                     try:
+                        if not self.db.rows('SELECT id FROM candidates WHERE id=?', (candidate['id'],)):
+                            continue
+                        _, domain = self.fetcher.canonical(candidate['url'])
+                        if domain in unavailable_stores:
+                            unavailable_stores[domain]['count'] += 1
+                            self.db.failure(candidate['id'], 'store_check_deferred')
+                            continue
                         readings = await self.read(candidate["url"])
                         if not readings:
                             raise ReadError('structured_product_missing_or_ambiguous')
@@ -220,9 +228,18 @@ class Monitor:
                         ):
                             self.db.failure(candidate["id"], code)
                         reason = REASONS.get(code, 'Não foi possível validar a leitura da página')
+                        if code in ('blocked_no_bypass', 'captcha_no_bypass', 'domain_access_cooldown',
+                                'robots_unavailable', 'robots_disallowed'):
+                            unavailable_stores[domain] = {'store': candidate['store'], 'count': 1,
+                                'reason': reason, 'url': candidate['url']}
+                            continue
                         notes.append(
                             f"⚠️ Oferta {candidate['id']} — {candidate['store']}: {reason}. O último preço válido foi preservado.\n{candidate['url']}"
                         )
+                for item in unavailable_stores.values():
+                    notes.append(f"⚠️ {item['store']}: {item['reason']}.\n"
+                        f"Ofertas com consulta suspensa nesta verificação: {item['count']}. "
+                        f"Os últimos preços válidos foram preservados. As demais lojas continuam.\n{item['url']}")
                 await self.options(pid, only_new=True)
                 await self.deliver()
             finally:

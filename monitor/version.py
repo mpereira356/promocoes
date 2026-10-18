@@ -1,1 +1,1 @@
-VERSION = "2026.10.18-model-monitoring.2"
+VERSION = "2026.10.18-store-access.1"

@@ -97,7 +97,7 @@ def test_browser_failure_is_classified_without_private_details(message, expected
     assert browser_error(RuntimeError(message), 'amazon_browser_start_failed') == expected
 
 
-def test_real_cart_price_requirement_stops_before_selenium():
+def test_hidden_price_attempts_public_panel_without_adding_to_cart():
     async def run():
         html = Path('tests/fixtures/amazon_ak820_cart_price_real.html').read_text(encoding='utf-8')
         url = 'https://www.amazon.com.br/dp/B0H9BWD7NP'
@@ -105,10 +105,10 @@ def test_real_cart_price_requirement_stops_before_selenium():
         assert not AmazonAdapter().price_requires_cart('<aside>adicione este item ao seu carrinho</aside>')
         f = SimpleNamespace(canonical=lambda u: (u, 'amazon.com.br'), html=AsyncMock(return_value=(html, url)))
         monitor = Monitor(None, SimpleNamespace(browser=True), f, None, None)
-        monitor.amazon_offers = SimpleNamespace(html=AsyncMock())
-        with pytest.raises(ReadError, match='amazon_price_requires_cart'):
+        monitor.amazon_offers = SimpleNamespace(html=AsyncMock(side_effect=ReadError('amazon_offers_panel_timeout')))
+        with pytest.raises(ReadError, match='amazon_offers_panel_timeout'):
             await monitor.read(url)
-        monitor.amazon_offers.html.assert_not_called()
+        monitor.amazon_offers.html.assert_awaited_once_with('https://www.amazon.com.br/dp/B0H9BWD7NP/ref=olp-opf-redir?aod=1')
     asyncio.run(run())
 
 
@@ -223,9 +223,9 @@ def test_real_other_offers_minimum_is_separate_from_individual_price(asin,cents)
     async def run():
         f=SimpleNamespace(canonical=lambda u:(u,'amazon.com.br'),html=AsyncMock(return_value=(html,url)))
         m=Monitor(None,SimpleNamespace(browser=True),f,None,None)
-        m.amazon_offers=SimpleNamespace(html=AsyncMock())
+        m.amazon_offers=SimpleNamespace(html=AsyncMock(side_effect=ReadError('amazon_offers_panel_timeout')))
         assert (await m.read(url))[0].starting_price == cents
-        m.amazon_offers.html.assert_not_awaited()
+        m.amazon_offers.html.assert_awaited_once()
     asyncio.run(run())
 
 
@@ -253,6 +253,7 @@ def test_search_delivers_real_page_minimum_without_counting_individual_price():
         html=Path('tests/fixtures/amazon_starting_'+asin+'.html').read_text(encoding='utf-8')
         f=SimpleNamespace(canonical=lambda u:(u,'amazon.com.br'),html=AsyncMock(return_value=(html,url)))
         m=Monitor(None,SimpleNamespace(browser=True),f,None,None)
+        m.amazon_offers=SimpleNamespace(html=AsyncMock(side_effect=ReadError('amazon_offers_panel_timeout')))
         send=AsyncMock()
         bot=SimpleNamespace(send_message=AsyncMock())
         db=SimpleNamespace(save_ad=lambda *a:{'id':1})
@@ -376,4 +377,23 @@ def test_public_minimum_survives_browser_failure_but_not_block_or_captcha(reason
         else:
             with pytest.raises(ReadError,match=reason):await m.read(url)
         m.amazon_offers.html.assert_awaited_once()
+    asyncio.run(run())
+
+
+
+def test_b550_hidden_without_button_still_attempts_same_asin_public_panel():
+    from bs4 import BeautifulSoup
+    async def run():
+        html=Path('tests/fixtures/amazon_b550_hidden_no_button_real.html').read_text(encoding='utf-8')
+        assert AmazonAdapter().buying_options_url(html,URL) is None
+        assert AmazonAdapter().price_requires_cart(html)
+        panel=BeautifulSoup(HTML,'html.parser')
+        title=BeautifulSoup(html,'html.parser').select_one('#productTitle').get_text(' ',strip=True)
+        panel.select_one('#productTitle').string=title;panel.select_one('#aod-asin-title-text').string=title
+        f=SimpleNamespace(canonical=lambda u:(u,'amazon.com.br'),html=AsyncMock(return_value=(html,URL)))
+        m=Monitor(None,SimpleNamespace(browser=True),f,None,None)
+        m.amazon_offers=SimpleNamespace(html=AsyncMock(return_value=str(panel)))
+        r=(await m.read(URL))[0]
+        assert r.price==172711  # Captura historica da fixture, nao preco atual.
+        m.amazon_offers.html.assert_awaited_once_with('https://www.amazon.com.br/dp/B08KGVH7YC/ref=olp-opf-redir?aod=1')
     asyncio.run(run())
