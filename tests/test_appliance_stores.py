@@ -119,6 +119,7 @@ def test_only_official_mobile_magalu_host_is_authorized():
 @pytest.mark.parametrize('domains,updated', [
     ('kabum.com.br,pichau.com.br,terabyteshop.com.br', True),
     ('kabum.com.br,pichau.com.br,terabyteshop.com.br,mercadolivre.com.br,amazon.com.br,sensetup.com.br,loja.elements.com.br,flexform.com.br', True),
+    ('kabum.com.br,pichau.com.br,terabyteshop.com.br,mercadolivre.com.br,amazon.com.br,sensetup.com.br,loja.elements.com.br,flexform.com.br,shopee.com.br,magazineluiza.com.br,frigelar.com.br', True),
     ('amazon.com.br,frigelar.com.br', False),
 ])
 def test_vps_upgrade_updates_standard_store_lists_but_preserves_custom(tmp_path, domains, updated):
@@ -132,5 +133,6 @@ def test_vps_upgrade_updates_standard_store_lists_but_preserves_custom(tmp_path,
     assert 'DATABASE_PATH=keep.sqlite' in result and 'TELEGRAM_CHAT_ID=-123' in result
     if updated:
         assert 'shopee.com.br,magazineluiza.com.br,frigelar.com.br' in result
+        assert 'brastemp.com.br' in result
     else:
         assert result == original

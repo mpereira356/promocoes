@@ -1131,6 +1131,17 @@
         "Ergonômicas"
       ],
       "url": "https://www.flexform.com.br/cadeiras/cadeiras-ergonomicas"
+    },
+    {
+      "domain": "brastemp.com.br",
+      "title": "Freezers verticais",
+      "url": "https://www.brastemp.com.br/eletrodomesticos/freezer/vertical",
+      "key": "eletrodomesticos/freezers-verticais",
+      "path": [
+        "Eletrodomésticos",
+        "Freezers verticais"
+      ],
+      "observed_at": "2026-10-19"
     }
   ]
 }

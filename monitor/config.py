@@ -4,7 +4,7 @@ from decimal import Decimal
 from dotenv import load_dotenv
 import re
 
-DEFAULT_DOMAINS = 'kabum.com.br,pichau.com.br,terabyteshop.com.br,mercadolivre.com.br,amazon.com.br,sensetup.com.br,loja.elements.com.br,flexform.com.br,shopee.com.br,magazineluiza.com.br,frigelar.com.br'
+DEFAULT_DOMAINS = 'kabum.com.br,pichau.com.br,terabyteshop.com.br,mercadolivre.com.br,amazon.com.br,sensetup.com.br,loja.elements.com.br,flexform.com.br,shopee.com.br,magazineluiza.com.br,frigelar.com.br,brastemp.com.br'
 
 
 def normalize_domains(value):

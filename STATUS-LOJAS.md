@@ -1,3 +1,13 @@
+# Brastemp oficial - 2026.10.19-brastemp.1
+
+Loja oficial integrada com validacao real local. BVR28PB 110V/220V: HTTP 200,
+364900 centavos, disponivel; bandeira explicitamente identificada para o total
+a vista no cartao, sem inferir Pix. EANs e voltagens diferentes preservados.
+BVR28NB: 595900 centavos, indisponivel; BVR28NK: 480900 centavos, indisponivel.
+Busca real por sitemap encontrou dois links; categoria vertical tambem consultada.
+Preco generico de item indisponivel nao significa oferta compravel nem gera alerta.
+Valores pontuais; nao houve execucao na VPS. Ver LOJAS-FREEZERS.md.
+
 # Freezers - 2026.10.19-freezers.1
 
 Frigelar: descoberta real de seis links pelo sitemap, quatro produtos lidos em

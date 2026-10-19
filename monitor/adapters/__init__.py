@@ -10,6 +10,7 @@ from .flexform import FlexformAdapter
 from .shopee import ShopeeAdapter
 from .magalu import MagaluAdapter
 from .frigelar import FrigelarAdapter
+from .brastemp import BrastempAdapter
 
 ADAPTERS = {
     "kabum.com.br": KabumAdapter,
@@ -23,6 +24,7 @@ ADAPTERS = {
     "shopee.com.br": ShopeeAdapter,
     "magazineluiza.com.br": MagaluAdapter,
     "frigelar.com.br": FrigelarAdapter,
+    "brastemp.com.br": BrastempAdapter,
 }
 
 

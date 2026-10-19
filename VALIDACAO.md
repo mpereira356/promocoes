@@ -1,3 +1,22 @@
+# Loja oficial Brastemp - 2026.10.19-brastemp.1
+
+503 testes passaram (tres avisos PTB preexistentes). Treze testes novos da
+Brastemp usam fixtures publicas reduzidas e mutacoes simuladas: SKU solicitado,
+EAN, tensao, preco e estoque conflitantes, total versus parcela, preco de
+referencia da mesma oferta, categoria/menu e descoberta simulada por sitemap.
+Mais um caso verifica a migracao da lista padrao de onze lojas da versao anterior.
+Fixtures excluem priceToken, dados de sessao e scripts de terceiros.
+
+Testes REAIS locais: robots HTTP 200; sitemap index e dois sitemaps de produtos;
+busca integrada Search -> Monitor.read_snapshot de BVR28NB e BVR28NK devolveu
+precos e estoque indisponivel. BVR28PB foi lido nas variantes 110V e 220V, com
+364900 centavos em ambas, estoque disponivel e EANs distintos. A forma de
+pagamento identifica a bandeira, a partir de um plano de uma parcela sem juros
+com total explicito igual ao preco da oferta. Nao se presume Pix. Categoria
+vertical e categoria 110V devolveram links estruturados de produtos.
+Sem envio real ao Telegram nem execucao na VPS. Valores sao capturas pontuais.
+Detalhes e exemplos em LOJAS-FREEZERS.md.
+
 # Shopee e freezers - 2026.10.19-freezers.1
 
 489 testes passaram (tres avisos PTB preexistentes). Dezessete novos casos cobrem
