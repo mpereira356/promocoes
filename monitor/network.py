@@ -57,13 +57,16 @@ class Fetcher:
         )
         if marketplace_host:
             domain = 'mercadolivre.com.br'
+        mobile_magalu = host == 'm.magazineluiza.com.br'
+        if mobile_magalu:
+            domain = 'magazineluiza.com.br'
         if (
             p.scheme != "https"
             or p.username
             or p.password
             or p.port not in (None, 443)
             or domain not in self.config.domains
-            or (host not in (domain, "www." + domain) and not marketplace_host)
+            or (host not in (domain, "www." + domain) and not marketplace_host and not mobile_magalu)
         ):
             raise ReadError("url_not_allowed")
         query = urlencode(

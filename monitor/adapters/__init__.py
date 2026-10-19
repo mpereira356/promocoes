@@ -7,6 +7,9 @@ from .amazon import AmazonAdapter
 from .sensetup import SensetupAdapter
 from .elements import ElementsAdapter
 from .flexform import FlexformAdapter
+from .shopee import ShopeeAdapter
+from .magalu import MagaluAdapter
+from .frigelar import FrigelarAdapter
 
 ADAPTERS = {
     "kabum.com.br": KabumAdapter,
@@ -17,6 +20,9 @@ ADAPTERS = {
     "sensetup.com.br": SensetupAdapter,
     "loja.elements.com.br": ElementsAdapter,
     "flexform.com.br": FlexformAdapter,
+    "shopee.com.br": ShopeeAdapter,
+    "magazineluiza.com.br": MagaluAdapter,
+    "frigelar.com.br": FrigelarAdapter,
 }
 
 

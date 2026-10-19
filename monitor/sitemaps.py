@@ -87,6 +87,8 @@ async def sitemap_candidates(store, domain, fetcher):
                 continue
             # O slug serve somente para selecionar links candidatos, nunca para preco/estoque.
             title = unquote(urlsplit(link).path.rsplit("/", 1)[-1]).replace("-", " ")
+            if hasattr(store, 'sitemap_title'):
+                title = store.sitemap_title(link)
             products.setdefault(link, LinkCandidate(link, title))
             if len(products) >= MAX_URLS:
                 break

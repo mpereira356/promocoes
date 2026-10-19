@@ -1,3 +1,20 @@
+# Shopee e freezers - 2026.10.19-freezers.1
+
+489 testes passaram (tres avisos PTB preexistentes). Dezessete novos casos cobrem
+fixtures reais reduzidas da Frigelar, documentos estruturados simulados de
+Shopee/Magalu, descoberta por sitemap/indice simulado, exclusao de categorias e
+pecas, plural, conflitos de tensao/capacidade, host mobile oficial e migracao
+segura da lista de dominios do instalador (preserva listas personalizadas).
+
+Validacao real local: Frigelar robots e paginas HTTP 200; dois produtos lidos por
+links e dois por descoberta via sitemap. Busca por freezer vertical encontrou
+seis candidatos. Shopee HTTP 200 sem Product/Offer; mesmo resultado no Chromium.
+Indice externo sem candidatos Shopee/Magalu nesta amostra, inclusive com filtro
+de URL de produto e alternativa sem filtro. Magalu busca e produto HTTP 403.
+Nao se afirma leitura de precos reais Shopee/Magalu; testes desses parsers usam
+simulacoes. Sem execucao na VPS ou envio real ao Telegram.
+Detalhes e links: LOJAS-FREEZERS.md.
+
 # Confirmacao destacada - 2026.10.18-confirm-choice.1
 
 472 testes passaram (tres avisos PTB preexistentes). Cartao de confirmacao com

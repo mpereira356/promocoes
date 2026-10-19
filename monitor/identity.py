@@ -4,7 +4,8 @@ from .models import normalize
 import re
 
 BRANDS = frozenset({'logitech', 'corsair', 'superframe', 'ajazz', 'razer', 'redragon',
-    'hyperx', 'havit', 'asus', 'gigabyte', 'msi', 'asrock', 'kingston', 'crucial', 'samsung'})
+    'hyperx', 'havit', 'asus', 'gigabyte', 'msi', 'asrock', 'kingston', 'crucial', 'samsung',
+    'consul', 'brastemp', 'electrolux', 'philco', 'midea', 'eos', 'metalfrio', 'gelopar', 'fricon'})
 
 
 def brand_conflict(left, right):
@@ -69,6 +70,13 @@ def monitoring_search_terms(title, identifiers=None):
 def model_conflict(left, right):
     """Conflitos explicitos de familias conhecidas, sem adivinhar sinonimos."""
     a, b = normalize(left), normalize(right)
+    if 'freezer' in a.split() and 'freezer' in b.split():
+        for pattern in (r'\b(110|115|127|220|240)\s*v\b', r'\b(\d+)\s*(?:l|litros)\b'):
+            x, y = set(re.findall(pattern, a)), set(re.findall(pattern, b))
+            if x and y and x != y:
+                return True
+        if ('vertical' in a and 'horizontal' in b) or ('horizontal' in a and 'vertical' in b):
+            return True
     if brand_conflict(left, right):
         return True
     if 'echo dot' in a and 'echo dot' in b:

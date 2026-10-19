@@ -27,7 +27,7 @@ class ExternalMarketSearch:
 
     async def links(self, query, domain='mercadolivre.com.br'):
         result = await self._links(query, domain)
-        if domain == 'amazon.com.br' and not any(candidate_relevance(query, c) for c in result):
+        if domain in ('amazon.com.br', 'shopee.com.br', 'magazineluiza.com.br', 'frigelar.com.br') and not any(candidate_relevance(query, c) for c in result):
             # No maximo uma alternativa; nunca repetir apos bloqueio/limite.
             result = await self._links(query, domain, product_hint=False)
         return result
@@ -59,7 +59,10 @@ class ExternalMarketSearch:
                         response = await client.post(
                             'https://api.tavily.com/search',
                             headers={'X-Tavily-Access-Mode': 'keyless', 'X-Client-Source': 'price-monitor'},
-                            json={'query': lookup + ' site:' + domain + (' inurl:dp' if domain == 'amazon.com.br' and product_hint else ''),
+                            json={'query': lookup + ' site:' + domain + ({
+                                      'amazon.com.br': ' inurl:dp', 'shopee.com.br': ' inurl:-i.',
+                                      'magazineluiza.com.br': ' inurl:/p/', 'frigelar.com.br': ' inurl:/p/',
+                                  }.get(domain, '') if product_hint else ''),
                                   'include_domains': [domain],
                                   'include_domains_mode': 'restrict', 'search_depth': 'basic',
                                   'auto_parameters': False, 'max_results': 10,

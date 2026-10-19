@@ -1,1 +1,1 @@
-VERSION = "2026.10.18-confirm-choice.1"
+VERSION = "2026.10.19-freezers.1"

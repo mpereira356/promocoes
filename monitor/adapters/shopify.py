@@ -14,7 +14,8 @@ def chair_store_supports_query(query):
     words = set(text.split())
     if words & {'cadeira', 'cadeiras', 'mesa', 'mesas', 'poltrona', 'poltronas'}:
         return True
-    hardware = {'teclado', 'mouse', 'headset', 'processador', 'ssd', 'memoria', 'notebook', 'gabinete'}
+    hardware = {'teclado', 'mouse', 'headset', 'processador', 'ssd', 'memoria', 'notebook', 'gabinete',
+                'freezer', 'freezers', 'geladeira', 'refrigerador'}
     return not (words & hardware or 'placa mae' in text or
                 re.search(r'\b(?:[bxyz]\d{3}m?|rtx\s*\d{4}|ddr[345])\b', text))
 

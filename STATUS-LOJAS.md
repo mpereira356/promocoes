@@ -1,3 +1,13 @@
+# Freezers - 2026.10.19-freezers.1
+
+Frigelar: descoberta real de seis links pelo sitemap, quatro produtos lidos em
+HTTP 200. EOS kit8956: 248900 centavos, disponivel; Consul kit1199: 179308,
+indisponivel; Metalfrio kit9338: 769900, indisponivel; Brastemp kit9543: 440900,
+indisponivel. Valores pontuais, genericos; vendedor e pagamento ausentes.
+Shopee: HTTP 200 sem oferta estruturada, inclusive com Chromium. Nenhum preco
+real validado. Magalu: HTTP 403 na busca e no produto. Ver LOJAS-FREEZERS.md.
+Nenhum contorno de bloqueio ou envio ao Telegram; validacao local, nao na VPS.
+
 # Rechecagem B550 AX V2 - 2026.10.18-monitor-all-stores.1
 
 KaBuM 473028: HTTP 200, R$ 1.439,00 no Pix, vendedor GIGANTEC, estoque

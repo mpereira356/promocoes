@@ -30,10 +30,18 @@ def relevance(query, title):
         text = re.sub(r'(\d+)\s*[ªº°]', r'\1', text)
         text = normalize(text)
         text = re.sub(r'\b(\d+)\s+(gb|tb|mhz|hz|w)\b', r'\1\2', text)
-        aliases = {'cadeiras': 'cadeira', 'ergonomicas': 'ergonomica', 'ergonomicos': 'ergonomico'}
+        aliases = {'cadeiras': 'cadeira', 'ergonomicas': 'ergonomica', 'ergonomicos': 'ergonomico',
+                   'freezers': 'freezer', 'verticais': 'vertical'}
         return {aliases.get(word, word) for word in text.split()}
     wanted = terms(query) - stop
     found = terms(title)
+    if 'freezer' in wanted:
+        if 'freezer' not in found or ('vertical' in wanted and 'vertical' not in found):
+            return 0
+        parts = {'termostato', 'dobradica', 'borracha', 'prateleira', 'gaveta', 'sensor',
+                 'resistencia', 'compressor', 'peca', 'reposicao', 'rele', 'protetor'}
+        if (found & parts) - wanted:
+            return 0
     if 'echo dot' in normalize(query) and 'echo dot' not in normalize(title):
         return 0
     vacuum_parts = {'copo', 'filtro', 'escova', 'bico', 'bateria', 'carregador', 'peca'}
