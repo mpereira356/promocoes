@@ -7,6 +7,22 @@ BRANDS = frozenset({'logitech', 'corsair', 'superframe', 'ajazz', 'razer', 'redr
     'hyperx', 'havit', 'asus', 'gigabyte', 'msi', 'asrock', 'kingston', 'crucial', 'samsung',
     'consul', 'brastemp', 'electrolux', 'philco', 'midea', 'eos', 'metalfrio', 'gelopar', 'fricon'})
 
+APPLIANCE_PATTERNS = {
+    'brastemp': r'\b(?P<model>bvr\d{2}[a-z]{2})(?:[ab]na)?\b',
+    'consul': r'\b(?P<model>cvu\d{2}[a-z]{2})(?:[ab]na)?\b',
+    'eos': r'\befv\d{2,4}[a-z]*\b',
+    'philco': r'\bpfv\d{2,4}[a-z]*\b',
+}
+
+
+def appliance_model_aliases(text):
+    """Familias apenas para descoberta; sufixos/tensao ainda exigem verificacao."""
+    result = set()
+    for pattern in APPLIANCE_PATTERNS.values():
+        for match in re.finditer(pattern, normalize(text)):
+            result.add(match.groupdict().get('model') or match[0])
+    return result
+
 
 def brand_conflict(left, right):
     a, b = set(normalize(left).split()) & BRANDS, set(normalize(right).split()) & BRANDS
@@ -49,6 +65,7 @@ def monitoring_search_terms(title, identifiers=None):
         'epomaker': r'\b(?:he|th|rt|ep)\d{2,4}[a-z]*(?: (?:pro|max|plus|mini|lite))?\b',
         'hyperx': r'\bmars\b',
         'sensetup': r'\ba\d{2,3}(?: premium)?\b',
+        **APPLIANCE_PATTERNS,
     }
     match = re.search(patterns[brand], text) if brand in patterns else None
     if match:
@@ -57,10 +74,13 @@ def monitoring_search_terms(title, identifiers=None):
             return search_terms(title, identifiers)
         revision = ' rev ' + next(iter(revisions)) if revisions else ''
         prefix = 'cadeira ' if brand == 'sensetup' else ''
-        return prefix + brand + ' ' + match[0] + revision
+        model = match.groupdict().get('model') or match[0]
+        return prefix + brand + ' ' + model + revision
     model = identifiers.get('model')
     brand = brand or normalize(identifiers.get('brand', ''))
-    if (brand and len(brand) <= 60 and isinstance(model, str) and 2 <= len(normalize(model).split()) <= 12
+    single_code = (isinstance(model, str) and bool(re.fullmatch(r'(?=[a-z0-9-]*\d)[a-z][a-z0-9-]{2,39}', normalize(model)))
+                   and not re.fullmatch(r'(?:[bxyz]\d{3}[a-z]?|ddr\d+)', normalize(model)))
+    if (brand and len(brand) <= 60 and isinstance(model, str) and (single_code or 2 <= len(normalize(model).split()) <= 12)
             and len(model) <= 100 and any(c.isdigit() for c in model)):
         model = normalize(model)
         return model if model.startswith(brand + ' ') else brand + ' ' + model

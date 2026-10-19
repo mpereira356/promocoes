@@ -24,7 +24,7 @@ class SearchLinks(list):
 
 
 def relevance(query, title):
-    from .identity import model_conflict, logitech_part_number, BRANDS
+    from .identity import model_conflict, logitech_part_number, BRANDS, appliance_model_aliases
     stop = {"de", "da", "do", "das", "dos", "com", "para", "e", "a", "o"}
     def terms(text):
         text = re.sub(r'(\d+)\s*[ªº°]', r'\1', text)
@@ -32,11 +32,11 @@ def relevance(query, title):
         text = re.sub(r'\b(\d+)\s+(gb|tb|mhz|hz|w)\b', r'\1\2', text)
         aliases = {'cadeiras': 'cadeira', 'ergonomicas': 'ergonomica', 'ergonomicos': 'ergonomico',
                    'freezers': 'freezer', 'verticais': 'vertical'}
-        return {aliases.get(word, word) for word in text.split()}
+        return {aliases.get(word, word) for word in text.split()} | appliance_model_aliases(text)
     wanted = terms(query) - stop
     found = terms(title)
-    if 'freezer' in wanted:
-        if 'freezer' not in found or ('vertical' in wanted and 'vertical' not in found):
+    if 'freezer' in wanted or appliance_model_aliases(query):
+        if ('freezer' in wanted and 'freezer' not in found) or ('vertical' in wanted and 'vertical' not in found):
             return 0
         parts = {'termostato', 'dobradica', 'borracha', 'prateleira', 'gaveta', 'sensor',
                  'resistencia', 'compressor', 'peca', 'reposicao', 'rele', 'protetor'}

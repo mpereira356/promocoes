@@ -28,6 +28,13 @@ from monitor.adapters.base import ReadError, StructuredAdapter
     ('Descricao comprida', {'brand':'hoto','model':'4in1 V2'}, 'hoto 4in1 v2'),
     ('Descricao comprida', {'brand':'logitech g','mpn':'920 011902'}, 'logitech 920-011902'),
     ('Cadeira Ergonômica Home Office A08 Premium', {'brand':'sensetup'}, 'cadeira sensetup a08 premium'),
+    ('Freezer 276 Litros Vertical Flex Frost Free Branco Brastemp - BVR28PB · 110V', {'brand':'brastemp','model':'bvr28pb'}, 'brastemp bvr28pb'),
+    ('Freezer Vertical Brastemp BVR28PBANA 276L Branco 110V', {}, 'brastemp bvr28pb'),
+    ('Freezer Vertical Consul 142 Litros CVU20GBBNA 220V', {}, 'consul cvu20gb'),
+    ('Freezer Vertical EOS 242 Litros EcoGelo EFV300 110V', {}, 'eos efv300'),
+    ('Freezer Vertical Philco 201 Litros PFV205I Inox', {}, 'philco pfv205i'),
+    ('Descricao comercial longa', {'brand':'marca','model':'XYZ900'}, 'marca xyz900'),
+    ('Descricao comercial longa', {'brand':'marca','model':'B550'}, 'Descricao comercial longa'),
 ])
 def test_monitoring_query_uses_model_preserving_versions(title,ids,expected):
     before=ids.copy()
@@ -40,6 +47,42 @@ def test_structured_model_is_preserved_as_declared_metadata():
         'offers':{'@type':'Offer','price':'100.00'}}
     r=StructuredAdapter().parse('<script type="application/ld+json">'+json.dumps(product)+'</script>','https://www.pichau.com.br/item')[0]
     assert r.identifiers['model']=='fury beast ddr4 3200'
+
+
+def test_freezer_all_stores_use_model_and_read_different_titles_each_cycle():
+    async def run():
+        from monitor.discovery import relevance
+        db = DB(':memory:')
+        seed = Reading('Freezer 276 Litros Vertical Flex Frost Free Branco Brastemp - BVR28PB · 110V',
+                       'Vendedor ID 1', 'NewCondition', 'Pix', 364900, 'in_stock',
+                       identifiers={'brand':'brastemp', 'model':'bvr28pb'})
+        origin = 'https://www.brastemp.com.br/freezer-vertical-flex-frost-free-brastemp-326196069/p'
+        other = 'https://www.frigelar.com.br/freezer-brastemp/p/kit-test'
+        config = SimpleNamespace(minimum=0, percent=0, target=None, interval=18000,
+                                 domains=('brastemp.com.br', 'frigelar.com.br'))
+        try:
+            ad = db.save_ad(origin, 'Brastemp oficial', seed)
+            pid, _ = db.subscribe(db.request_scope(ad['id']), 'all', config)
+            search = SimpleNamespace(links=AsyncMock(return_value=[other]))
+            fetch = SimpleNamespace(canonical=lambda u: (u,urlsplit(u).hostname.removeprefix('www.')))
+            m = Monitor(db, config, fetch, search, AsyncMock())
+            alternate = replace(seed, title='Brastemp BVR28PBANA Freezer Frost Free Vertical 276L 110V',
+                                seller='Outra loja', identifiers={})
+            assert relevance('brastemp bvr28pb', alternate.title)
+            assert not relevance('brastemp bvr28pb', 'Freezer Brastemp BVR28PK Inox')
+            assert not relevance('brastemp bvr28pb', 'Gaveta para Freezer Brastemp BVR28PB')
+            m.read = AsyncMock(side_effect=lambda u: [seed if u == origin else alternate])
+            for _ in range(2):
+                await m.check(pid)
+            assert [c.args[0] for c in search.links.await_args_list] == ['brastemp bvr28pb'] * 2
+            assert {c.args[0] for c in m.read.await_args_list} == {origin, other}
+            candidate = db.rows('SELECT * FROM candidates WHERE url=?', (other,))[0]
+            assert candidate['title'] == alternate.title and not candidate['confirmed']
+            assert db.rows('SELECT query FROM products WHERE id=?', (pid,))[0]['query'] == seed.title
+            assert not db.rows('SELECT * FROM alerts')  # Descoberta nao confirma equivalencia.
+        finally:
+            db.conn.close()
+    asyncio.run(run())
 
 
 def test_all_stores_use_short_model_every_cycle_and_keep_original_title():

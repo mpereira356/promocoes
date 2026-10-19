@@ -1,3 +1,20 @@
+# Busca pelo modelo entre lojas - 2026.10.19-model-search.1
+
+511 testes passaram (tres avisos PTB preexistentes). Oito casos adicionais cobrem
+modelos estruturados de uma palavra, extracao de familias de freezers, rejeicao
+de especificacao generica como modelo e fluxo all com duas verificacoes de nomes
+diferentes em lojas distintas. BVR28PBANA pode ser candidato de BVR28PB na
+descoberta, mas nao confirma equivalencia: EAN, voltagem, capacidade e condicao
+continuam sujeitos a verificacao; ambiguos continuam pendentes. Pecas com esses
+codigos de freezer sao excluidas da descoberta.
+
+Correcao reproduzida: modelo estruturado bvr28pb era ignorado por ter uma palavra,
+caindo no titulo completo. Agora e pesquisado como brastemp bvr28pb. Nomes
+originais e banco nao sao reescritos; a consulta e calculada a cada verificacao.
+Modelos nao reconhecidos e sem metadados suficientes ainda podem usar o titulo.
+Validacao com simulacoes/fixtures; sem nova consulta real a lojas, envio Telegram
+ou execucao na VPS nesta revisao.
+
 # Resumo apenas com precos encontrados - 2026.10.19-summary.1
 
 19 testes locais de monitoramentos e recuperacao entre lojas passaram. Resumo

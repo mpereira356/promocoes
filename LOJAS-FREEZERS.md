@@ -1,5 +1,11 @@
 # Shopee e freezers verticais
 
+Monitoramento em outras lojas usa marca/modelo (ex.: `brastemp bvr28pb`), e nao
+precisa que os titulos comerciais sejam iguais. Codigos de variante podem gerar
+candidatos, mas tensao/EAN/condicao continuam exigindo verificacao. Monitoramentos
+existentes usam a nova consulta no proximo ciclo, sem recadastro. Bloqueios ou
+limites das lojas ainda podem impedir resultados.
+
 ## Loja oficial Brastemp (19/10/2026)
 
 `brastemp.com.br` integrado à busca, cadastro por link e menu de promoções.
