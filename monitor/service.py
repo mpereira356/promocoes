@@ -299,20 +299,16 @@ class Monitor:
                 for item in unavailable_stores.values():
                     notes.append(f"⚠️ {item['store']}: {short_reason(item['reason'])}.\n"
                         f"{item['count']} oferta(s) sem atualização. Preços anteriores preservados.\n{item['url']}")
-                domains = list(getattr(self.config, 'domains', ())) if p['scope'] == 'all' else []
-                domains = list(dict.fromkeys(domains + list(coverage)))
                 lines = ['🏪 Resumo por loja']
-                for domain in domains:
-                    stats = coverage.get(domain)
+                for domain, stats in coverage.items():
+                    if not stats['priced']:
+                        continue
                     name = adapter(domain).name
-                    if stats is None:
-                        lines.append(f'{name}: sem oferta nesta consulta.')
-                    else:
-                        line = f"{name}: {len(stats['priced'])} preço(s)"
-                        if stats['failed']: line += f" · {stats['failed']} falha(s)"
-                        if stats['deferred']: line += f" · {stats['deferred']} adiada(s)"
-                        lines.append(line)
-                if domains:
+                    line = f"{name}: {len(stats['priced'])} preço(s)"
+                    if stats['failed']: line += f" · {stats['failed']} falha(s)"
+                    if stats['deferred']: line += f" · {stats['deferred']} adiada(s)"
+                    lines.append(line)
+                if len(lines) > 1:
                     notes.append('\n'.join(lines))
                 await self.options(pid, only_new=True)
                 await self.deliver()

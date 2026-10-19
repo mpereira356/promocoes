@@ -220,6 +220,7 @@ def test_monitor_failure_is_readable_and_preserves_last_price(data):
         monitor.read = AsyncMock(side_effect=ReadError('blocked_no_bypass'))
         message = await monitor.check(pid)
         assert 'acesso bloqueado pela loja' in message
+        assert '🏪 Resumo por loja' not in message
         assert 'blocked_no_bypass' not in message
         assert ad['url'] in message
         assert db.rows('SELECT last FROM series')[0]['last'] == before
@@ -346,7 +347,7 @@ def test_monitor_defers_repeated_store_failures_but_checks_other_stores_each_cyc
         for _ in range(2):
             text=await monitor.check(pid)
             assert text.count('⚠️ Pichau:')==1
-            assert 'Pichau: 0 preço(s) · 1 falha(s) · 2 adiada(s)' in text
+            assert 'Pichau: 0 preço(s)' not in text
             assert '3 oferta(s) sem atualiza\u00e7\u00e3o' in text
         visited=[c.args[0] for c in monitor.read.await_args_list]
         assert visited.count(urls[0])==2 and ad['url'] in visited

@@ -1,3 +1,11 @@
+# Resumo apenas com precos encontrados - 2026.10.19-summary.1
+
+19 testes locais de monitoramentos e recuperacao entre lojas passaram. Resumo
+lista apenas lojas com preco lido, omite lojas vazias e nao exibe cabecalho vazio.
+Avisos de falha continuam separados e a preservacao de precos anteriores foi
+verificada nos testes existentes. Nenhuma alteracao na consulta das lojas.
+Validacao com transporte simulado; sem envio real ao Telegram ou teste na VPS.
+
 # Loja oficial Brastemp - 2026.10.19-brastemp.1
 
 503 testes passaram (tres avisos PTB preexistentes). Treze testes novos da

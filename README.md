@@ -1,4 +1,4 @@
-**Versão atual: `2026.10.19-brastemp.1`.** Envie **/start** ou **/menu** para usar a central de botões: buscas, promoções, monitoramentos e dinheiro emprestado. Veja [MENU-TELEGRAM.md](MENU-TELEGRAM.md).
+**Versão atual: `2026.10.19-summary.1`.** Envie **/start** ou **/menu** para usar a central de botões: buscas, promoções, monitoramentos e dinheiro emprestado. Veja [MENU-TELEGRAM.md](MENU-TELEGRAM.md).
 
 Loja oficial Brastemp, Shopee, Magalu e Frigelar: comandos, validacao real e limitacoes em [LOJAS-FREEZERS.md](LOJAS-FREEZERS.md). Brastemp e Frigelar retornaram precos em testes reais; Shopee ainda sem leitura real validada e Magalu bloqueada na amostra.
 
