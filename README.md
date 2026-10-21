@@ -1,6 +1,8 @@
-**Versão atual: `2026.10.19-model-search.1`.** Envie **/start** ou **/menu** para usar a central de botões: buscas, promoções, monitoramentos e dinheiro emprestado. Veja [MENU-TELEGRAM.md](MENU-TELEGRAM.md).
+**Versão atual: `2026.10.21-store-search.1`.** Envie **/start** ou **/menu** para usar a central de botões: buscas, promoções, monitoramentos e dinheiro emprestado. Veja [MENU-TELEGRAM.md](MENU-TELEGRAM.md).
 
 Loja oficial Brastemp, Shopee, Magalu e Frigelar: comandos, validacao real e limitacoes em [LOJAS-FREEZERS.md](LOJAS-FREEZERS.md). Brastemp e Frigelar retornaram precos em testes reais; Shopee ainda sem leitura real validada e Magalu bloqueada na amostra.
+
+Lacoste Brasil: `/promocoes lacoste`, desconto maior/menor que o percentual escolhido e tamanho opcional. Busca por sitemap público e preços de boné/camiseta validados em páginas reais em 21/10/2026. Veja [LACOSTE.md](LACOSTE.md) e a [auditoria das 13 lojas](AUDITORIA-LOJAS.md).
 
 **Fila de pedidos:** o bot executa uma tarefa por vez. Se uma pesquisa ou
 verificação estiver em andamento, novos comandos, mensagens e botões autorizados

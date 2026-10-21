@@ -9,7 +9,7 @@ from ..selection import authorized
 from ..telegram_text import send_text
 from .adapters import ADAPTERS
 from .catalog import CategoryCatalog, Category
-from .models import DiscountFilter
+from .models import DiscountFilter, parse_size
 from .formatting import messages
 
 PAGE_SIZE = 8
@@ -28,6 +28,7 @@ class Session:
     groups: list[str] = field(default_factory=list)
     choices: list[Category] = field(default_factory=list)
     revision: int = 0
+    size: str = ''
 
 
 class PromotionsTelegram:
@@ -69,6 +70,9 @@ class PromotionsTelegram:
         try:
             if name == '/descontopromo' and session.stage == 'filter':
                 session.discount = DiscountFilter.parse(args)
+                return await self.after_discount(reply)
+            if name == '/tamanhopromo' and session.stage in ('size', 'stores'):
+                session.size = parse_size(args)
                 session.stage = 'stores'
                 return await self.show_stores(reply)
             if name == '/ceppromo':
@@ -135,12 +139,30 @@ class PromotionsTelegram:
 
     async def select(self, category, reply):
         session = self.session
+        session.size = ''
+        if set(category.urls) == {'lacoste.com'}:
+            session.stores = {'lacoste.com'}
         session.category, session.stage = category, 'filter'
         notice = ('\nBusca por termo: esta categoria ainda não tem página mapeada. Serão procuradas ofertas com o termo informado; não é uma varredura completa de categoria.\n' if category.query else '\n')
-        return await reply(f'🏷️ {category.title}\n{notice}\nEscolha o desconto anunciado ou use /descontopromo >25,5.\n\nExemplos de uso\n/descontopromo >30 — 30% não entra; 31% entra.\n/descontopromo >=30 — 30% já entra.\nDe R$ 1.000,00 por R$ 700,00 = 30% de desconto anunciado.\nEsta busca é pontual e não cria alertas.', reply_markup=self.keyboard([('Maior que 30%', 'gt30'), ('Maior ou igual a 30%', 'ge30'), ('✍️ Outro percentual','discount')]))
+        return await reply(f'🏷️ {category.title}\n{notice}\nEscolha o desconto anunciado ou use /descontopromo >25,5.\n\nExemplos de uso\n/descontopromo >30 — 30% não entra; 31% entra.\n/descontopromo >=30 — 30% já entra.\nDe R$ 1.000,00 por R$ 700,00 = 30% de desconto anunciado.\nEsta busca é pontual e não cria alertas.', reply_markup=self.keyboard([('Maior que 30%', 'gt30'), ('Maior ou igual a 30%', 'ge30'), ('Menor que 30%', 'lt30'), ('Menor ou igual a 30%', 'le30'), ('✍️ Outro percentual','discount')]))
+
+    async def after_discount(self, reply):
+        if self.session.category and set(self.session.category.urls) == {'lacoste.com'}:
+            return await self.show_sizes(reply)
+        self.session.stage = 'stores'
+        return await self.show_stores(reply)
+
+    async def show_sizes(self, reply):
+        self.session.stage = 'size'
+        buttons = [('Ignorar tamanho (todos)', 'sizeall')]
+        buttons += [(size, 'size'+size) for size in ('PP', 'P', 'M', 'G', 'GG', 'XG', 'TU', '2', '3', '4', '5', '6')]
+        buttons += [('Outro tamanho / calçado', 'sizecustom')]
+        return await reply('Escolha o tamanho exatamente como aparece na loja. Não converto M em número Lacoste. Para um tamanho específico, só entram itens com estoque confirmado nesse tamanho.\nTambém aceita /tamanhopromo 42 ou /tamanhopromo todos.', reply_markup=self.keyboard(buttons))
 
     async def show_stores(self, reply):
         buttons = [(('✅ ' if d in self.session.stores else '⬜ ') + ADAPTERS[d].store, 'store'+str(i)) for i, d in enumerate(self.domains)]
+        if 'lacoste.com' in self.session.stores:
+            buttons.append(('Tamanho: ' + (self.session.size or 'todos') + ' — alterar', 'sizes'))
         buttons += [('Todas as lojas habilitadas', 'all'), ('📍 Informar CEP','cep'), ('🔎 Pesquisar agora', 'run'), ('↩️ Trocar categoria', 'home')]
         title = self.session.category.title if self.session.category else 'Categoria não selecionada'
         return await reply(f'🏷️ {title}\n\nSelecione as lojas. Toque para marcar ou desmarcar e depois escolha Pesquisar agora.\nLojas sem página mapeada usarão busca por termo, identificada no resumo.\nOpcional: /ceppromo 01001000. A consulta não ativa alertas futuros.', reply_markup=self.keyboard(buttons))
@@ -185,7 +207,17 @@ class PromotionsTelegram:
         if action == 'discount' and session.stage == 'filter':
             if self.prompt_input:
                 return await self.prompt_input(update,'discount')
-            return await reply('Use /descontopromo >=30. O filtro aceita >30 e >=30, inclusive outros percentuais.')
+            return await reply('Use /descontopromo >30, >=30, <30 ou <=30.')
+        if action == 'sizecustom' and session.stage == 'size':
+            if self.prompt_input:
+                return await self.prompt_input(update, 'size')
+            return await reply('Use /tamanhopromo M, /tamanhopromo 4 ou /tamanhopromo 42. Para ignorar: /tamanhopromo todos.')
+        if action.startswith('size') and session.stage == 'size' and action != 'sizecustom':
+            session.size = parse_size('todos' if action == 'sizeall' else action[4:])
+            session.stage = 'stores'
+            return await self.show_stores(reply)
+        if action == 'sizes' and session.stage == 'stores':
+            return await self.show_sizes(reply)
         if action == 'cep' and session.stage == 'stores':
             if self.prompt_input:
                 return await self.prompt_input(update,'cep')
@@ -205,10 +237,9 @@ class PromotionsTelegram:
             index = int(action[4:])
             if index < len(session.choices):
                 return await self.select(session.choices[index], reply)
-        if action in ('gt30', 'ge30') and session.stage == 'filter':
-            session.discount = DiscountFilter.parse('>30' if action == 'gt30' else '>=30')
-            session.stage = 'stores'
-            return await self.show_stores(reply)
+        if action in ('gt30', 'ge30', 'lt30', 'le30') and session.stage == 'filter':
+            session.discount = DiscountFilter.parse({'gt30': '>30', 'ge30': '>=30', 'lt30': '<30', 'le30': '<=30'}[action])
+            return await self.after_discount(reply)
         if session.stage != 'stores':
             return await reply('Este botão pertence a uma etapa anterior. Use a seleção mais recente.')
         if action == 'all':
@@ -237,7 +268,8 @@ class PromotionsTelegram:
     async def execute(self, session):
         try:
             try:
-                report = await self.deals.run(session.category, session.discount, sorted(session.stores), session.cep)
+                kwargs = {'size': session.size} if session.size else {}
+                report = await self.deals.run(session.category, session.discount, sorted(session.stores), session.cep, **kwargs)
                 output = list(messages(report))
             except Exception as exc:
                 logging.getLogger(__name__).critical('promo_search_failed type=%s', type(exc).__name__)

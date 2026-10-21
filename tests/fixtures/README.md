@@ -13,3 +13,6 @@ pichau_product_browser_real.html e terabyte_product_browser_real.html: recortes 
 `amazon_unavailable_real.html` e `amazon_hidden_price_real.html` sao recortes reduzidos de paginas Amazon reais observadas em 15/10/2026. Preservam apenas titulo e trechos da Buy Box usados nos testes, sem forms, credenciais ou dados de sessao. O primeiro declara indisponibilidade; o segundo identifica vendedor mas omite preco e pede acesso ao carrinho. Nenhum preco foi inventado nesses arquivos.
 
 `amazon_aod_real.html`: recorte de DOM real do painel publico de ofertas, ASIN B08KGVH7YC, 15/10/2026. Preco, vendedor e condicao foram observados na pagina. Sem forms, tokens ou cookies. Os valores sao historicos de teste, nao ofertas atuais garantidas. O leitor nao assume Pix ou estoque a partir desse painel.
+
+
+`lacoste_product_real.html` e `lacoste_cap_real.html`: recortes reais obtidos com o Fetcher em 21/10/2026. Preservam apenas h1, Product JSON-LD, identificacao publica do produto/cor e blocos de preco. Valores historicos da amostra: camiseta Pima branca de R$ 429,00 por R$ 299,00; bone azul-marinho R$ 469,00 tamanho TU. Sem cookies, tokens, formularios ou dados de sessao. Nao comprovam acesso futuro nem disponibilidade de outros tamanhos.

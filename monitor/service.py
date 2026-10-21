@@ -135,7 +135,7 @@ class Monitor:
         except ReadError as exc:
             if (
                 self.config.browser
-                and str(exc) == "structured_product_missing_or_ambiguous"
+                and str(exc) in ("structured_product_missing_or_ambiguous", "store_requires_javascript")
             ):
                 html = await self.fetcher.render(final)
                 return parser.parse(html, final), html, final

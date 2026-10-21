@@ -1,3 +1,4 @@
+from .lacoste import LacosteAdapter
 from .base import StructuredAdapter
 from .kabum import KabumAdapter
 from .pichau import PichauAdapter
@@ -13,6 +14,7 @@ from .frigelar import FrigelarAdapter
 from .brastemp import BrastempAdapter
 
 ADAPTERS = {
+    "lacoste.com": LacosteAdapter,
     "kabum.com.br": KabumAdapter,
     "pichau.com.br": PichauAdapter,
     "terabyteshop.com.br": TerabyteAdapter,

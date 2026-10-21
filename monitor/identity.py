@@ -130,6 +130,12 @@ def same_product(seed, candidate):
     if model_conflict(seed.title, candidate.title):
         return False
     left, right = seed.identifiers, candidate.identifiers
+    for key in ('color', 'size'):
+        if left.get(key) or right.get(key):
+            if not left.get(key) or not right.get(key):
+                return None
+            if normalize(left[key]) != normalize(right[key]):
+                return False
     for key in ("gtin", "generation"):
         if left.get(key) and right.get(key) and left[key] != right[key]:
             return False

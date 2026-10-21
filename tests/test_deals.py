@@ -36,7 +36,7 @@ def test_discount_exact(expression, old, current, expected):
     assert DiscountFilter.parse(expression).accepts(old, current) is expected
 
 
-@pytest.mark.parametrize('expression', ['30', '<30', '>=101', '>=-1', '>nan', '>1e2', '>30x'])
+@pytest.mark.parametrize('expression', ['30', '<<30', '>=101', '>=-1', '>nan', '>1e2', '>30x'])
 def test_invalid_filters(expression):
     with pytest.raises(ValueError):
         DiscountFilter.parse(expression)

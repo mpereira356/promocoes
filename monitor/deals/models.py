@@ -9,25 +9,28 @@ from ..models import Reading
 class DiscountFilter:
     inclusive: bool
     value: Decimal
+    less: bool = False
 
     @classmethod
     def parse(cls, text):
-        match = re.fullmatch(r'\s*(>=|>)\s*(\d{1,3}(?:[.,]\d{1,4})?)\s*%?\s*', text)
+        match = re.fullmatch(r'\s*(>=|>|<=|<)\s*(\d{1,3}(?:[.,]\d{1,4})?)\s*%?\s*', text)
         if not match:
-            raise ValueError('Use >30 ou >=30, com um percentual entre 0 e 100.')
+            raise ValueError('Use >30, >=30, <30 ou <=30, com percentual entre 0 e 100.')
         value = Decimal(match[2].replace(',', '.'))
         if value > 100:
             raise ValueError('O percentual deve estar entre 0 e 100.')
-        return cls(match[1] == '>=', value)
+        return cls('=' in match[1], value, match[1].startswith('<'))
 
     def accepts(self, old, current):
         if not valid_price(old) or not valid_price(current) or old <= current:
             return False
         left, right = Decimal(old - current) * 100, self.value * old
+        if self.less:
+            return left <= right if self.inclusive else left < right
         return left >= right if self.inclusive else left > right
 
     def __str__(self):
-        return ('>=' if self.inclusive else '>') + str(self.value) + '%'
+        return ('<' if self.less else '>') + ('=' if self.inclusive else '') + str(self.value) + '%'
 
 
 def valid_price(value):
@@ -47,6 +50,8 @@ class DealOffer:
     members: str = ''
     shipping: int | None = None
     notes: list[str] = field(default_factory=list)
+    available_sizes: list[str] = field(default_factory=list)
+    color: str = ''
 
     @property
     def ratio(self):
@@ -97,3 +102,13 @@ class DealReport:
     comparisons_limited: bool = False
     examined: list[DealOffer] = field(default_factory=list)
     category_title: str = ''
+    size: str = ''
+
+
+def parse_size(text):
+    text = text.strip().upper()
+    if text in ('TODOS', 'TODAS', 'IGNORAR', '*'):
+        return ''
+    if not re.fullmatch(r'(?:[A-Z]{1,4}|\d{1,3}(?:[.,]\d)?|ÚNICO|UNICO)', text):
+        raise ValueError('Informe um tamanho como M, G, 4 ou 42; ou todos para ignorar.')
+    return text.replace(',', '.')

@@ -1,3 +1,7 @@
+# Auditoria 2026.10.21-store-search.1
+
+Leitura real de precos em 10 das 13 lojas. Mercado Livre e Magalu tiveram bloqueios; Shopee retornou estrutura JavaScript sem oferta verificavel. Lacoste corrigida com sitemap publico e capturas reais. Detalhes e diagnostico para a VPS em [AUDITORIA-LOJAS.md](AUDITORIA-LOJAS.md).
+
 # Brastemp oficial - 2026.10.19-brastemp.1
 
 Loja oficial integrada com validacao real local. BVR28PB 110V/220V: HTTP 200,

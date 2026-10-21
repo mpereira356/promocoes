@@ -39,6 +39,8 @@ Exemplos de uso
 /alertas 1 quedas — volta a aplicar os filtros às quedas.
 /descontopromo >30 — exclui exatamente 30%; aceita, por exemplo, 31%.
 /descontopromo >=30 — inclui exatamente 30%. Use na etapa de desconto de /promocoes.
+/descontopromo <30 ou <=30 — desconto abaixo de 30%, sem ou com igualdade.
+/tamanhopromo M — tamanho exato na busca Lacoste; use todos para ignorar.
 Use ponto para centavos em /configurar: 50.90 significa R$ 50,90. Informe todos os valores, sem R$ ou separador de milhar.
 """
 
@@ -329,7 +331,7 @@ def main():
             ui.clear()
         await promotions.callback(update,context)
 
-    for name in ('promocoes', 'categoria', 'categorias', 'descontopromo', 'ceppromo'):
+    for name in ('promocoes', 'categoria', 'categorias', 'descontopromo', 'ceppromo', 'tamanhopromo'):
         app.add_handler(CommandHandler(name, queued_handler(work,promotion_command,config)))
     app.add_handler(CallbackQueryHandler(queued_handler(work,promotion_callback,config), pattern=r'^promo:'))
     app.add_handler(CallbackQueryHandler(queued_handler(work,ui.callback,config), pattern=r'^ui:'))

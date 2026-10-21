@@ -21,6 +21,8 @@ def build_package(output=None):
         "PROMOCOES.md",
         "TEMPLATES-REVISADOS.md",
         "MENU-TELEGRAM.md",
+        "LACOSTE.md",
+        "AUDITORIA-LOJAS.md",
         ".env.example",
         "requirements.txt",
         "requirements.lock.txt",

@@ -78,6 +78,15 @@ async def sitemap_candidates(store, domain, fetcher):
         if kind == "sitemapindex":
             queue = locations[: MAX_DOCUMENTS - len(visited)] + queue
             continue
+        titles = {}
+        if getattr(store, 'sitemap_image_titles', False):
+            # parse_sitemap already rejects entities and invalid XML.
+            root = ET.fromstring(text)
+            for entry in root:
+                location = entry.find('{http://www.sitemaps.org/schemas/sitemap/0.9}loc')
+                title = entry.find('.//{http://www.google.com/schemas/sitemap-image/1.1}title')
+                if location is not None and location.text and title is not None and title.text:
+                    titles[location.text.strip()] = title.text.strip()
         for location in locations:
             try:
                 link, host = fetcher.canonical(location)
@@ -89,6 +98,7 @@ async def sitemap_candidates(store, domain, fetcher):
             title = unquote(urlsplit(link).path.rsplit("/", 1)[-1]).replace("-", " ")
             if hasattr(store, 'sitemap_title'):
                 title = store.sitemap_title(link)
+            title = titles.get(location, title)
             products.setdefault(link, LinkCandidate(link, title))
             if len(products) >= MAX_URLS:
                 break

@@ -6,6 +6,13 @@ from ..identity import model_conflict
 def model_relation(a, b):
     """True somente com identificador forte ou marca e modelo declarados."""
     ra, rb = a.reading, b.reading
+    for key in ('color', 'size'):
+        va, vb = ra.identifiers.get(key), rb.identifiers.get(key)
+        if va or vb:
+            if not va or not vb:
+                return None
+            if normalize(va) != normalize(vb):
+                return False
     if model_conflict(ra.title, rb.title):
         return False
     ta, tb = normalize(ra.title), normalize(rb.title)

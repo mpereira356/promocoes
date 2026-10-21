@@ -36,6 +36,7 @@ def messages(report):
         yield text
     title = report.category_title or ' > '.join(CATEGORIES[report.category])
     text = f'✅ Busca pontual concluída — {title}\nFiltro: {report.filter}\nOfertas válidas apresentadas: {len(report.results)}\n\n'
+    text += 'Tamanho: ' + (report.size or 'todos (sem filtro)') + '\n'
     text += 'Cobertura parcial — não representa o site inteiro:\n'
     for cov in report.coverage:
         text += (f'• {cov.store}: {cov.category_pages} página(s) de categoria tentada(s), '

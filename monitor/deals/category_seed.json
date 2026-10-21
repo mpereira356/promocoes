@@ -1142,6 +1142,56 @@
         "Freezers verticais"
       ],
       "observed_at": "2026-10-19"
+    },
+    {
+      "key": "lacoste/sale",
+      "path": [
+        "Lacoste",
+        "Todas as promoções"
+      ],
+      "domain": "lacoste.com",
+      "url": "https://www.lacoste.com/br/lacoste/sale/",
+      "title": "Todas as promoções"
+    },
+    {
+      "key": "lacoste/masculino",
+      "path": [
+        "Lacoste",
+        "Masculino"
+      ],
+      "domain": "lacoste.com",
+      "url": "https://www.lacoste.com/br/lacoste/sale/masculino/",
+      "title": "Masculino"
+    },
+    {
+      "key": "lacoste/feminino",
+      "path": [
+        "Lacoste",
+        "Feminino"
+      ],
+      "domain": "lacoste.com",
+      "url": "https://www.lacoste.com/br/lacoste/sale/feminino/",
+      "title": "Feminino"
+    },
+    {
+      "key": "lacoste/polos-masculinos",
+      "path": [
+        "Lacoste",
+        "Polos masculinos"
+      ],
+      "domain": "lacoste.com",
+      "url": "https://www.lacoste.com/br/lacoste/sale/masculino/polos/",
+      "title": "Polos masculinos"
+    },
+    {
+      "key": "lacoste/polos-femininos",
+      "path": [
+        "Lacoste",
+        "Polos femininos"
+      ],
+      "domain": "lacoste.com",
+      "url": "https://www.lacoste.com/br/lacoste/sale/feminino/polos/",
+      "title": "Polos femininos"
     }
   ]
 }

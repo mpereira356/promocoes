@@ -10,7 +10,7 @@ from ..network import PAGE_AUDIT
 from ..discovery import REASONS
 from .adapters import ADAPTERS
 from .identity import model_relation, comparable
-from .models import Coverage, DealResult, DealReport, valid_price
+from .models import Coverage, DealResult, DealReport, valid_price, parse_size
 from .catalog import CategoryCatalog, Category
 
 
@@ -31,7 +31,8 @@ class Deals:
             raise ValueError('Os limites devem estar entre 1 e 100.')
         self.lock = asyncio.Lock()
 
-    async def run(self, category, discount, domains, cep=''):
+    async def run(self, category, discount, domains, cep='', size=''):
+        size = parse_size(size) if size else ''
         domains = list(dict.fromkeys(domains))
         if isinstance(category, str):
             category = self.catalog.items.get(category)
@@ -45,9 +46,9 @@ class Deals:
         if cep and (len(cep) != 8 or not cep.isdigit()):
             raise ValueError('O CEP deve conter oito dígitos.')
         async with self.lock:
-            return await self._run(category, discount, domains, cep)
+            return await self._run(category, discount, domains, cep, size)
 
-    async def _run(self, category, discount, domains, cep):
+    async def _run(self, category, discount, domains, cep, size):
         coverage = {d: Coverage(d, ADAPTERS[d].store) for d in domains}
         cache, pool = {}, []
 
@@ -163,7 +164,12 @@ class Deals:
                 if not any(eligible(o, discount) for o in offers):
                     cov.excluded += 1
 
-        qualified = select_offers(pool, discount, limit=None)
+        qualified = select_offers([o for o in pool if not size or size in o.available_sizes], discount, limit=None)
+        if size:
+            for domain, cov in coverage.items():
+                excluded = sum(o.domain == domain and size not in o.available_sizes for o in pool)
+                cov.excluded += excluded
+                cov.notices.append(f'Tamanho solicitado: {size}. {excluded} oferta(s) excluída(s) por falta de estoque confirmado nesse tamanho.')
         # Busca textual descobre candidatos; identidade forte valida a comparacao.
         for offer in qualified:
             identifiers = offer.reading.identifiers
@@ -177,8 +183,9 @@ class Deals:
                 for url in urls[:self.limits.comparisons_per_store]:
                     pool.extend(await read(url, domain, comparison=True))
 
-        results = [compare_offer(o, pool) for o in qualified[:3]]
-        return DealReport(results, list(coverage.values()), discount, category.key, cep, True, pool, category.title)
+        comparable_pool = [o for o in pool if not size or size in o.available_sizes]
+        results = [compare_offer(o, comparable_pool) for o in qualified[:3]]
+        return DealReport(results, list(coverage.values()), discount, category.key, cep, True, pool, category.title, size)
 
 
 def eligible(offer, discount):
@@ -190,7 +197,10 @@ def select_offers(pool, discount, limit=3):
     result = []
     for offer in sorted((o for o in pool if eligible(o, discount)), key=lambda o: o.ratio, reverse=True):
         # O mesmo titulo so serve para evitar duplicata; nunca confirma comparacao.
-        if any(model_relation(offer, old) is True or normalize(offer.reading.title) == normalize(old.reading.title) for old in result):
+        if any(model_relation(offer, old) is True or
+               (normalize(offer.reading.title) == normalize(old.reading.title)
+                and offer.reading.identifiers.get('color', '') == old.reading.identifiers.get('color', '')
+                and offer.reading.identifiers.get('size', '') == old.reading.identifiers.get('size', '')) for old in result):
             continue
         result.append(offer)
         if limit is not None and len(result) == limit:

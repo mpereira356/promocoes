@@ -31,10 +31,22 @@ def relevance(query, title):
         text = normalize(text)
         text = re.sub(r'\b(\d+)\s+(gb|tb|mhz|hz|w)\b', r'\1\2', text)
         aliases = {'cadeiras': 'cadeira', 'ergonomicas': 'ergonomica', 'ergonomicos': 'ergonomico',
-                   'freezers': 'freezer', 'verticais': 'vertical'}
+                   'freezers': 'freezer', 'verticais': 'vertical',
+                   'bones': 'bone', 'camisetas': 'camiseta', 'camisas': 'camisa',
+                   'polos': 'polo', 'bermudas': 'bermuda', 'calcas': 'calca',
+                   'vestidos': 'vestido', 'saias': 'saia', 'jaquetas': 'jaqueta',
+                   'moletons': 'moletom', 'sapatos': 'sapato',
+                   'esportivos': 'esportivo', 'esportivas': 'esportivo',
+                   'esportiva': 'esportivo', 'leves': 'leve'}
         return {aliases.get(word, word) for word in text.split()} | appliance_model_aliases(text)
     wanted = terms(query) - stop
     found = terms(title)
+    # Adjectives such as "esportivo leve" cannot substitute the requested item.
+    for category in ({'bone'}, {'camiseta'}, {'camisa'}, {'polo'}, {'bermuda', 'shorts'},
+                     {'calca'}, {'vestido'}, {'saia'}, {'jaqueta'}, {'moletom'},
+                     {'tenis', 'sneaker'}, {'sapato'}, {'bolsa'}, {'mochila'}):
+        if wanted & category and not found & category:
+            return 0
     if 'freezer' in wanted or appliance_model_aliases(query):
         if ('freezer' in wanted and 'freezer' not in found) or ('vertical' in wanted and 'vertical' not in found):
             return 0
@@ -90,7 +102,7 @@ def relevance(query, title):
 
 def candidate_relevance(query, candidate):
     store_brand = {'sensetup.com.br': 'sensetup', 'loja.elements.com.br': 'elements',
-                   'flexform.com.br': 'flexform'}.get((urlsplit(candidate.url).hostname or '').removeprefix('www.'))
+                   'flexform.com.br': 'flexform', 'lacoste.com': 'lacoste'}.get((urlsplit(candidate.url).hostname or '').removeprefix('www.'))
     if store_brand:
         return relevance(query, candidate.title + ' ' + store_brand)
     score = relevance(query, candidate.title)
@@ -110,7 +122,7 @@ def candidate_relevance(query, candidate):
 
 
 def reading_relevance(query, reading):
-    requested = set(normalize(query).split()) & {'sensetup', 'elements', 'flexform'}
+    requested = set(normalize(query).split()) & {'sensetup', 'elements', 'flexform', 'lacoste'}
     declared = set(normalize(getattr(reading, 'identifiers', {}).get('brand', '')).split())
     if requested and declared and not requested <= declared:
         return 0
@@ -177,6 +189,7 @@ def form_search_url(html, base, query, fields=None):
 
 
 REASONS = {
+    'store_requires_javascript': 'A loja retornou apenas a estrutura JavaScript, sem oferta ou preço verificável',
     'store_check_deferred': 'Consulta suspensa nesta verificação após falha de acesso a outra oferta da mesma loja',
     'individual_listing_required': 'É necessário um link de produto individual; categorias não são ofertas com preço validado',
     'conflicting_product_identifiers': 'A página apresenta códigos de produto conflitantes; a comparação foi recusada',
