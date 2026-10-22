@@ -170,7 +170,7 @@ def test_manual_run_partial_failure_no_database_and_no_future_jobs(failure, reas
         # Nao ha db, scheduler, send ou alertas disponiveis neste objeto.
         report = await Deals(monitor).run('hardware/placas-mae', DiscountFilter.parse('>=30'), config.domains, '01001000')
         assert len(report.results) == 1
-        assert report.coverage[1].category_pages == 1
+        assert report.coverage[1].failed_pages == 1
         assert any(reason in n for n in report.coverage[1].notices)
         output = '\n'.join(messages(report))
         assert '🏆' in output and 'concluída' in output and '01001000' in output
@@ -225,6 +225,7 @@ def test_telegram_unauthorized_and_duplicate_run():
         controller.session.stage = 'stores'
         controller.session.discount = DiscountFilter.parse('>=30')
         controller.session.category = controller.catalog.items['hardware/placas-mae']
+        controller.session.stores = {'kabum.com.br'}
         update.callback_query = SimpleNamespace(data=f'promo:{controller.session.nonce}:{controller.session.revision}:run', answer=AsyncMock(), message=SimpleNamespace(reply_text=reply))
         await controller.callback(update, None)
         await controller.callback(update, None)
@@ -296,7 +297,8 @@ def test_query_all_qualifying_products_but_present_only_three(monkeypatch):
         monkeypatch.setattr('monitor.deals.service.Search.links', search)
         monitor = SimpleNamespace(config=config, fetcher=fetcher, read_snapshot=read_snapshot)
         report = await Deals(monitor).run('hardware/placas-mae', DiscountFilter.parse('>30'), config.domains)
-        assert len(queries) == 4 and len(report.results) == 3
+        assert queries == [] and len(report.results) == 3
+        assert report.coverage[0].comparison_pages == 0
         assert any('A loja bloqueou o acesso' in n for n in report.coverage[1].notices)
         await fetcher.close()
     asyncio.run(scenario())
@@ -376,7 +378,7 @@ def test_delivery_failure_does_not_report_search_failure():
             discount=report.filter, stores={'kabum.com.br'})
         await controller.execute(session)
         assert not controller.running and controller.session is None
-        assert 'Telegram não recebeu 1' in send.await_args_list[-1].args[0]
+        assert 'entrega de 1 mensagem(ns) não foi confirmada' in send.await_args_list[-1].args[0]
         assert not any('falha inesperada' in call.args[0] for call in send.await_args_list)
     asyncio.run(scenario())
 

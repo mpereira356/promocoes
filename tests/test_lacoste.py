@@ -128,20 +128,22 @@ def test_telegram_lacoste_discount_size_and_execution():
         reply = AsyncMock()
         controller.new_session()
         await controller.select(deals.catalog.items['lacoste/sale'], reply)
-        assert controller.session.stores == {'lacoste.com'}
+        assert controller.session.stores == set()
         markup = reply.call_args.kwargs['reply_markup']
-        assert any(b.callback_data.endswith(':lt30') for row in markup.inline_keyboard for b in row)
+        assert any(b.callback_data.endswith(':gt30') for row in markup.inline_keyboard for b in row)
         message = SimpleNamespace(reply_text=AsyncMock())
         query = SimpleNamespace(data='', message=message, answer=AsyncMock())
         update = SimpleNamespace(callback_query=query, effective_user=SimpleNamespace(id=1), effective_chat=SimpleNamespace(id=2))
         def action(value):
             query.data = f'promo:{controller.session.nonce}:{controller.session.revision}:{value}'
-        action('lt30')
+        action('gt30')
         await controller.callback(update, None)
         assert controller.session.stage == 'size'
         action('sizeM')
         await controller.callback(update, None)
         assert controller.session.stage == 'stores' and controller.session.size == 'M'
+        action('store0')
+        await controller.callback(update, None)
         action('run')
         await controller.callback(update, None)
         assert len(background) == 1

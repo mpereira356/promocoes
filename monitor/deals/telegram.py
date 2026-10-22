@@ -13,6 +13,7 @@ from .models import DiscountFilter, parse_size
 from .formatting import messages
 
 PAGE_SIZE = 8
+DISCOUNTS = tuple(range(20, 81, 10))
 
 
 @dataclass
@@ -29,6 +30,8 @@ class Session:
     choices: list[Category] = field(default_factory=list)
     revision: int = 0
     size: str = ''
+    path: tuple[str, ...] = ()
+    branches: list[tuple[str, ...]] = field(default_factory=list)
 
 
 class PromotionsTelegram:
@@ -45,8 +48,13 @@ class PromotionsTelegram:
         return [d for d in ADAPTERS if d in self.config.domains]
 
     def new_session(self):
-        self.session = Session(stores=set(self.domains))
+        self.session = Session()
         return self.session
+
+    @property
+    def store_choices(self):
+        category = self.session.category
+        return self.catalog.stores_for(category, self.domains) if category else []
 
     async def command(self, update, context, name=None, args=None):
         if not authorized(update, self.config):
@@ -70,6 +78,9 @@ class PromotionsTelegram:
         try:
             if name == '/descontopromo' and session.stage == 'filter':
                 session.discount = DiscountFilter.parse(args)
+                if session.discount.inclusive or session.discount.less:
+                    session.discount = None
+                    raise ValueError('Escolha um botão de Maior que 20% a Maior que 80%.')
                 return await self.after_discount(reply)
             if name == '/tamanhopromo' and session.stage in ('size', 'stores'):
                 session.size = parse_size(args)
@@ -84,12 +95,15 @@ class PromotionsTelegram:
                 if session.stage == 'stores':
                     return await self.show_stores(reply)
                 return
-            return await reply('Escolha a etapa pelos botões. Categoria livre: /categoria notebooks. Percentual personalizado: /descontopromo >=30 na etapa de desconto.')
+            return await reply('Escolha a etapa pelos botões. Em Promoções, os descontos vão de Maior que 20% a Maior que 80%.')
         except ValueError as exc:
             return await reply(str(exc))
 
     async def choose_text(self, text, reply):
         try:
+            group = 'Computadores' if text.strip().casefold() in ('computador', 'computadores') else text.strip()
+            if group in self.catalog.navigation_groups(self.domains):
+                return await self.show_tree(reply, (group,))
             found = self.catalog.find(text, self.domains) if not text.startswith('https://') else []
             if found:
                 self.session.stage = 'subcategory'
@@ -112,7 +126,7 @@ class PromotionsTelegram:
     async def show_groups(self, reply, page=0):
         session = self.session
         session.stage = 'category'
-        session.groups = sorted({c.path[0] for c in self.catalog.available(self.domains)})
+        session.groups = self.catalog.navigation_groups(self.domains)
         pages = max(1, (len(session.groups) + PAGE_SIZE - 1) // PAGE_SIZE)
         page = max(0, min(page, pages - 1))
         start = page * PAGE_SIZE
@@ -137,17 +151,31 @@ class PromotionsTelegram:
         buttons.append(('↩️ Todas as categorias', 'home'))
         return await reply(f'{session.group} · escolha a subcategoria\nPágina {page+1}/{pages}. Para outro tema: /categoria nome.', reply_markup=self.keyboard(buttons))
 
+    async def show_tree(self, reply, path, page=0):
+        session = self.session
+        session.stage, session.path = 'tree', path
+        session.branches = self.catalog.branches(path, self.domains)
+        pages = max(1, (len(session.branches) + PAGE_SIZE - 1) // PAGE_SIZE)
+        page = max(0, min(page, pages - 1))
+        start = page * PAGE_SIZE
+        buttons = [('Tudo nesta categoria', 'scopeall')]
+        buttons += [(branch[-1], f'node{i}') for i, branch in enumerate(session.branches[start:start + PAGE_SIZE], start)]
+        if page:
+            buttons.append(('⬅️ Anterior', f'treepage{page-1}'))
+        if page + 1 < pages:
+            buttons.append(('Próxima ➡️', f'treepage{page+1}'))
+        buttons.append(('↩️ Voltar', 'treeback'))
+        return await reply('🗂️ ' + ' > '.join(path) + f'\n\nEscolha a subcategoria ou Tudo nesta categoria.\nPágina {page+1}/{pages}.\nAs páginas usadas são as categorias reais de cada loja.', reply_markup=self.keyboard(buttons))
+
     async def select(self, category, reply):
         session = self.session
         session.size = ''
-        if set(category.urls) == {'lacoste.com'}:
-            session.stores = {'lacoste.com'}
         session.category, session.stage = category, 'filter'
-        notice = ('\nBusca por termo: esta categoria ainda não tem página mapeada. Serão procuradas ofertas com o termo informado; não é uma varredura completa de categoria.\n' if category.query else '\n')
-        return await reply(f'🏷️ {category.title}\n{notice}\nEscolha o desconto anunciado ou use /descontopromo >25,5.\n\nExemplos de uso\n/descontopromo >30 — 30% não entra; 31% entra.\n/descontopromo >=30 — 30% já entra.\nDe R$ 1.000,00 por R$ 700,00 = 30% de desconto anunciado.\nEsta busca é pontual e não cria alertas.', reply_markup=self.keyboard([('Maior que 30%', 'gt30'), ('Maior ou igual a 30%', 'ge30'), ('Menor que 30%', 'lt30'), ('Menor ou igual a 30%', 'le30'), ('✍️ Outro percentual','discount')]))
+        session.stores.intersection_update(self.store_choices)
+        return await reply(f'🏷️ {category.title}\n\nEscolha o desconto anunciado.\n“Maior que 30%” exclui exatamente 30%.\nSó entram ofertas com preço anterior verificável e estoque disponível.\nDepois você escolherá as lojas. Esta consulta não cria alertas.', reply_markup=self.keyboard([(f'Maior que {value}%', f'gt{value}') for value in DISCOUNTS]))
 
     async def after_discount(self, reply):
-        if self.session.category and set(self.session.category.urls) == {'lacoste.com'}:
+        if self.store_choices == ['lacoste.com']:
             return await self.show_sizes(reply)
         self.session.stage = 'stores'
         return await self.show_stores(reply)
@@ -160,12 +188,14 @@ class PromotionsTelegram:
         return await reply('Escolha o tamanho exatamente como aparece na loja. Não converto M em número Lacoste. Para um tamanho específico, só entram itens com estoque confirmado nesse tamanho.\nTambém aceita /tamanhopromo 42 ou /tamanhopromo todos.', reply_markup=self.keyboard(buttons))
 
     async def show_stores(self, reply):
-        buttons = [(('✅ ' if d in self.session.stores else '⬜ ') + ADAPTERS[d].store, 'store'+str(i)) for i, d in enumerate(self.domains)]
+        available = self.store_choices
+        self.session.stores.intersection_update(available)
+        buttons = [(('✅ ' if d in self.session.stores else '⬜ ') + ADAPTERS[d].store, 'store'+str(i)) for i, d in enumerate(available)]
         if 'lacoste.com' in self.session.stores:
             buttons.append(('Tamanho: ' + (self.session.size or 'todos') + ' — alterar', 'sizes'))
-        buttons += [('Todas as lojas habilitadas', 'all'), ('📍 Informar CEP','cep'), ('🔎 Pesquisar agora', 'run'), ('↩️ Trocar categoria', 'home')]
+        buttons += [('TODAS', 'all'), ('Limpar seleção', 'none'), ('🔎 Pesquisar agora', 'run'), ('↩️ Trocar desconto', 'filterback'), ('↩️ Trocar categoria', 'home')]
         title = self.session.category.title if self.session.category else 'Categoria não selecionada'
-        return await reply(f'🏷️ {title}\n\nSelecione as lojas. Toque para marcar ou desmarcar e depois escolha Pesquisar agora.\nLojas sem página mapeada usarão busca por termo, identificada no resumo.\nOpcional: /ceppromo 01001000. A consulta não ativa alertas futuros.', reply_markup=self.keyboard(buttons))
+        return await reply(f'🏷️ {title}\n\nSelecione as lojas e toque em Pesquisar agora.\nSelecionadas: {len(self.session.stores)} de {len(available)}.\nTODAS marca somente as lojas com categoria mapeada para esta escolha.\nNenhuma loja é marcada automaticamente.', reply_markup=self.keyboard(buttons))
 
     async def start_refresh(self, reply):
         if self.refreshing or self.running:
@@ -200,6 +230,21 @@ class PromotionsTelegram:
             await send_text(query.message.reply_text, text, **kwargs)
         if action == 'home':
             return await self.show_groups(reply)
+        if action.startswith('treepage') and action[8:].isdigit() and session.stage == 'tree':
+            return await self.show_tree(reply, session.path, int(action[8:]))
+        if action == 'treeback' and session.stage == 'tree':
+            if len(session.path) > 1:
+                return await self.show_tree(reply, session.path[:-1])
+            return await self.show_groups(reply)
+        if action == 'scopeall' and session.stage == 'tree':
+            return await self.select(self.catalog.scope(session.path, self.domains), reply)
+        if action.startswith('node') and action[4:].isdigit() and session.stage == 'tree':
+            index = int(action[4:])
+            if index < len(session.branches):
+                path = session.branches[index]
+                if self.catalog.branches(path, self.domains):
+                    return await self.show_tree(reply, path)
+                return await self.select(self.catalog.scope(path, self.domains), reply)
         if action == 'custom':
             if self.prompt_input:
                 return await self.prompt_input(update,'category')
@@ -230,31 +275,36 @@ class PromotionsTelegram:
         if action.startswith('group') and action[5:].isdigit() and session.stage == 'category':
             index = int(action[5:])
             if index < len(session.groups):
-                session.group, session.stage = session.groups[index], 'subcategory'
-                session.choices = sorted([c for c in self.catalog.available(self.domains) if c.path[0] == session.group], key=lambda c:c.title)
-                return await self.show_choices(reply)
+                return await self.show_tree(reply, (session.groups[index],))
         if action.startswith('pick') and action[4:].isdigit() and session.stage == 'subcategory':
             index = int(action[4:])
             if index < len(session.choices):
                 return await self.select(session.choices[index], reply)
-        if action in ('gt30', 'ge30', 'lt30', 'le30') and session.stage == 'filter':
-            session.discount = DiscountFilter.parse({'gt30': '>30', 'ge30': '>=30', 'lt30': '<30', 'le30': '<=30'}[action])
+        if action in {f'gt{value}' for value in DISCOUNTS} and session.stage == 'filter':
+            session.discount = DiscountFilter.parse('>' + action[2:])
             return await self.after_discount(reply)
         if session.stage != 'stores':
             return await reply('Este botão pertence a uma etapa anterior. Use a seleção mais recente.')
         if action == 'all':
-            session.stores = set(self.domains)
+            session.stores = set(self.store_choices)
             return await self.show_stores(reply)
+        if action == 'none':
+            session.stores.clear()
+            return await self.show_stores(reply)
+        if action == 'filterback':
+            return await self.select(session.category, reply)
         if action.startswith('store') and action[5:].isdigit():
             index = int(action[5:])
-            if index < len(self.domains):
-                session.stores.symmetric_difference_update({self.domains[index]})
+            if index < len(self.store_choices):
+                session.stores.symmetric_difference_update({self.store_choices[index]})
                 return await self.show_stores(reply)
         if action == 'run':
             if not session.stores:
                 return await reply('Selecione pelo menos uma loja para continuar.')
             if not session.category:
                 return await reply('Escolha a categoria com /promocoes antes de pesquisar.')
+            if not session.discount:
+                return await reply('Escolha o desconto antes de pesquisar.')
             self.running, session.stage = True, 'running'
             self.background(self.execute(session))
             await reply(
@@ -284,7 +334,7 @@ class PromotionsTelegram:
                     logging.getLogger(__name__).critical('promo_delivery_failed type=%s', type(exc).__name__)
             if failed:
                 try:
-                    await self.send(f'⚠️ A pesquisa foi concluída, mas o Telegram não recebeu {failed} mensagem(ns). Os resultados entregues continuam válidos. Tente novamente mais tarde.')
+                    await self.send(f'⚠️ A entrega de {failed} mensagem(ns) não foi confirmada pelo Telegram. Os resultados já recebidos continuam válidos. Repita a consulta para recuperar o restante.')
                 except TelegramError:
                     pass
         finally:

@@ -37,6 +37,7 @@ class Category:
     path: tuple[str, ...]
     urls: dict[str, str] = field(default_factory=dict)
     query: str = ''
+    children: tuple['Category', ...] = ()
 
     @property
     def title(self):
@@ -61,6 +62,15 @@ class Category:
         return (set(re.findall(r'\bddr[345]\b', text)) == {self.memory_type}
                 and not any(word in text.split() for word in
                     ('adaptador', 'adaptadora', 'testador', 'conversor', 'placa', 'computador')))
+
+    def accepts_parent_title(self, title):
+        from ..discovery import relevance
+        text = normalize(title)
+        if self.key.startswith('hardware/placas-mae') and text.startswith(('kit ', 'combo ')):
+            return False
+        if self.key == 'perifericos/mouse' and ('mouse pad' in text or 'mousepad' in text):
+            return False
+        return self.accepts_title(title) and bool(relevance(self.search_query, title))
 
 
 def category_links(html, base, domain):
@@ -135,14 +145,96 @@ class CategoryCatalog:
             self.items[category.key] = category
 
     def parent_urls(self, category):
-        """Somente RAM com geração explícita: a leitura filtra o tipo em cada título."""
-        if not category.memory_type:
+        """Use a mapped parent only with a title filter for the requested child."""
+        if '/' not in category.key:
             return {}
-        parent = self.items.get(category.key.rsplit('/', 1)[0])
-        return {d: u for d, u in (parent.urls.items() if parent else []) if d not in category.urls}
+        result = {}
+        key = category.key.rsplit('/', 1)[0]
+        while key:
+            parent = self.items.get(key)
+            for domain, url in parent.urls.items() if parent else []:
+                if domain not in category.urls:
+                    result.setdefault(domain, url)
+            key = key.rsplit('/', 1)[0] if '/' in key else ''
+        return result
 
     def available(self, domains):
         return [c for c in self.items.values() if set(c.urls) & set(domains)]
+
+    def navigation_path(self, category):
+        """Navigation groups related departments without inventing store URLs."""
+        keys = category.key.split('/')
+        labels = []
+        for index in range(len(keys)):
+            ancestor = self.items.get('/'.join(keys[:index + 1]))
+            label = ancestor.path[-1] if ancestor else keys[index].replace('-', ' ').title()
+            if label == 'Todas as subcategorias':
+                label = ancestor.path[0]
+            labels.append(label)
+        computer_roots = {'hardware', 'perifericos', 'computadores', 'pc-gamer', 'monitores',
+                          'notebooks', 'gabinetes', 'fontes', 'refrigeracao', 'kit-upgrade'}
+        if keys[0] in computer_roots:
+            if keys[0] in ('hardware', 'perifericos') and len(keys) > 1:
+                return ('Computadores', *labels[1:])
+            if keys[0] == 'computadores':
+                labels[0] = 'Computadores prontos'
+            return ('Computadores', *labels)
+        return tuple(labels)
+
+    def navigation_groups(self, domains):
+        return sorted({self.navigation_path(c)[0] for c in self.available(domains)})
+
+    def descendants(self, path, domains):
+        enabled = set(domains)
+        return [c for c in self.items.values()
+                if (set(c.urls) | set(self.parent_urls(c))) & enabled
+                and self.navigation_path(c)[:len(path)] == path]
+
+    def branches(self, path, domains):
+        branches = {self.navigation_path(c)[:len(path) + 1]
+                    for c in self.descendants(path, domains) if len(self.navigation_path(c)) > len(path)}
+        priorities = ['placas mae', 'mouse', 'teclado', 'processadores', 'memoria ram', 'ssd',
+                      'placa de video', 'computadores prontos', 'notebooks', 'monitores']
+        def order(branch):
+            label = normalize(branch[-1])
+            rank = priorities.index(label) if path == ('Computadores',) and label in priorities else len(priorities)
+            return rank, branch
+        return sorted(branches, key=order)
+
+    def scope(self, path, domains):
+        children = self.descendants(path, domains)
+        if not children:
+            raise ValueError('Nenhuma categoria mapeada neste grupo para as lojas habilitadas.')
+        if len(children) == 1:
+            return children[0]
+        digest = hashlib.sha256('/'.join(path).encode()).hexdigest()[:16]
+        return Category('grupo/' + digest, (*path, 'Tudo'), children=tuple(children))
+
+    def sources(self, category, domain):
+        """Minimal observed category URLs, preserving different store hierarchies."""
+        if not category.children:
+            url = category.urls.get(domain) or self.parent_urls(category).get(domain)
+            return [(category, url)] if url else []
+        candidates = []
+        for child in category.children:
+            candidates.extend(self.sources(child, domain))
+        candidates.sort(key=lambda item: (len(urlsplit(item[1]).path), item[1],
+                                           domain not in item[0].urls, len(item[0].key)))
+        result = []
+        for child, url in candidates:
+            target = urlsplit(url)
+            if any((urlsplit(old).hostname or '').removeprefix('www.') == (target.hostname or '').removeprefix('www.')
+                   and (target.path.rstrip('/') == urlsplit(old).path.rstrip('/') or
+                        target.path.startswith(urlsplit(old).path.rstrip('/') + '/'))
+                   and target.query == urlsplit(old).query for _, old in result):
+                continue
+            result.append((child, url))
+        return result
+
+    def stores_for(self, category, domains):
+        if category.query:
+            return list(domains)
+        return [d for d in domains if self.sources(category, d)]
 
     def find(self, query, domains):
         query = normalize(query)
@@ -152,10 +244,12 @@ class CategoryCatalog:
         words = set(aliases.get(query, query).split())
         def score(c):
             text = normalize(c.title + ' ' + c.key)
-            if query == normalize(c.title) or query == normalize(c.path[-1]):
+            if {query, aliases.get(query, query)} & {normalize(c.title), normalize(c.path[-1])}:
                 return 100
             return sum(any(w == t or (len(w) >= 4 and t.startswith(w.rstrip('s'))) for t in text.split()) for w in words) / max(len(words), 1)
-        return sorted((c for c in self.available(domains) if score(c) >= 1), key=lambda c: (-score(c), c.title))
+        enabled = set(domains)
+        candidates = (c for c in self.items.values() if (set(c.urls) | set(self.parent_urls(c))) & enabled)
+        return sorted((c for c in candidates if score(c) >= 1), key=lambda c: (-score(c), len(c.key.split('/')), c.title))
 
     def request(self, text, fetcher):
         text = text.strip()

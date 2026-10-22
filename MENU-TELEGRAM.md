@@ -9,7 +9,7 @@ Envie **/start** para ativar os atalhos fixos do teclado e abrir a central. **/m
 ## Central de ofertas
 
 - **🔎 Buscar produto:** toque e digite o nome ou link na próxima mensagem, sem escrever `/buscar`.
-- **🏷️ Promoções:** escolha categoria, desconto e lojas. Os botões de categoria livre, percentual personalizado e CEP também aceitam respostas digitadas, sem precisar copiar comandos.
+- **🏷️ Promoções:** escolha categoria e subcategoria, ou Tudo nesta categoria. Use os botões Maior que 20% até Maior que 80%, marque as lojas e pesquise. Nenhuma loja começa selecionada; TODAS marca somente as compatíveis com a categoria escolhida.
 - **🔔 Meus monitoramentos:** lista paginada de seis itens, com situação ativa/pausada. Toque no produto para abrir suas ações.
 - **➕ Monitorar produto:** informe nome, link ou ID de anúncio. A escolha da oferta e da abrangência continua obrigatória; o menu não cadastra automaticamente qualquer resultado parecido.
 - **🛒 Mercado Livre:** abre uma entrada dedicada à pesquisa na loja, mantendo os avisos de links e dados não verificados.

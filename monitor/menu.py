@@ -114,7 +114,7 @@ class BotMenu:
             'ml': ('🛒 Buscar no Mercado Livre','Digite o nome do produto.\nExemplo: notebook Lenovo IdeaPad\nLinks sem preço ou dados verificados serão identificados.'),
             'monitor': ('➕ Escolher produto para acompanhar','Digite o nome, link ou ID do anúncio encontrado.\nExemplo: SSD Kingston NV3 1TB ou 36\nVocê ainda escolherá a oferta e onde acompanhar.'),
             'category': ('🗂️ Escolher categoria','Digite um tema ou link de categoria.\nExemplos: monitores, pets, casa e lazer\nSem página mapeada, a busca será por termo e parcial.'),
-            'discount': ('📣 Escolher desconto','Digite >30, >=30, <30 ou <=30.\n>30: exatamente 30% não entra; 31% entra.\n>=30: exatamente 30% já entra.\nTambém aceita >=25,5.'),
+            'discount': ('📣 Escolher desconto','No menu Promoções, escolha Maior que 20% até Maior que 80%.\nAlternativa por texto: >30. Exatamente 30% não entra.'),
             'size': ('Escolher tamanho', 'Digite M, G, 4 ou 42, como na loja. Digite todos para ignorar tamanho.'),
             'cep': ('📍 Informar CEP','Digite os 8 números do CEP. Exemplo: 01001000.\nO frete ainda não é cotado; os preços continuarão sem frete.'),
         }

@@ -1,3 +1,11 @@
+# Promoções 2026.10.21-promotions.2
+
+Fluxo de Telegram testado com categorias/subcategorias, seleção Tudo, sete botões de desconto estrito de 20% a 80%, lojas desmarcadas e seleção restrita às categorias mapeadas. Avisos consolidados, com contagem de preços e motivo para ausência de promoções. A função continua sem gravar no banco nem criar alertas.
+
+Teste real do serviço: KaBuM e Terabyte leram placas-mãe e encontraram promoções acima de 20%; Pichau leu placas-mãe e mouses via sitemap público, sem promoção acima do filtro na amostra de dois produtos de cada tipo. Lacoste leu doze ofertas de Sale e retornou três camisetas, de R$ 429,00 por R$ 299,00. Relatórios locais em `data/promotions-routing-live-20261021.json` e `data/promotions-subcategories-live-20261021.json`. Não são garantias de preço atual nem de acesso na VPS. Bloqueios externos continuam sendo informados.
+
+Detalhes de uso, fontes por loja e limites em [PROMOCOES.md](PROMOCOES.md).
+
 # Auditoria 2026.10.21-store-search.1
 
 Leitura real de precos em 10 das 13 lojas. Mercado Livre e Magalu tiveram bloqueios; Shopee retornou estrutura JavaScript sem oferta verificavel. Lacoste corrigida com sitemap publico e capturas reais. Detalhes e diagnostico para a VPS em [AUDITORIA-LOJAS.md](AUDITORIA-LOJAS.md).

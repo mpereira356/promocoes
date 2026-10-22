@@ -81,6 +81,12 @@ class Coverage:
     discovery_loaded: int = 0
     partial: bool = True
     notices: list[str] = field(default_factory=list)
+    failed_pages: int = 0
+    priced: int = 0
+    qualifying: int = 0
+    missing_reference: int = 0
+    unavailable: int = 0
+    sources: list[str] = field(default_factory=list)
 
 
 @dataclass

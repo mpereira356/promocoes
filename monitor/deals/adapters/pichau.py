@@ -5,6 +5,7 @@ from .base import CategoryAdapter, CategoryPage, primary_scope, one_display_pric
 
 class PichauCategories(CategoryAdapter):
     domain = 'pichau.com.br'
+    catalog_discovery = 'sitemap'
     categories = {'hardware/placas-mae': 'https://www.pichau.com.br/hardware/placa-m-e'}
 
     def page(self, html, url):

@@ -31,6 +31,9 @@ def relevance(query, title):
         text = normalize(text)
         text = re.sub(r'\b(\d+)\s+(gb|tb|mhz|hz|w)\b', r'\1\2', text)
         aliases = {'cadeiras': 'cadeira', 'ergonomicas': 'ergonomica', 'ergonomicos': 'ergonomico',
+                   'placas': 'placa', 'mouses': 'mouse', 'teclados': 'teclado',
+                   'processadores': 'processador', 'monitores': 'monitor',
+                   'computadores': 'computador', 'memorias': 'memoria',
                    'freezers': 'freezer', 'verticais': 'vertical',
                    'bones': 'bone', 'camisetas': 'camiseta', 'camisas': 'camisa',
                    'polos': 'polo', 'bermudas': 'bermuda', 'calcas': 'calca',

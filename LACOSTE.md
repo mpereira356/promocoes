@@ -2,9 +2,9 @@
 
 No Telegram, use `/promocoes lacoste`, escolha a categoria e siga os botões:
 
-1. Desconto anunciado: maior que (`>30`), maior ou igual (`>=30`), menor que (`<30`) ou menor ou igual (`<=30`). O botão de outro percentual aceita, por exemplo, `/descontopromo >=25,5`.
+1. Desconto anunciado: botões **Maior que 20%**, **Maior que 30%**, **Maior que 40%**, **Maior que 50%**, **Maior que 60%**, **Maior que 70%** e **Maior que 80%**. Não é necessário digitar expressões.
 2. Tamanho: escolha uma opção ou digite outro tamanho. `/tamanhopromo 42` filtra por 42; `/tamanhopromo todos` ignora tamanho. Não existe conversão automática entre M e a numeração Lacoste.
-3. Confirme a loja e toque em Pesquisar agora. Categorias Lacoste deixam somente essa loja marcada inicialmente.
+3. Marque Lacoste e toque em Pesquisar agora. Nenhuma loja começa marcada; TODAS seleciona as lojas compatíveis com a categoria.
 
 Categorias iniciais: Sale, masculino, feminino e polos masculinos/femininos. Também é possível informar um link brasileiro de categoria com `/categoria https://www.lacoste.com/br/lacoste/sale/`.
 

@@ -1,38 +1,41 @@
-# Busca pontual de promoções
+# Busca pontual de promocoes
 
-No Telegram, envie `/promocoes` e escolha um departamento, subcategoria, filtro e lojas. As telas têm botões de próxima/anterior e permitem trocar de categoria. O catálogo distribuído reúne **201 categorias/subcategorias em 33 grupos**, com **215 links** observados nas lojas. Inclui Hardware, Periféricos, Monitores, Notebooks, Cadeiras, Casa e Lazer, Casa e Eletro, Games, Pets e outros. Só aparecem categorias com link em pelo menos uma loja habilitada em `ALLOWED_DOMAINS`.
+Versao `2026.10.21-promotions.2`.
 
-Também pode digitar `/categoria monitores`, `/categoria pets`, `/categoria casa e lazer` ou `/promocoes notebooks`. Se houver mais de uma opção, escolha o resultado correto. Para qualquer outro tema, como `/categoria brinquedos`, o bot aceita a consulta e informa que a descoberta será **por termo**, com cobertura parcial, sem inventar uma URL de categoria. Alguns termos comuns têm equivalência de busca explícita, como celulares → smartphone. Não há garantia de que todo tema exista em todas as lojas.
+## Fluxo no Telegram
 
-Pode informar diretamente uma página: `/categoria https://www.pichau.com.br/pets`. A origem precisa ser uma loja autorizada. O extrator da loja será aplicado à página fornecida; ausência de dados ou formato não suportado será relatado, sem afirmar que a página foi lida com sucesso.
+1. Toque em Promocoes ou envie `/promocoes`.
+2. Escolha o grupo e a subcategoria. Em Computadores aparecem Placas-mae, Mouse, Teclado, Processadores, Memoria RAM e outras categorias mapeadas. Subcategorias podem ter novas subdivisoes. Tudo nesta categoria inclui as fontes mapeadas dos departamentos descendentes.
+3. Escolha um dos sete botoes: Maior que 20%, 30%, 40%, 50%, 60%, 70% ou 80%. O comparador e sempre estrito: exatamente 30% nao atende a Maior que 30%. Nao e necessario digitar operadores.
+4. Para Lacoste, escolha o tamanho ou Ignorar tamanho.
+5. Marque as lojas. Nenhuma loja comeca marcada. TODAS marca somente as lojas compativeis com a categoria escolhida; Limpar selecao desmarca todas.
+6. Toque em Pesquisar agora. Sem lojas marcadas, o bot pede uma selecao e nao inicia uma tarefa.
 
-Use `/categorias atualizar` ou o botão de atualização para reler uma página de menu por loja. O catálogo anterior é preservado em caso de bloqueio; atualizações têm cache de uma hora e valem para a execução atual. O catálogo distribuído é carregado novamente após reinício. O menu é parcial: links descobertos não comprovam preços, estoque ou acesso a todas as páginas. Amazon/Mercado Livre ainda não têm descoberta automática de menus validada; aceitam categoria por termo ou URL, respeitando as limitações de acesso existentes.
+As categorias sao ligadas a URLs observadas de cada loja. Quando existe apenas uma categoria-pai mapeada, os titulos sao filtrados pela subcategoria solicitada. Nao se enviam buscas por Computadores a lojas de roupas ou eletrodomesticos. Categorias mapeadas nao usam o indice externo para pesquisas genericas em lojas sem mapa. As ofertas das lojas escolhidas sao comparadas entre si quando existe identidade suficiente; nao ha novas buscas externas para completar uma consulta por categoria.
 
-Marque ou desmarque cada loja e toque em **Pesquisar agora**. Todas significa todas as lojas suportadas habilitadas em `ALLOWED_DOMAINS`. Quando uma loja não tiver página mapeada para a categoria escolhida, usa descoberta por termo e informa isso no resumo; o preço continua vindo da oferta.
+Categoria livre por termo e link direto permanecem disponiveis via `/categoria`. Consultas explicitamente por termo tem cobertura parcial e usam somente as lojas marcadas. O bot continua sem agendamentos ou gravacoes no banco de precos para esta funcao.
 
-Para outro percentual, na etapa do desconto envie `/descontopromo >25,5` ou `/descontopromo >=30`. O primeiro exige mais de 25,5%; o segundo aceita exatamente 30%. O filtro usa centavos e comparação exata, sem arredondar o percentual antes de filtrar. O valor exibido tem duas casas decimais.
+## Descoberta por loja
 
-Opcionalmente, envie `/ceppromo 01001000` antes de iniciar. **Os adaptadores ainda não fazem cotação de frete**; o CEP será mencionado e todos os preços serão explicitamente apresentados sem frete. Não é estimado frete zero. A seleção expira em 30 minutos.
+| Loja | Fonte de descoberta de promocoes |
+| --- | --- |
+| KaBuM | Categoria mapeada, catalogo NEXT_DATA e paginacao declarada. |
+| Pichau | Sitemap publico, filtrado pela categoria; produtos lidos individualmente. Se o sitemap nao tem dados aplicaveis, tenta a pagina mapeada, salvo bloqueio ou restricao. |
+| Terabyte | Categoria mapeada, links de produto e paginacao declarada. |
+| Lacoste | Sale/categorias mapeadas, preservando cor; preco riscado do produto principal. Busca textual usa sitemap publico de imagens. |
+| Sensetup, Elements, Flexform | Categorias mapeadas; preco anterior depende de dados atribuidos ao produto/variante. |
+| Brastemp, Frigelar | Categorias mapeadas; SKU e preco anterior precisam ser verificaveis. |
+| Amazon, Mercado Livre, Shopee, Magalu | Categorias mapeadas ou link informado; dados estruturados precisam identificar a oferta e o preco anterior. Acesso e referencias podem estar ausentes. |
 
-A consulta acontece naquele momento, termina com uma mensagem de conclusão e não cadastra anúncios, produtos, histórico, jobs, acompanhamentos nem alertas. O banco não é uma dependência do serviço de promoções. Um monitoramento já existente continua independente. Só o usuário e o chat autorizados podem operar os comandos e botões.
+Nenhuma referencia de desconto e inventada. HTTP 403, CAPTCHA e restricoes de robots.txt interrompem a leitura correspondente. Um bloqueio de acesso da loja nao e contornado e nao impede continuar nas outras lojas selecionadas.
 
-## Cobertura inicial e limites
+## Cobertura e entrega
 
-A navegação usa `monitor/deals/catalog.py` e o catálogo público `category_seed.json`. Os links vieram dos menus reais; não são fabricados a partir de nomes. O mapa de cada adaptador é preenchido a partir desse catálogo, e a seleção efetiva é passada ao serviço, sem fixar Hardware/Placas-mãe. Menus, busca por nome e URL livre compartilham os mesmos leitores, validação de preços e limites. Equivalências entre rotas são explícitas; a comparação do mesmo produto continua exigindo identidade forte.
+Amostra limitada a doze produtos por loja. Na selecao Tudo, o orcamento de produtos e distribuido entre as categorias, com uma pagina de cada fonte e ate doze fontes por loja. Categorias individuais usam ate duas paginas. O resumo e explicito sobre a cobertura parcial.
 
-Por pesquisa: até **2 páginas de categoria e 12 produtos por loja**. Para cada produto distinto que passar no filtro dentro dessa amostra, busca complementar de até **2 candidatos por outra loja selecionada**; os três melhores são apresentados. Os mesmos URLs são reutilizados em memória durante a consulta. A busca complementar reutiliza o provedor configurado; com `SEARCH_PROVIDER=direct` não exige chave de busca. Ela pode consultar sitemaps ou índice externo para descobrir links; nunca usa preços de snippets. Muitas ofertas aptas podem tornar a consulta demorada; o recebimento de comandos permanece ativo.
+O resultado distingue ofertas com preco, ofertas que atendem ao filtro, ausencia de preco anterior, indisponibilidade e falhas de acesso. Sem precos verificaveis, a conclusao nao e exibida como sucesso. Os avisos sao consolidados em uma mensagem, dividida nos limites de tamanho do Telegram pelo envio existente. O envio respeita RetryAfter; timeout de entrega e informado como entrega nao confirmada, sem afirmar que ocorreu falha na pesquisa nem reenviar mensagens de resultado que possam ja ter sido entregues.
 
-O resumo identifica páginas lógicas tentadas, produtos descobertos, leituras de ofertas, documentos de descoberta complementar, falhas e limites. Tentativas recusadas por robots ou bloqueio não são apresentadas como páginas lidas. Não é uma varredura integral, nem garantia de encontrar todas as promoções. Recursos internos de navegador, robots.txt, redirecionamentos e retentativas não são contados como novas páginas. Cache pode reduzir a contagem de documentos complementares.
-
-| Loja | Extração de categoria | Referência de desconto | Situação |
-|---|---|---|---|
-| KaBuM | NEXT_DATA, incluindo JSON serializado duas vezes; paginação da categoria | `product.prices.oldPrice` vinculado a ID e título | Caminhos e estrutura observados em páginas reais |
-| Pichau | Cards `data-cy=list-product` e próximo link da própria categoria | Bloco principal `price_from`, associado ao preço Pix lido | Estruturas observadas em páginas reais; depende de acesso da loja |
-| Terabyte | Links de produto reconhecidos pelo adaptador existente e paginação declarada | StrikethroughPrice estruturado ou bloco principal de/por à vista, com produto e preço vinculados | Bloco HTML validado em captura real do Corsair K65; outros layouts e categorias podem falhar |
-| Amazon | URL mapeada/livre: ItemList/Product estruturados; sem mapa: descoberta por termo | Somente StrikethroughPrice estruturado da mesma oferta | Menu automático, HTML de categoria e referência por vendedor não validados; pode não produzir resultados |
-| Mercado Livre | URL mapeada/livre: ItemList/Product estruturados e anúncios individuais; sem mapa: descoberta por termo | Somente StrikethroughPrice estruturado da mesma oferta | Menu automático não validado; acesso bloqueado nas verificações anteriores |
-
-O suporte genérico a `priceSpecification`/`StrikethroughPrice` segue o contrato estruturado e é testado com simulações; **não comprova que essas lojas o fornecem**. Nenhum percentual é atribuído se não existir uma referência válida da própria oferta. Bloqueios/CAPTCHA/robots são respeitados e não são contornados.
+O frete nao e cotado e nao entra no desconto. A selecao expira em trinta minutos. Botoes de telas anteriores sao recusados.
 
 ## Cálculo, condições e comparação
 

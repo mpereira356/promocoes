@@ -192,7 +192,7 @@ def test_discount_retry_and_cep_returns_to_stores(setup):
         update.effective_message.text='abc'
         await ui.text(update,None)
         assert ui.pending.kind=='discount'
-        update.effective_message.text='>=30'
+        update.effective_message.text='>30'
         await ui.text(update,None)
         assert promotions.session.stage=='stores'
         await ui.prompt(update,'cep')

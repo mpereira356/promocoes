@@ -1,5 +1,6 @@
 from .adapters import CATEGORIES
 from ..message_style import short_reason
+from ..models import normalize
 
 
 def reais(cents):
@@ -34,20 +35,37 @@ def messages(report):
             text += '\n'.join(offer.notes) + '\n'
         text += f'\nDesconto da loja; queda histórica não comprovada.\n🔗 {offer.url}'
         yield text
-    title = report.category_title or ' > '.join(CATEGORIES[report.category])
-    text = f'✅ Busca pontual concluída — {title}\nFiltro: {report.filter}\nOfertas válidas apresentadas: {len(report.results)}\n\n'
-    text += 'Tamanho: ' + (report.size or 'todos (sem filtro)') + '\n'
-    text += 'Cobertura parcial — não representa o site inteiro:\n'
+    title = report.category_title or ' > '.join(CATEGORIES.get(report.category, (report.category,)))
+    failed = any(c.failed_pages for c in report.coverage)
+    unread = not report.results and not any(c.priced for c in report.coverage)
+    heading = ('Consulta encerrada sem ofertas verificadas' if unread else
+               'Busca pontual concluída com limitações' if failed else 'Busca pontual concluída')
+    prefix = '\u26a0\ufe0f ' if unread or failed else '\u2705 '
+    label = ('Maior que ' + str(report.filter.value) + '%' if not report.filter.inclusive and not report.filter.less else str(report.filter))
+    text = prefix + heading + ' \u2014 ' + title + '\nFiltro: ' + label + '\n'
+    text += f'Ofertas válidas apresentadas: {len(report.results)}\n'
+    if report.size or 'lacoste' in report.category:
+        text += 'Tamanho: ' + (report.size or 'todos (sem filtro)') + '\n'
+    if not report.results:
+        text += ('Não foi possível confirmar preços nesta consulta.\n' if unread else
+                 'Nenhuma oferta lida atendeu ao desconto, estoque e tamanho escolhidos.\n')
+    text += '\nLojas consultadas (cobertura parcial):\n'
     for cov in report.coverage:
-        text += (f'• {cov.store}: {cov.category_pages} página(s) de categoria tentada(s), '
-                 f'{cov.product_pages + cov.comparison_pages} oferta(s) tentada(s), '
-                 f'{cov.discovery_loaded} documento(s) de descoberta lido(s).\n')
-        if cov.notices:
-            text += '  ⚠️ Consulta com limitações.\n'
-    text += '\nConsulta manual, sem acompanhamento automático.'
+        text += (f'\u2022 {cov.store}: {cov.priced} oferta(s) com preço, {cov.qualifying} no filtro'
+                 + (f', {cov.failed_pages} falha(s)' if cov.failed_pages else '') + '.\n')
+        if cov.missing_reference:
+            text += f'  Sem preço anterior verificável: {cov.missing_reference}.\n'
+        if cov.unavailable:
+            text += f'  Sem estoque confirmado: {cov.unavailable}.\n'
+    text += '\nConsulta manual, sem acompanhamento automático. Frete não incluído.'
     yield text
-    # Cada loja recebe seu bloco; send_text preserva as linhas ao dividir mensagens.
+    # One consolidated notice avoids a long burst of individual store messages.
+    warnings = []
     for cov in report.coverage:
-        notices = list(dict.fromkeys(short_reason(n.removeprefix('⚠️').strip()) for n in cov.notices))
+        ordered = sorted(cov.notices, key=lambda n: not any(word in normalize(n) for word in
+                         ('bloque', 'captcha', 'falha', 'indisponivel', 'nao permite', 'sem links')))
+        notices = list(dict.fromkeys(short_reason(n.removeprefix('\u26a0\ufe0f').strip()) for n in ordered))
         if notices:
-            yield f'⚠️ Avisos da pesquisa — {cov.store}\n\n' + '\n\n'.join('⚠️ ' + n for n in notices)
+            warnings.append(cov.store + ': ' + '; '.join(notices[:2]) + '.')
+    if warnings:
+        yield '\u26a0\ufe0f Avisos da pesquisa\n\n' + '\n\n'.join(warnings)

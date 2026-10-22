@@ -37,9 +37,8 @@ Exemplos de uso
 /configurar 1 0 0 1500 — sem queda mínima, mas só alerta em uma queda que termine em até R$ 1.500,00. Não avisa apenas por já estar abaixo do alvo.
 /alertas 1 todas — volta a avisar aumentos e quedas, sem aplicar esses filtros.
 /alertas 1 quedas — volta a aplicar os filtros às quedas.
-/descontopromo >30 — exclui exatamente 30%; aceita, por exemplo, 31%.
-/descontopromo >=30 — inclui exatamente 30%. Use na etapa de desconto de /promocoes.
-/descontopromo <30 ou <=30 — desconto abaixo de 30%, sem ou com igualdade.
+/promocoes — botões Maior que 20%, 30%, 40%, 50%, 60%, 70% e 80%.
+/descontopromo >30 — alternativa aos botões; exatamente 30% não entra.
 /tamanhopromo M — tamanho exato na busca Lacoste; use todos para ignorar.
 Use ponto para centavos em /configurar: 50.90 significa R$ 50,90. Informe todos os valores, sem R$ ou separador de milhar.
 """

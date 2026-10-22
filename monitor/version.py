@@ -1,1 +1,1 @@
-VERSION = "2026.10.21-store-search.1"
+VERSION = "2026.10.21-promotions.2"
