@@ -173,7 +173,7 @@ def test_manual_run_partial_failure_no_database_and_no_future_jobs(failure, reas
         assert report.coverage[1].failed_pages == 1
         assert any(reason in n for n in report.coverage[1].notices)
         output = '\n'.join(messages(report))
-        assert '🏆' in output and 'concluída' in output and '01001000' in output
+        assert '🏆' in output and 'Pesquisa finalizada' in output and '01001000' in output
         assert 'queda histórica não comprovada' in output
         assert 'Comparação: não confirmada' in output
         assert monitor.read_snapshot.await_count == 1
@@ -336,10 +336,11 @@ def test_report_separates_store_notices_without_duplicate_labels():
     cov = Coverage(a.domain, 'KaBuM', notices=['⚠️ Falha na leitura da oferta: ' + a.url] * 2)
     report = DealReport([compare_offer(a, [a])], [cov], DiscountFilter.parse('>=30'), 'hardware/placas-mae')
     output = list(messages(report))
-    assert len(output) == 3
+    assert len(output) == 2
     assert 'Comparação: não confirmada' in output[0]
     assert 'Falha na leitura' not in output[1]
-    assert output[2].count(a.url) == 1
+    assert a.url not in output[1]
+    assert output[-1].startswith('🏁 Pesquisa finalizada')
     assert '⚠️ ⚠️' not in '\n'.join(output)
 
 
@@ -378,7 +379,8 @@ def test_delivery_failure_does_not_report_search_failure():
             discount=report.filter, stores={'kabum.com.br'})
         await controller.execute(session)
         assert not controller.running and controller.session is None
-        assert 'entrega de 1 mensagem(ns) não foi confirmada' in send.await_args_list[-1].args[0]
+        assert 'envio de algumas mensagens não foi confirmado' in send.await_args_list[-1].args[0]
+        assert send.await_args_list[-1].args[0].startswith('🏁 Pesquisa finalizada')
         assert not any('falha inesperada' in call.args[0] for call in send.await_args_list)
     asyncio.run(scenario())
 

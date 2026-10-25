@@ -156,8 +156,9 @@ def test_blocked_promotions_stop_the_store_and_do_not_claim_success():
             monitor.read_snapshot.assert_not_awaited()
             output = list(messages(report))
             assert not any(text.startswith('✅') for text in output)
-            assert 'sem ofertas verificadas' in output[0]
-            assert len(output) == 2  # Summary and a single consolidated warning.
+            assert output[0].startswith('🏁 Pesquisa finalizada')
+            assert 'Não consegui verificar ofertas' in output[0]
+            assert len(output) == 1
         finally:
             await fetcher.close()
     asyncio.run(run())
@@ -167,5 +168,5 @@ def test_thirteen_stores_do_not_generate_thirteen_notice_messages():
     cov = [Coverage(f'store{i}', f'Loja {i}', failed_pages=1, notices=['A loja bloqueou o acesso']) for i in range(13)]
     report = DealReport([], cov, DiscountFilter.parse('>40'), 'grupo/computadores', category_title='Computadores > Tudo')
     output = list(messages(report))
-    assert len(output) == 2
-    assert all(f'Loja {i}' in output[1] for i in range(13))
+    assert len(output) == 1
+    assert all(f'Loja {i}' in output[0] for i in range(13))

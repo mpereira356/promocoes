@@ -1,6 +1,4 @@
 from .adapters import CATEGORIES
-from ..message_style import short_reason
-from ..models import normalize
 
 
 def reais(cents):
@@ -36,36 +34,33 @@ def messages(report):
         text += f'\nDesconto da loja; queda histórica não comprovada.\n🔗 {offer.url}'
         yield text
     title = report.category_title or ' > '.join(CATEGORIES.get(report.category, (report.category,)))
-    failed = any(c.failed_pages for c in report.coverage)
-    unread = not report.results and not any(c.priced for c in report.coverage)
-    heading = ('Consulta encerrada sem ofertas verificadas' if unread else
-               'Busca pontual concluída com limitações' if failed else 'Busca pontual concluída')
-    prefix = '\u26a0\ufe0f ' if unread or failed else '\u2705 '
+    title = ' > '.join(title.split(' > ')[-2:])
+    result_domains = {result.offer.domain for result in report.results}
+    checked = [c.store for c in report.coverage if c.priced or c.domain in result_domains]
+    unavailable = [c.store for c in report.coverage if not c.priced and c.domain not in result_domains]
+    partial = [c.store for c in report.coverage if c.store in checked and c.failed_pages]
+    text = '🏁 Pesquisa finalizada\n\n' + title + '\n'
     label = ('Maior que ' + str(report.filter.value) + '%' if not report.filter.inclusive and not report.filter.less else str(report.filter))
-    text = prefix + heading + ' \u2014 ' + title + '\nFiltro: ' + label + '\n'
-    text += f'Ofertas válidas apresentadas: {len(report.results)}\n'
+    text += 'Desconto: ' + label + '\n'
     if report.size or 'lacoste' in report.category:
         text += 'Tamanho: ' + (report.size or 'todos (sem filtro)') + '\n'
-    if not report.results:
-        text += ('Não foi possível confirmar preços nesta consulta.\n' if unread else
-                 'Nenhuma oferta lida atendeu ao desconto, estoque e tamanho escolhidos.\n')
-    text += '\nLojas consultadas (cobertura parcial):\n'
-    for cov in report.coverage:
-        text += (f'\u2022 {cov.store}: {cov.priced} oferta(s) com preço, {cov.qualifying} no filtro'
-                 + (f', {cov.failed_pages} falha(s)' if cov.failed_pages else '') + '.\n')
-        if cov.missing_reference:
-            text += f'  Sem preço anterior verificável: {cov.missing_reference}.\n'
-        if cov.unavailable:
-            text += f'  Sem estoque confirmado: {cov.unavailable}.\n'
-    text += '\nConsulta manual, sem acompanhamento automático. Frete não incluído.'
+    if report.results:
+        text += f'\nPromoções encontradas: {len(report.results)}.\n'
+    elif checked:
+        threshold = ('mais de ' + str(report.filter.value) + '%' if not report.filter.inclusive and not report.filter.less else str(report.filter))
+        text += '\nNão encontrei promoções com ' + threshold + ' de desconto'
+        text += (' no tamanho ' + report.size if report.size else '') + ' nas ofertas verificadas.\n'
+    else:
+        text += '\nNão consegui verificar ofertas nesta tentativa.\n'
+    if checked:
+        text += '\nPreços verificados em: ' + ', '.join(checked) + '.\n'
+    if unavailable:
+        text += '\nNão consegui verificar: ' + ', '.join(unavailable) + '.\n'
+    if partial:
+        text += 'Consulta incompleta em: ' + ', '.join(partial) + '.\n'
+    if unavailable or partial:
+        text += 'Pode haver promoções nas lojas que não consegui consultar por completo.\n'
+    text += '\n' + ('Tente um desconto menor ou pesquise novamente.' if checked and not report.results else
+                    'Tente novamente mais tarde.' if not checked and not report.results else
+                    'Os resultados são das ofertas verificadas nesta consulta.')
     yield text
-    # One consolidated notice avoids a long burst of individual store messages.
-    warnings = []
-    for cov in report.coverage:
-        ordered = sorted(cov.notices, key=lambda n: not any(word in normalize(n) for word in
-                         ('bloque', 'captcha', 'falha', 'indisponivel', 'nao permite', 'sem links')))
-        notices = list(dict.fromkeys(short_reason(n.removeprefix('\u26a0\ufe0f').strip()) for n in ordered))
-        if notices:
-            warnings.append(cov.store + ': ' + '; '.join(notices[:2]) + '.')
-    if warnings:
-        yield '\u26a0\ufe0f Avisos da pesquisa\n\n' + '\n\n'.join(warnings)

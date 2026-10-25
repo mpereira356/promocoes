@@ -1,6 +1,6 @@
 # Busca pontual de promocoes
 
-Versao `2026.10.21-promotions.2`.
+Versao `2026.10.25-completion.1`.
 
 ## Fluxo no Telegram
 
@@ -33,7 +33,7 @@ Nenhuma referencia de desconto e inventada. HTTP 403, CAPTCHA e restricoes de ro
 
 Amostra limitada a doze produtos por loja. Na selecao Tudo, o orcamento de produtos e distribuido entre as categorias, com uma pagina de cada fonte e ate doze fontes por loja. Categorias individuais usam ate duas paginas. O resumo e explicito sobre a cobertura parcial.
 
-O resultado distingue ofertas com preco, ofertas que atendem ao filtro, ausencia de preco anterior, indisponibilidade e falhas de acesso. Sem precos verificaveis, a conclusao nao e exibida como sucesso. Os avisos sao consolidados em uma mensagem, dividida nos limites de tamanho do Telegram pelo envio existente. O envio respeita RetryAfter; timeout de entrega e informado como entrega nao confirmada, sem afirmar que ocorreu falha na pesquisa nem reenviar mensagens de resultado que possam ja ter sido entregues.
+A ultima mensagem sempre comeca com Pesquisa finalizada. Ela informa o resultado do filtro e agrupa as lojas com precos verificados e as lojas que nao puderam ser verificadas. Se nenhuma loja retornar dados, diz que nao foi possivel verificar ofertas, sem afirmar que nao existem descontos. Contagens tecnicas, paginas, sitemaps e avisos de extracao nao sao enviados ao usuario. Falhas de consulta e de entrega tambem encerram com uma mensagem explicita, quando o Telegram permite a entrega. Os detalhes de cobertura continuam disponiveis no relatorio interno para diagnostico.
 
 O frete nao e cotado e nao entra no desconto. A selecao expira em trinta minutos. Botoes de telas anteriores sao recusados.
 

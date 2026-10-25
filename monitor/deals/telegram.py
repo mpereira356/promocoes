@@ -323,7 +323,7 @@ class PromotionsTelegram:
                 output = list(messages(report))
             except Exception as exc:
                 logging.getLogger(__name__).critical('promo_search_failed type=%s', type(exc).__name__)
-                await self.send('⚠️ Não foi possível concluir a pesquisa. Nenhum acompanhamento foi criado. Consulte os logs do serviço para identificar a falha.')
+                await self.send('🏁 Pesquisa finalizada\n\nUma falha impediu a consulta. Tente novamente mais tarde.')
                 return
             failed = 0
             for text in output:
@@ -334,7 +334,7 @@ class PromotionsTelegram:
                     logging.getLogger(__name__).critical('promo_delivery_failed type=%s', type(exc).__name__)
             if failed:
                 try:
-                    await self.send(f'⚠️ A entrega de {failed} mensagem(ns) não foi confirmada pelo Telegram. Os resultados já recebidos continuam válidos. Repita a consulta para recuperar o restante.')
+                    await self.send('🏁 Pesquisa finalizada\n\nO envio de algumas mensagens não foi confirmado. Pesquise novamente para receber os resultados completos.')
                 except TelegramError:
                     pass
         finally:
