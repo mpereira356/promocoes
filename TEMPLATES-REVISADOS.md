@@ -165,8 +165,8 @@ Pagamento: {s['payment']}
 ## Resultado com oferta lida — estrutura sugerida
 
 ```
-{MEDALS[rank]} {rank}º menor preço desta busca — {reading.payment[:100]}
-{“⚠️ Ranking provisório: condição não declarada.” se provisional; caso contrário, “Ranking entre ofertas com a mesma condição e forma de pagamento.”}
+{MEDALS[rank]} {rank}º na lista por preço — {reading.payment[:100]}
+{“⚠️ Condição não informada; confira na loja.” se provisional; caso contrário, “Confira pagamento e condição antes de comprar.”}
 🔎 Os modelos desta busca podem ser diferentes. Confira se a oferta corresponde ao produto desejado.
 
 {reading.title[:350]}
@@ -191,12 +191,9 @@ Valores literais de `price` e `condition` devem manter a informação retornada:
 
 **Origem:** `monitor/presentation.py` — `offer_text` e `send_offer`.
 
-## Envio alternativo quando a foto não cabe na legenda
+## Cartao longo e falha de foto
 
-```
-{reading.title[:200]}
-📋 Os detalhes da oferta serão enviados na próxima mensagem.
-```
+Cartoes maiores que a legenda permitida usam apenas texto. Foto explicitamente rejeitada admite alternativa em texto; timeout ou falha de rede nao gera novo cartao, evitando duplicacao quando a entrega inicial e incerta.
 
 ## Resultado do resumo da busca
 
@@ -681,7 +678,7 @@ A tabela resume os principais ajustes; os templates completos acima são a vers�
 
 1. Os trechos com `{se ...}` ou texto entre aspas curvas descrevem variantes condicionais para adaptação editorial; não são expressões Python prontas.
 
-1. A API do Telegram limita legendas de fotos. Preservar o envio alternativo de detalhes em mensagem separada quando a legenda exceder o limite.
+1. A API do Telegram limita legendas de fotos. Usar uma unica mensagem de texto quando a legenda exceder o limite.
 
 1. Para usar negrito, configurar o envio com parse mode compatível e escapar conteúdo dinâmico. Se isso não estiver implementado, enviar como texto simples mantendo os mesmos espaços e quebras de linha.
 

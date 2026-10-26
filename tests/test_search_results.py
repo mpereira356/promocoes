@@ -36,7 +36,7 @@ def test_search_always_finishes_and_does_not_expose_internal_errors(failure):
         )
         await deliver_search(monitor, None, None, None, 1, 'b550', send)
         messages = [c.args[0] for c in send.await_args_list]
-        assert messages[-1].startswith('⚠️ Pesquisa concluída com limitações')
+        assert messages[-1].startswith('🏁 Pesquisa finalizada')
         assert 'Links com falha de leitura: 1' in messages[-1]
         assert all('private detail' not in m for m in messages)
         assert all('Pesquisa: b550' in m for m in messages)
@@ -49,7 +49,7 @@ def test_discovery_failure_finishes_with_honest_status():
         send = AsyncMock()
         monitor = SimpleNamespace(search=SimpleNamespace(links=AsyncMock(side_effect=ReadError('search_unavailable'))))
         await deliver_search(monitor, None, None, None, 1, 'b550', send)
-        assert send.await_args_list[-1].args[0].startswith('⚠️ Pesquisa encerrada com falha')
+        assert send.await_args_list[-1].args[0].startswith('🏁 Pesquisa finalizada')
     asyncio.run(run())
 
 
@@ -151,7 +151,7 @@ def test_catalogs_are_grouped_and_never_reported_as_verified_offers():
         assert 'links sem preço confirmado' in text
         assert all(u in text for u in urls)
         summary = send.await_args_list[-1].args[0]
-        assert summary.startswith('⚠️ Pesquisa concluída com limitações')
+        assert summary.startswith('🏁 Pesquisa finalizada')
         assert 'Ofertas enviadas: 0' in summary and 'Links para conferência: 6' in summary
     asyncio.run(run())
 
@@ -255,7 +255,7 @@ def test_failed_fourth_result_does_not_abort_remaining_or_resend_previous(monkey
         summary=send.await_args_list[-1].args[0]
         assert 'Ofertas enviadas: 4' in summary
         assert 'Com pre\u00e7o: 4' in summary
-        assert 'Pesquisa conclu\u00edda com limita\u00e7\u00f5es' in summary
+        assert 'Pesquisa finalizada' in summary
         assert 'SECRET-MARKER' not in caplog.text
         assert 'stage='+('save_ad' if stage=='save' else 'send_offer') in caplog.text
         assert 'frames=' in caplog.text

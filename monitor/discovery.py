@@ -24,11 +24,11 @@ class SearchLinks(list):
 
 
 def relevance(query, title):
-    from .identity import model_conflict, logitech_part_number, BRANDS, appliance_model_aliases
+    from .identity import model_conflict, logitech_part_number, BRANDS, appliance_model_aliases, motherboard_family, motherboard_text
     stop = {"de", "da", "do", "das", "dos", "com", "para", "e", "a", "o"}
     def terms(text):
         text = re.sub(r'(\d+)\s*[ªº°]', r'\1', text)
-        text = normalize(text)
+        text = motherboard_text(text)
         text = re.sub(r'\b(\d+)\s+(gb|tb|mhz|hz|w)\b', r'\1\2', text)
         aliases = {'cadeiras': 'cadeira', 'ergonomicas': 'ergonomica', 'ergonomicos': 'ergonomico',
                    'placas': 'placa', 'mouses': 'mouse', 'teclados': 'teclado',
@@ -44,6 +44,9 @@ def relevance(query, title):
         return {aliases.get(word, word) for word in text.split()} | appliance_model_aliases(text)
     wanted = terms(query) - stop
     found = terms(title)
+    family = motherboard_family(query)
+    if family and motherboard_family(title) != family:
+        return 0
     # Adjectives such as "esportivo leve" cannot substitute the requested item.
     for category in ({'bone'}, {'camiseta'}, {'camisa'}, {'polo'}, {'bermuda', 'shorts'},
                      {'calca'}, {'vestido'}, {'saia'}, {'jaqueta'}, {'moletom'},

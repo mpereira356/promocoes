@@ -15,6 +15,32 @@ APPLIANCE_PATTERNS = {
 }
 
 
+def motherboard_text(text):
+    value = normalize(text)
+    value = re.sub(r'\b(mag|mpg|meg|pro)(?=[abxyz]\d{3})', r'\1 ', value)
+    value = re.sub(r'([abxyz]\d{3}(?:e|m)?)(?=tomahawk|gamingplus|carbon|mortar|godlike|wifi)', r'\1 ', value)
+    value = re.sub(r'(tomahawk|gamingplus|carbon|mortar|godlike)(?=wifi)', r'\1 ', value)
+    return value.replace('gamingplus', 'gaming plus')
+
+
+def motherboard_family(text):
+    """A chipset is not a model: preserve explicit MSI product families."""
+    value = motherboard_text(text)
+    if not re.search(r'\b[abxyz]\d{3}(?:e|m)?(?:\b|(?=gaming|tomahawk|carbon|edge|mortar))', value):
+        return ''
+    families = set(re.findall(r'\b(?:tomahawk|gaming plus|carbon|mortar|godlike|pro|ace|edge)\b', value))
+    return next(iter(families)) if len(families) == 1 else ''
+
+
+def is_bundle(text):
+    value = normalize(text)
+    if re.search(r'\b(?:kit (?:de )?upgrade|combo|bundle)\b', value):
+        return True
+    board = bool(re.search(r'\b(?:placa mae|motherboard|mainboard)\b', value))
+    processor = bool(re.search(r'\b(?:processador|cpu)\b', value))
+    return board and processor and ('+' in text or 'com processador' in value)
+
+
 def appliance_model_aliases(text):
     """Familias apenas para descoberta; sufixos/tensao ainda exigem verificacao."""
     result = set()
@@ -59,6 +85,7 @@ def monitoring_search_terms(title, identifiers=None):
         BRANDS | {'epomaker', 'sensetup'})
     brand = next(iter(brands)) if len(brands) == 1 else ''
     patterns = {
+        'msi': r'\b(?:(?:mag|mpg|meg) )?[abxyz]\d{3}[a-z]? (?:tomahawk|gaming plus|carbon|mortar|godlike)(?: wifi)?\b',
         'gigabyte': r'\b[bxyz]\d{3}m? aorus (?:elite|pro|master)(?: (?:ax|wifi))?(?: v\d+)?\b',
         'asus': r'\brog strix [bxyz]\d{3}(?: [a-z])? gaming(?: wifi)?(?: ii)?\b',
         'ajazz': r'\bak\d{2,4}[a-z]*(?: (?:pro|max|plus|mini|lite))?\b',
@@ -89,7 +116,12 @@ def monitoring_search_terms(title, identifiers=None):
 
 def model_conflict(left, right):
     """Conflitos explicitos de familias conhecidas, sem adivinhar sinonimos."""
-    a, b = normalize(left), normalize(right)
+    a, b = motherboard_text(left), motherboard_text(right)
+    if is_bundle(left) != is_bundle(right):
+        return True
+    family_a, family_b = motherboard_family(left), motherboard_family(right)
+    if family_a and family_b and family_a != family_b:
+        return True
     if 'freezer' in a.split() and 'freezer' in b.split():
         for pattern in (r'\b(110|115|127|220|240)\s*v\b', r'\b(\d+)\s*(?:l|litros)\b'):
             x, y = set(re.findall(pattern, a)), set(re.findall(pattern, b))

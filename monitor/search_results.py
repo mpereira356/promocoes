@@ -5,7 +5,7 @@ from pathlib import Path
 import httpx
 from .adapters import adapter
 from .adapters.base import ReadError
-from .discovery import REASONS, relevance, reading_relevance, SearchLinks
+from .discovery import REASONS, relevance, reading_relevance, candidate_relevance, SearchLinks
 from .presentation import rank_offers, send_offer
 from .search import search_error_message
 from .message_style import short_reason, summarize_notices
@@ -61,6 +61,9 @@ async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketpla
         offers = []
         for url in urls:
             candidate = getattr(urls, 'candidates', {}).get(url)
+            if candidate and not query.startswith('https://') and not candidate_relevance(query, candidate):
+                rejected += 1
+                continue
             from urllib.parse import urlsplit
             domain_key = (urlsplit(url).hostname or '').removeprefix('www.')
             if domain_key in ('produto.mercadolivre.com.br', 'lista.mercadolivre.com.br'):
@@ -144,8 +147,11 @@ async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketpla
     finally:
         if starting:
             await report(f'Valores publicados como "a partir de": {starting}. São referências de outras ofertas, sem vendedor e condições confirmados; não contam como preços de ofertas individuais.')
-        status = ('⚠️ Pesquisa encerrada com falha' if interrupted else
-            '⚠️ Pesquisa concluída com limitações' if failed or unverified or notices or save_failed or delivery_failed or report_failed or (sent and not priced) else '✅ Pesquisa concluída')
+        status = '🏁 Pesquisa finalizada'
+        if interrupted:
+            status += '\nUma falha interrompeu a consulta.'
+        elif failed or unverified or notices or save_failed or delivery_failed or report_failed or (sent and not priced):
+            status += '\nAlgumas ofertas ou lojas não puderam ser verificadas.'
         extra = ''
         if save_failed or delivery_failed or report_failed:
             extra = (f'\nAnúncios não salvos por falha: {save_failed}'

@@ -1,4 +1,4 @@
-**Versão atual: `2026.10.25-completion.1`.** Envie **/start** ou **/menu** para usar a central de botões: buscas, promoções, monitoramentos e dinheiro emprestado. Veja [MENU-TELEGRAM.md](MENU-TELEGRAM.md).
+**Versão atual: `2026.10.25-exact-search.1`.** Envie **/start** ou **/menu** para usar a central de botões: buscas, promoções, monitoramentos e dinheiro emprestado. Veja [MENU-TELEGRAM.md](MENU-TELEGRAM.md).
 
 Loja oficial Brastemp, Shopee, Magalu e Frigelar: comandos, validacao real e limitacoes em [LOJAS-FREEZERS.md](LOJAS-FREEZERS.md). Brastemp e Frigelar retornaram precos em testes reais; Shopee ainda sem leitura real validada e Magalu bloqueada na amostra.
 
@@ -215,11 +215,15 @@ As consultas ocorrem a cada cinco horas após terminar o ciclo. Uma alteração 
 
 Alertas são enfileirados na mesma transação da mudança de preço. Falhas de envio deixam a mensagem pendente. Existe uma janela entre o Telegram aceitar a mensagem e o banco confirmar: um crash nessa janela pode repetir a mensagem, pois `sendMessage` não tem chave de idempotência. Não se promete entrega exatamente uma vez. O destaque visual não muda o volume ou as configurações de notificação do seu aparelho.
 
-## Medalhas
+## Lista por preco e anuncios repetidos
 
-A busca reúne as leituras e ordena por preço em cada grupo de pagamento, condição e moeda: **🥇**, **🥈**, **🥉** para os três menores valores distintos. Empatados recebem a mesma medalha; o próximo valor recebe a seguinte. Sem preço positivo em BRL, pagamento identificado ou estoque confirmado, não há medalha.
+A busca apresenta uma unica lista de precos anunciados em reais, com pagamento e estoque identificados. As tres primeiras posicoes recebem medalhas, sem reiniciar a numeracao para Pix, boleto ou condicao. A lista e visual e nao comprova equivalencia de condicoes nem menor preco de toda a internet. Condicao desconhecida continua explicita e nao habilita alertas.
 
-Condição ausente fica em grupo separado, marcado **ranking provisório**. Isso compara apenas valores exibidos, sem afirmar equivalência de condição e sem habilitar alertas históricos. Modelos diferentes de uma busca ampla podem participar, com aviso explícito. O ranking considera somente os anúncios lidos nessa consulta, sem frete; não representa toda a internet nem o mínimo histórico.
+O mesmo anuncio nao gera um cartao por modalidade de pagamento: e escolhida uma leitura real com o menor preco valido; em empate, Pix tem preferencia. Vendedores, condicoes e variantes diferentes sao preservados. URLs Amazon com o mesmo ASIN sao reconhecidas, mantendo seletores explicitos de vendedor. Leituras e regras do historico nao sao alteradas pela deduplicacao visual.
+
+Uma busca especifica por MSI MAG X870 Tomahawk WiFi rejeita PRO X870-P, Gaming Plus e kits com processador/memoria. O filtro tambem valida nomes compactos do modelo. Buscas explicitamente genericas ou por kit mantem seu escopo.
+
+Fotos rejeitadas pelo Telegram podem usar texto como alternativa. Timeout ou erro de rede nao envia um segundo cartao, pois a primeira entrega pode ter ocorrido. RetryAfter repete apenas a foto explicitamente recusada por limite de envio. Cartoes longos usam uma unica mensagem de texto.
 
 ## Busca direta e limites reais
 

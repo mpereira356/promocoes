@@ -1,1 +1,1 @@
-VERSION = "2026.10.25-completion.1"
+VERSION = "2026.10.25-exact-search.1"

@@ -26,7 +26,7 @@ def test_three_medals_sorted_and_fourth_without_medal():
             assert all(m not in text for m in ["🥇", "🥈", "🥉"])
 
 
-def test_ranking_keeps_payment_condition_separate_and_ties_equal():
+def test_ranking_has_one_global_order_with_explicit_payment_and_condition():
     r = sample(100)
     offers = [
         (r, "https://example.org/a", "Loja"),
@@ -44,9 +44,11 @@ def test_ranking_keeps_payment_condition_separate_and_ties_equal():
         ),
     ]
     indexed = {url: rank for _, url, _, rank, _ in rank_offers(offers)}
-    assert indexed["https://example.org/a"] == indexed["https://example.org/b"] == 1
-    assert indexed["https://example.org/c"] == 2
-    assert indexed["https://example.org/d"] == indexed["https://example.org/e"] == 1
+    assert indexed["https://example.org/a"] == 3
+    assert indexed["https://example.org/b"] == 4
+    assert indexed["https://example.org/c"] == 5
+    assert indexed["https://example.org/d"] == 2
+    assert indexed["https://example.org/e"] == 1
 
 
 def test_unknown_condition_provisional_unknown_payment_stock_price_unranked():
@@ -62,7 +64,7 @@ def test_unknown_condition_provisional_unknown_payment_stock_price_unranked():
         [(x, f"https://example.org/{i}", "Loja") for i, x in enumerate(cases)]
     )
     assert ranked[0][3:] == (1, True)
-    assert "Ranking provisório" in offer_text(ranked[0][0], "Loja", 1, True)
+    assert "Condição não informada" in offer_text(ranked[0][0], "Loja", 1, True)
     assert all(item[3] is None for item in ranked[1:])
     assert all(not item[0].comparable for item in ranked[:2])
 

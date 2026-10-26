@@ -73,7 +73,7 @@ async def handle_subscription(update, config, db, bot, send, on_confirm):
         return
     pid, created = result
     await query.answer(
-        '✅ Monitoramento ativado!' if created else 'Este monitoramento já existe.'
+        '✅ Monitoramento cadastrado!' if created else 'Este monitoramento já existe.'
     )
     try:
         await query.edit_message_reply_markup(reply_markup=None)
@@ -89,10 +89,25 @@ async def handle_subscription(update, config, db, bot, send, on_confirm):
         if parts[2] == "site"
         else "mesmo modelo nas lojas autorizadas que permitirem acesso"
     )
+    import json
+    from .models import Reading
+    product = db.rows('SELECT seed_ad FROM products WHERE id=?', (pid,))[0]
+    ad = db.get_ad(product['seed_ad'])
+    reading = Reading(**json.loads(ad['reading']))
+    pending = []
+    for field, label in (('condition', 'condição'), ('payment', 'pagamento'), ('seller', 'vendedor')):
+        if not getattr(reading, field):
+            pending.append(label)
+    if type(reading.price) is not int or reading.price <= 0 or reading.currency != 'BRL':
+        pending.append('preço válido em reais')
+    status = ('⏸️ Alertas aguardando: ' + ', '.join(pending) + '.\n' if pending else
+              'Vou confirmar e registrar o preço inicial.\n')
     await send(
-        f"✅ Monitoramento {pid} ativado\nAbrangência: {scope}.\n\n"
-        "🚨 Alertas de aumentos e quedas. Consultas a cada 5 horas, sem data de encerramento.\n"
+        f"✅ Monitoramento {pid} cadastrado\nAbrangência: {scope}.\n\n"
+        + status +
+        "Os avisos de mudança começam após registrar um preço com dados comparáveis.\n"
+        f"Consultas a cada {config.interval / 3600:g} horas.\n"
         f"Controle: /pausar {pid} · /retomar {pid} · /historico {pid}\n\n"
-        "Registrando o preço inicial. Se os dados forem insuficientes, os alertas ficam suspensos; nenhum valor será inventado."
+        "O cadastro está ativo; dados ausentes não serão inventados."
     )
     on_confirm(pid)

@@ -3,49 +3,38 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from .models import normalize
 from .telegram_text import render, send_text
+import json
 
 MEDALS = {1: "🥇", 2: "🥈", 3: "🥉"}
 
 
 def rank_offers(offers):
     """Ranking visual da busca, sem alterar series ou regras de alerta."""
-    groups, unranked = {}, []
-    seen = set()
+    from urllib.parse import urlsplit, parse_qs
+    import re
+    selected = {}
+    def valid(reading):
+        return (type(reading.price) is int and reading.price > 0 and reading.currency == 'BRL'
+                and bool(reading.payment) and reading.stock == 'in_stock')
+    def priority(reading):
+        return (valid(reading), type(reading.price) is int and reading.price > 0,
+                reading.stock == 'in_stock', -(reading.price or 0), reading.payment == 'Pix')
     for reading, url, store in offers:
-        key = (reading.currency, normalize(reading.payment), reading.condition)
-        identity = (url,) + key
-        if identity in seen:
-            continue
-        seen.add(identity)
-        if (
-            not isinstance(reading.price, int)
-            or isinstance(reading.price, bool)
-            or reading.price <= 0
-            or reading.currency != "BRL"
-            or not reading.payment
-            or reading.stock != "in_stock"
-        ):
-            unranked.append((reading, url, store, None, False))
-        else:
-            groups.setdefault(key, []).append((reading, url, store))
-    result = []
-    for items in groups.values():
-        items.sort(key=lambda item: item[0].price)
-        levels = {
-            price: i + 1
-            for i, price in enumerate(sorted({item[0].price for item in items}))
-        }
-        for reading, url, store in items:
-            result.append(
-                (
-                    reading,
-                    url,
-                    store,
-                    levels[reading.price],
-                    not bool(reading.condition),
-                )
-            )
-    return result + unranked
+        path = urlsplit(url)
+        host = (path.hostname or '').removeprefix('www.')
+        asin = re.search(r'/(?:dp|gp/product)/([A-Z0-9]{10})(?:/|$)', path.path) if host == 'amazon.com.br' else None
+        merchant = tuple((key, tuple(values)) for key, values in sorted(parse_qs(path.query).items()) if key in ('smid', 'm', 'seller'))
+        product = (host, asin[1], merchant) if asin else url
+        identity = (product, reading.seller, reading.condition, reading.currency,
+                    json.dumps(reading.identifiers, sort_keys=True))
+        previous = selected.get(identity)
+        # Select a real payment reading; never invent a combined payment method.
+        if previous is None or priority(reading) > priority(previous[0]):
+            selected[identity] = (reading, url, store)
+    ranked = sorted((item for item in selected.values() if valid(item[0])), key=lambda item: item[0].price)
+    result = [(reading, url, store, index, not bool(reading.condition))
+              for index, (reading, url, store) in enumerate(ranked, 1)]
+    return result + [(r, url, store, None, False) for r, url, store in selected.values() if not valid(r)]
 
 
 def offer_text(reading, store="", rank=None, provisional=False, ad_id=None):
@@ -66,9 +55,9 @@ def offer_text(reading, store="", rank=None, provisional=False, ad_id=None):
     }.get(reading.condition, "❓ Não declarada pela página")
     parts = [reading.title[:350], '']
     if rank in MEDALS:
-        parts.insert(0, f"{MEDALS[rank]} {rank}º menor preço desta busca")
-        parts.insert(1, '⚠️ Ranking provisório; confira modelo e condição.' if provisional else
-                     'Ranking da busca; confira o modelo.')
+        parts.insert(0, f"{MEDALS[rank]} {rank}º na lista por preço")
+        parts.insert(1, '⚠️ Condição não informada; confira na loja.' if provisional else
+                     'Confira pagamento e condição antes de comprar.')
     if store:
         parts.append('🏪 ' + store[:80])
     payment = ' · ' + reading.payment[:80] if reading.payment else ''
@@ -116,18 +105,26 @@ async def send_offer(
             ]
         )
     keyboard = InlineKeyboardMarkup(list(keyboard.inline_keyboard) + [[InlineKeyboardButton('🏠 Menu principal',callback_data='ui:home')]])
-    if reading.image:
-        fits_caption = len(text.encode('utf-16-le')) // 2 <= 1024
+    if reading.image and len(text.encode('utf-16-le')) // 2 <= 1024:
+        from telegram.error import BadRequest, RetryAfter
+        import asyncio
+        from datetime import timedelta
         try:
-            await bot.send_photo(
-                chat, photo=reading.image,
-                caption=render(text, (reading.title[:350],)) if fits_caption else render(reading.title[:200] + '\n📋 Os detalhes da oferta serão enviados na próxima mensagem.', (reading.title[:200],)),
-                parse_mode='HTML',
-                reply_markup=keyboard
-            )
-        except Exception:
+            for attempt in range(3):
+                try:
+                    await bot.send_photo(chat, photo=reading.image,
+                                         caption=render(text, (reading.title[:350],)),
+                                         parse_mode='HTML', reply_markup=keyboard)
+                    break
+                except RetryAfter as exc:
+                    delay = exc.retry_after.total_seconds() if isinstance(exc.retry_after, timedelta) else exc.retry_after
+                    if attempt == 2 or delay > 60:
+                        raise
+                    await asyncio.sleep(delay + 0.2)
+        except BadRequest:
+            # The server explicitly rejected the photo: one text fallback is safe.
             pass
         else:
-            if fits_caption:
-                return
+            return
+    # A timeout is ambiguous and propagates instead of sending a duplicate card.
     await send_text(lambda t, **kw: bot.send_message(chat, t, **kw), text + "\n" + url, bold_lines=(reading.title[:350],), reply_markup=keyboard)

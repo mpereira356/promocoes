@@ -140,7 +140,8 @@ def test_preview_photo_and_text_fallback():
         bot = SimpleNamespace(send_photo=AsyncMock(), send_message=AsyncMock())
         await send_offer(bot, -1, r, "https://www.kabum.com.br/produto/42", "KaBuM")
         bot.send_photo.assert_awaited_once()
-        bot.send_photo.side_effect = OSError()
+        from telegram.error import BadRequest
+        bot.send_photo.side_effect = BadRequest("photo rejected")
         await send_offer(bot, -1, r, "https://www.kabum.com.br/produto/42", "KaBuM")
         bot.send_message.assert_awaited_once()
 

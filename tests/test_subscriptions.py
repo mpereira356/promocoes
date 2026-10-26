@@ -283,6 +283,26 @@ def test_scope_buttons_and_callback_authorization(data):
     asyncio.run(run())
 
 
+def test_new_monitoring_does_not_promise_alerts_when_condition_is_missing(data):
+    async def run():
+        db, c, r, ad, _ = data
+        ad = db.save_ad(ad['url'], ad['store'], replace(r, condition=''))
+        token = db.request_scope(ad['id'])
+        query = SimpleNamespace(data=f'scope:{token}:all', answer=AsyncMock(), edit_message_reply_markup=AsyncMock())
+        update = SimpleNamespace(callback_query=query, effective_user=SimpleNamespace(id=c.user),
+                                 effective_chat=SimpleNamespace(id=c.chat))
+        send, scheduled = AsyncMock(), []
+        await handle_subscription(update, c, db, None, send, scheduled.append)
+        text = send.await_args.args[0]
+        assert 'cadastrado' in text
+        assert 'Alertas aguardando: condição' in text
+        assert 'após registrar um preço com dados comparáveis' in text
+        assert len(scheduled) == 1
+        assert db.rows('SELECT active FROM products WHERE id=?', (scheduled[0],))[0]['active'] == 1
+        assert db.rows('SELECT * FROM series') == []
+    asyncio.run(run())
+
+
 def test_schema_identifiers_validated_and_sku_not_model():
     from monitor.adapters.base import StructuredAdapter
 
