@@ -180,6 +180,56 @@ def test_failed_queue_notice_does_not_discard_request():
     asyncio.run(run())
 
 
+@pytest.mark.parametrize('command', ['/cancelar', '/cancelar@betgolsbetBot'])
+def test_cancel_bypasses_queue_and_removes_only_users_pending_requests(command):
+    async def run():
+        queue = WorkQueue()
+        started, release = asyncio.Event(), asyncio.Event()
+        events = []
+
+        async def active():
+            started.set()
+            await release.wait()
+            events.append('active-finished')
+
+        async def callback(u, context):
+            events.append(u.effective_message.text)
+
+        handler = queued_handler(queue, callback, SimpleNamespace(user=42, chat=42))
+        try:
+            first = queue.submit(active)
+            await started.wait()
+            await handler(update('/buscar Produto'), None)
+            unrelated = queue.submit(lambda: asyncio.sleep(0), owner=(42, 99))
+            cancellation = update(command)
+            await asyncio.wait_for(handler(cancellation, None), 1)
+            assert events == [command]
+            assert len(queue.items) == 1
+            assert 'retirados da fila: 1' in cancellation.effective_message.reply_text.await_args.args[0]
+            release.set()
+            await asyncio.gather(first, unrelated)
+            assert events == [command, 'active-finished']
+        finally:
+            await queue.close()
+    asyncio.run(run())
+
+
+def test_unauthorized_cancel_does_not_remove_pending_work():
+    async def run():
+        queue = WorkQueue()
+        callback = AsyncMock()
+        future = queue.submit(lambda: asyncio.sleep(0), owner=(42, 42))
+        try:
+            u = update('/cancelar', user=99)
+            await queued_handler(queue, callback, SimpleNamespace(user=42, chat=42))(u, None)
+            assert not future.cancelled()
+            u.effective_message.reply_text.assert_not_awaited()
+            await future
+        finally:
+            await queue.close()
+    asyncio.run(run())
+
+
 def test_scheduler_rechecks_pause_after_waiting_for_queue(monkeypatch):
     from monitor.db import DB
     from monitor.service import Monitor

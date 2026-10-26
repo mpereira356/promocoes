@@ -20,12 +20,13 @@ class WorkQueue:
         if self.worker is None:
             self.worker = asyncio.create_task(self._work())
 
-    def submit(self, factory, *, cleanup=None):
+    def submit(self, factory, *, cleanup=None, owner=None):
         if self.closed:
             if cleanup:
                 cleanup()
             raise RuntimeError('queue_closed')
         future = asyncio.get_running_loop().create_future()
+        future.owner = owner
         # Consumir excecoes mesmo quando o chamador apenas agenda uma tarefa.
         future.add_done_callback(lambda f: f.exception() if not f.cancelled() else None)
         job = (factory, future, cleanup)
@@ -39,6 +40,21 @@ class WorkQueue:
         self.ready.set()
         self.start()
         return future
+
+    def cancel_pending(self, owner):
+        retained = deque()
+        count = 0
+        for job in self.items:
+            _, future, cleanup = job
+            if future.owner == owner:
+                if cleanup:
+                    cleanup()
+                future.cancel()
+                count += 1
+            else:
+                retained.append(job)
+        self.items = retained
+        return count
 
     async def run(self, factory):
         if asyncio.current_task() is self.worker:
@@ -107,6 +123,15 @@ def queued_handler(queue, callback, config):
         from .telegram_text import send_text
         if not authorized(update, config):
             return await callback(update, context)
+        owner = (update.effective_chat.id, update.effective_user.id)
+        text = update.effective_message.text or ''
+        command = text.split(maxsplit=1)[0].split('@')[0].lower() if text else ''
+        if not update.callback_query and command == '/cancelar':
+            cancelled = queue.cancel_pending(owner)
+            await send_text(update.effective_message.reply_text,
+                            f'Cancelamento recebido. Pedidos retirados da fila: {cancelled}. '
+                            'Uma consulta já em execução poderá terminar.')
+            return await callback(update, context)
         waiting = queue.busy
         gate = asyncio.Event()
         deferred = _DeferredUpdate(update) if waiting and update.callback_query else update
@@ -121,7 +146,7 @@ def queued_handler(queue, callback, config):
                 await send_text(update.effective_message.reply_text,
                                 '⚠️ Não foi possível concluir este pedido. A fila continuará com o próximo.')
 
-        queue.submit(execute)
+        queue.submit(execute, owner=owner)
         try:
             if waiting:
                 if update.callback_query:
