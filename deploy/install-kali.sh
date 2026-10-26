@@ -59,7 +59,7 @@ if [[ ! -f "$install_dir/.env" ]]; then
         printf 'TELEGRAM_CHAT_ID=%s\n' "$telegram_chat"
         printf 'TELEGRAM_USER_ID=%s\n' "$telegram_user"
         printf 'SEARCH_PROVIDER=direct\nSEARCH_API_KEY=\n'
-        printf 'ALLOWED_DOMAINS=kabum.com.br,pichau.com.br,terabyteshop.com.br,mercadolivre.com.br,amazon.com.br,sensetup.com.br,loja.elements.com.br,flexform.com.br,shopee.com.br,magazineluiza.com.br,frigelar.com.br,brastemp.com.br,lacoste.com\n'
+        printf 'ALLOWED_DOMAINS=kabum.com.br,pichau.com.br,terabyteshop.com.br,mercadolivre.com.br,amazon.com.br,sensetup.com.br,loja.elements.com.br,flexform.com.br,shopee.com.br,magazineluiza.com.br,frigelar.com.br,brastemp.com.br,lacoste.com,patoloco.com.br\n'
         printf 'DATABASE_PATH=data/monitor.sqlite3\nINTERVAL_HOURS=5\nREQUEST_DELAY=3\n'
         printf 'MIN_DROP_BRL=0\nMIN_DROP_PERCENT=0\nTARGET_PRICE=\nPLAYWRIGHT_ENABLED=false\n'
     } > "$install_dir/.env"
@@ -70,12 +70,12 @@ from pathlib import Path
 import sys
 p = Path(sys.argv[1])
 text = p.read_text(encoding='utf-8')
-DEFAULT_DOMAINS = 'kabum.com.br,pichau.com.br,terabyteshop.com.br,mercadolivre.com.br,amazon.com.br,sensetup.com.br,loja.elements.com.br,flexform.com.br,shopee.com.br,magazineluiza.com.br,frigelar.com.br,brastemp.com.br,lacoste.com'
+DEFAULT_DOMAINS = 'kabum.com.br,pichau.com.br,terabyteshop.com.br,mercadolivre.com.br,amazon.com.br,sensetup.com.br,loja.elements.com.br,flexform.com.br,shopee.com.br,magazineluiza.com.br,frigelar.com.br,brastemp.com.br,lacoste.com,patoloco.com.br'
 def normalize_domains(value):
     return tuple(d.strip().lower().removeprefix('www.').rstrip('.') for d in value.split(',') if d.strip())
 legacy = normalize_domains(DEFAULT_DOMAINS)
 # Only upgrade historical default lists. Explicit custom allowlists stay intact.
-legacy_lengths = (3, 4, 5, 8, 11, 12)
+legacy_lengths = (3, 4, 5, 8, 11, 12, 13)
 lines = text.splitlines()
 changed = False
 for index, line in enumerate(lines):
@@ -90,7 +90,7 @@ for index, line in enumerate(lines):
         changed = True
 if changed:
     p.write_text('\n'.join(lines) + '\n', encoding='utf-8')
-    print('Lista padrao atualizada, incluindo Lacoste; listas personalizadas sao preservadas.')
+    print('Lista padrao atualizada, incluindo Lacoste e Patoloco; listas personalizadas sao preservadas.')
 
 PY
 chown root:pricebot "$install_dir/.env"

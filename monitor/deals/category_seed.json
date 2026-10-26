@@ -1192,6 +1192,28 @@
       "domain": "lacoste.com",
       "url": "https://www.lacoste.com/br/lacoste/sale/feminino/polos/",
       "title": "Polos femininos"
+    },
+    {
+      "key": "hardware/placas-mae",
+      "title": "Placas-mae",
+      "path": [
+        "Hardware",
+        "Placas-mae"
+      ],
+      "domain": "patoloco.com.br",
+      "url": "https://patoloco.com.br/produtos/placas-mae",
+      "observed_at": "2026-10-25"
+    },
+    {
+      "key": "hardware/placas-de-video",
+      "title": "Placa de Video",
+      "path": [
+        "Hardware",
+        "Placa de Video"
+      ],
+      "domain": "patoloco.com.br",
+      "url": "https://patoloco.com.br/produtos/placa-de-video",
+      "observed_at": "2026-10-25"
     }
   ]
 }

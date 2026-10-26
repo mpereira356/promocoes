@@ -4,7 +4,7 @@ from decimal import Decimal
 from dotenv import load_dotenv
 import re
 
-DEFAULT_DOMAINS = 'kabum.com.br,pichau.com.br,terabyteshop.com.br,mercadolivre.com.br,amazon.com.br,sensetup.com.br,loja.elements.com.br,flexform.com.br,shopee.com.br,magazineluiza.com.br,frigelar.com.br,brastemp.com.br,lacoste.com'
+DEFAULT_DOMAINS = 'kabum.com.br,pichau.com.br,terabyteshop.com.br,mercadolivre.com.br,amazon.com.br,sensetup.com.br,loja.elements.com.br,flexform.com.br,shopee.com.br,magazineluiza.com.br,frigelar.com.br,brastemp.com.br,lacoste.com,patoloco.com.br'
 
 
 def normalize_domains(value):
@@ -42,6 +42,8 @@ class Config:
     browser: bool
     mercadolivre_token: str = ''
     mercadolivre_discovery: str = 'external'
+    tavily_key: str = ''
+    promotions_depth: str = 'expanded'
 
     @classmethod
     def load(cls):
@@ -73,8 +75,12 @@ class Config:
             os.getenv("PLAYWRIGHT_ENABLED", "false").lower() == "true",
             os.getenv('MERCADOLIVRE_ACCESS_TOKEN', '').strip(),
             os.getenv('MERCADOLIVRE_DISCOVERY', 'external').strip().lower(),
+            os.getenv('TAVILY_API_KEY', '').strip(),
+            os.getenv('PROMOTIONS_DEPTH', 'expanded').strip().lower(),
         )
         if (
+            c.promotions_depth not in ('quick', 'expanded')
+            or
             c.mercadolivre_discovery not in ('external', 'site')
             or c.user <= 0
             or c.interval <= 0

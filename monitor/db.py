@@ -50,6 +50,8 @@ class DB:
         self.conn = sqlite3.connect(path)
         self.conn.row_factory = sqlite3.Row
         self.conn.executescript(SCHEMA)
+        from .observations import SCHEMA as OBSERVATIONS_SCHEMA
+        self.conn.executescript(OBSERVATIONS_SCHEMA)
         # Migracao aditiva: preserva bancos de instalacoes anteriores.
         if "image" not in {
             r["name"] for r in self.rows("PRAGMA table_info(candidates)")
@@ -93,6 +95,14 @@ class DB:
             "SELECT * FROM ads WHERE url=? AND title_key=?",
             (url, title_key),
         )[0]
+
+    def observe_prices(self, url, readings, now=None):
+        from .observations import record
+        record(self.conn, url, readings, now)
+
+    def observed_history(self, url, reading, now=None):
+        from .observations import history
+        return history(self.conn, url, reading, now)
 
     def get_ad(self, ad_id):
         rows = self.rows("SELECT * FROM ads WHERE id=?", (ad_id,))

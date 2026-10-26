@@ -98,7 +98,7 @@ def test_size_filter_reaches_actual_deals_and_summary(size, count):
         monitor = SimpleNamespace(config=config, fetcher=fetcher,
                                   read_snapshot=AsyncMock(return_value=(LacosteAdapter().parse(html, URL), html, URL)))
         try:
-            report = await Deals(monitor).run('lacoste/sale', DiscountFilter.parse('>25'), config.domains, size=size)
+            report = await Deals(monitor).run('lacoste/sale', DiscountFilter.parse('>25'), config.domains, size=size, validation='announced')
             assert len(report.results) == count
             assert report.size == size
             assert 'Tamanho:' in '\n'.join(messages(report))
@@ -151,7 +151,7 @@ def test_telegram_lacoste_discount_size_and_execution():
         from monitor.deals.models import DealReport
         deals.run.return_value = DealReport([], [], DiscountFilter.parse('<30'), 'lacoste/sale', category_title='Lacoste', size='M')
         await background[0]
-        assert deals.run.call_args.kwargs == {'size': 'M'}
+        assert deals.run.call_args.kwargs == {'size': 'M', 'depth': 'expanded', 'validation': 'market'}
         assert deals.run.call_args.args[2] == ['lacoste.com']
     asyncio.run(run())
 

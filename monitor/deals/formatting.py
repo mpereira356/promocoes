@@ -8,6 +8,41 @@ def reais(cents):
 def messages(report):
     for result in report.results:
         offer, r = result.offer, result.offer.reading
+        if result.evidence is not None:
+            evidence = result.evidence
+            headline = 'Queda no preço observado' if evidence.status == 'history_only' else 'Preço com vantagem verificada'
+            text = (f'🏆 {headline}\n{r.title}\n\n'
+                    f'🏪 {offer.store} · {reais(r.price)} · {r.payment}\n'
+                    + ('Economia verificada: ' if evidence.status == 'history_only' else 'Economia comparada: ')
+                    + f'{evidence.percent:.2f}%\n')
+            condition = {'NewCondition': 'Novo', 'UsedCondition': 'Usado',
+                         'RefurbishedCondition': 'Recondicionado', 'DamagedCondition': 'Com avaria'}.get(r.condition, 'não declarada')
+            text += 'Condição: ' + condition + '\n'
+            if offer.coupon:
+                text += 'Cupom necessário: ' + offer.coupon + '\n'
+            if offer.members:
+                text += 'Assinatura necessária: ' + offer.members + '\n'
+            if offer.percent is not None:
+                text += f'Desconto anunciado pela loja: {offer.percent:.2f}% (não usado como prova).\n'
+            if evidence.peers:
+                text += '\nMesmo modelo e condições comparáveis:\n'
+            for peer in evidence.peers[:2]:
+                text += f'{peer.store}: {reais(peer.reading.price)}\n{peer.url}\n'
+            if evidence.inflated_reference:
+                text += '\nO preço “de” anunciado está acima dos preços comparados.\n'
+            if evidence.history_low:
+                text += f'Menor preço observado anteriormente nesta loja: {reais(evidence.history_low)}.\n'
+                if evidence.status == 'history_only':
+                    text += 'Queda observada nesta loja; comparação de mercado insuficiente.\n'
+            else:
+                text += 'Histórico ainda insuficiente para comprovar uma queda ao longo do tempo.\n'
+            if offer.color:
+                text += 'Cor: ' + offer.color + '\n'
+            if report.size:
+                text += 'Tamanho confirmado: ' + report.size + '\n'
+            text += '\nComparação sem frete. Confira o total antes de comprar.\n' + offer.url
+            yield text
+            continue
         condition = {'NewCondition': 'Novo', 'UsedCondition': 'Usado',
                      'RefurbishedCondition': 'Recondicionado', 'DamagedCondition': 'Danificado'}.get(r.condition, 'não declarada')
         comparison = result.comparison
@@ -36,16 +71,22 @@ def messages(report):
     title = report.category_title or ' > '.join(CATEGORIES.get(report.category, (report.category,)))
     title = ' > '.join(title.split(' > ')[-2:])
     result_domains = {result.offer.domain for result in report.results}
-    checked = [c.store for c in report.coverage if c.priced or c.domain in result_domains]
-    unavailable = [c.store for c in report.coverage if not c.priced and c.domain not in result_domains]
+    checked = [c.store for c in report.coverage if c.priced or c.comparison_prices or c.domain in result_domains]
+    unavailable = [c.store for c in report.coverage if not c.priced and not c.comparison_prices and c.domain not in result_domains]
     partial = [c.store for c in report.coverage if c.store in checked and c.failed_pages]
     text = '🏁 Pesquisa finalizada\n\n' + title + '\n'
     label = ('Maior que ' + str(report.filter.value) + '%' if not report.filter.inclusive and not report.filter.less else str(report.filter))
-    text += 'Desconto: ' + label + '\n'
+    text += ('Economia comparada: ' if report.validation == 'market' else 'Desconto: ') + label + '\n'
     if report.size or 'lacoste' in report.category:
         text += 'Tamanho: ' + (report.size or 'todos (sem filtro)') + '\n'
     if report.results:
         text += f'\nPromoções encontradas: {len(report.results)}.\n'
+    elif checked and report.validation == 'market':
+        text += '\nNão confirmei ofertas com a economia comparada escolhida.\n'
+        if report.unconfirmed:
+            text += 'Faltaram preços comparáveis para comprovar parte das ofertas.\n'
+        if report.not_advantageous:
+            text += 'Preços sem vantagem comprovada foram descartados.\n'
     elif checked:
         threshold = ('mais de ' + str(report.filter.value) + '%' if not report.filter.inclusive and not report.filter.less else str(report.filter))
         text += '\nNão encontrei promoções com ' + threshold + ' de desconto'

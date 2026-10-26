@@ -1,4 +1,4 @@
-"""Consulta manual limitada e sem qualquer dependencia de banco/agendador."""
+"""Pesquisa limitada, comparação de mercado e histórico observado opcional."""
 import asyncio
 import httpx
 from copy import copy
@@ -12,6 +12,7 @@ from .adapters import ADAPTERS
 from .identity import model_relation, comparable
 from .models import Coverage, DealResult, DealReport, valid_price, parse_size
 from .catalog import CategoryCatalog, Category
+from .evidence import assess, meets_filter
 
 
 @dataclass(frozen=True)
@@ -20,6 +21,14 @@ class Limits:
     products_per_store: int = 12
     comparisons_per_store: int = 2
     category_sources: int = 12
+    comparison_queries: int = 12
+    candidates_to_validate: int = 9
+
+
+PROFILES = {
+    'quick': Limits(),
+    'expanded': Limits(category_pages=4, products_per_store=48, comparisons_per_store=8),
+}
 
 
 class Deals:
@@ -32,7 +41,9 @@ class Deals:
             raise ValueError('Os limites devem estar entre 1 e 100.')
         self.lock = asyncio.Lock()
 
-    async def run(self, category, discount, domains, cep='', size=''):
+    async def run(self, category, discount, domains, cep='', size='', validation='market', depth=None):
+        if validation not in ('market', 'announced') or depth not in (None, 'quick', 'expanded'):
+            raise ValueError('Modo de pesquisa inválido.')
         size = parse_size(size) if size else ''
         domains = list(dict.fromkeys(domains))
         if isinstance(category, str):
@@ -48,11 +59,13 @@ class Deals:
         if cep and (len(cep) != 8 or not cep.isdigit()):
             raise ValueError('O CEP deve conter oito dígitos.')
         async with self.lock:
-            return await self._run(category, discount, domains, cep, size)
+            return await self._run(category, discount, domains, cep, size, validation, depth)
 
-    async def _run(self, category, discount, domains, cep, size):
+    async def _run(self, category, discount, domains, cep, size, validation, depth):
+        limits = PROFILES[depth] if depth else self.limits
         coverage = {d: Coverage(d, ADAPTERS[d].store) for d in domains}
         cache, pool = {}, []
+        discovery_cache = {}
         stopped = set()
         stop_reasons = {'blocked_no_bypass', 'captcha_no_bypass', 'domain_access_cooldown',
                         'rate_limit_deferred', 'store_rate_cooldown', 'robots_unavailable'}
@@ -60,6 +73,9 @@ class Deals:
         async def discover(domain, query):
             if domain in stopped:
                 return []
+            lookup = (domain, normalize(query))
+            if lookup in discovery_cache:
+                return discovery_cache[lookup]
             config = copy(self.monitor.config)
             config.domains = (domain,)
             audit = []
@@ -67,13 +83,15 @@ class Deals:
             try:
                 urls = await Search(config, self.fetcher).links(query)
                 coverage[domain].notices.extend(getattr(urls, 'notices', []))
-                return list(urls)
+                discovery_cache[lookup] = list(urls)
+                return discovery_cache[lookup]
             except (ReadError, ValueError, OSError, httpx.RequestError) as exc:
                 reason = REASONS.get(str(exc), 'A busca complementar está indisponível')
                 coverage[domain].notices.append(reason)
                 coverage[domain].failed_pages += 1
                 if str(exc) in stop_reasons:
                     stopped.add(domain)
+                discovery_cache[lookup] = []
                 return []
             finally:
                 PAGE_AUDIT.reset(token)
@@ -105,6 +123,8 @@ class Deals:
                 if self.fetcher.canonical(final)[1] != domain:
                     raise ReadError('redirect_changed_store')
                 offers = [ADAPTERS[domain].offer(html, final, r) for r in readings]
+                if comparison:
+                    cov.comparison_prices += sum(valid_price(o.reading.price) for o in offers)
                 cache[url] = offers
                 return offers
             except (ReadError, ValueError, TypeError, KeyError, OSError, httpx.RequestError) as exc:
@@ -157,7 +177,7 @@ class Deals:
                     cov.discovery_pages += len(documents)
                     cov.discovery_loaded += sum(e['ok'] for e in documents)
             url, visited, links = start_url, set(), []
-            pages = 1 if aggregate else self.limits.category_pages
+            pages = 1 if aggregate else limits.category_pages
             for _ in range(pages):
                 if not url or url in visited or domain in stopped:
                     break
@@ -193,20 +213,20 @@ class Deals:
                 cov.notices.append(f'Limite de {pages} página(s) por categoria atingido.')
             return links
 
-        for domain in domains:
+        async def scan_store(domain):
             cov = coverage[domain]
             sources = self.catalog.sources(category, domain)
             groups = []
             if not sources:
                 if not category.query:
                     cov.notices.append('Loja sem categoria mapeada para esta escolha; nenhuma busca genérica foi executada.')
-                    continue
+                    return
                 cov.notices.append('Busca por termo "' + category.search_query + '"; cobertura parcial.')
                 groups.append((category, list(dict.fromkeys(await discover(domain, category.search_query)))))
             else:
-                if len(sources) > self.limits.category_sources:
-                    cov.notices.append(f'Cobertura limitada a {self.limits.category_sources} de {len(sources)} categorias mapeadas.')
-                for source, url in sources[:self.limits.category_sources]:
+                if len(sources) > limits.category_sources:
+                    cov.notices.append(f'Cobertura limitada a {limits.category_sources} de {len(sources)} categorias mapeadas.')
+                for source, url in sources[:limits.category_sources]:
                     if domain in stopped:
                         break
                     cov.sources.append(source.title)
@@ -223,9 +243,9 @@ class Deals:
                         seen.add(urls[index])
                         links.append((source, urls[index]))
             cov.discovered = len(links)
-            if len(links) > self.limits.products_per_store:
-                cov.notices.append(f'Leitura limitada a {self.limits.products_per_store} de {len(links)} produtos encontrados.')
-            for source, link in links[:self.limits.products_per_store]:
+            if len(links) > limits.products_per_store:
+                cov.notices.append(f'Leitura limitada a {limits.products_per_store} de {len(links)} produtos encontrados.')
+            for source, link in links[:limits.products_per_store]:
                 if domain in stopped:
                     break
                 accepts = source.accepts_parent_title if domain not in source.urls and not source.query else source.accepts_title
@@ -238,28 +258,92 @@ class Deals:
                 if not any(eligible(o, discount) and (not size or size in o.available_sizes) for o in offers):
                     cov.excluded += 1
 
-        qualified = select_offers([o for o in pool if not size or size in o.available_sizes], discount, limit=None)
+        semaphore = asyncio.Semaphore(3)
+        async def bounded_scan(domain):
+            async with semaphore:
+                await scan_store(domain)
+        outcomes = await asyncio.gather(*(bounded_scan(d) for d in domains), return_exceptions=True)
+        for domain, outcome in zip(domains, outcomes):
+            if isinstance(outcome, Exception):
+                coverage[domain].failed_pages += 1
+                coverage[domain].notices.append('Consulta desta loja interrompida por falha; dados parciais preservados.')
+
+        sized_pool = [o for o in pool if not size or size in o.available_sizes]
+        if validation == 'announced':
+            qualified = select_offers(sized_pool, discount, limit=None)
+        else:
+            # A product may be a good price even without a crossed-out price.
+            candidates = [o for o in sized_pool if o.reading.comparable and o.reading.stock == 'in_stock']
+            qualified = []
+            for offer in sorted(candidates, key=lambda o: (sum(comparable(o, p) and p.domain != o.domain for p in sized_pool),
+                                                           o.ratio or 0), reverse=True):
+                if not any(model_relation(offer, old) is True for old in qualified):
+                    qualified.append(offer)
         if size:
             for domain, cov in coverage.items():
                 excluded = sum(o.domain == domain and size not in o.available_sizes for o in pool)
                 cov.excluded += excluded
-                cov.notices.append(f'Tamanho solicitado: {size}. {excluded} oferta(s) excluída(s) por falta de estoque confirmado nesse tamanho.')
-        # Busca textual descobre candidatos; identidade forte valida a comparacao.
-        for offer in (qualified[:3] if category.query else []):
+                cov.notices.append(f'Tamanho solicitado: {size}. {excluded} oferta(s) sem estoque confirmado nesse tamanho.')
+        # Price comparisons now run for mapped categories too. Global and store
+        # budgets prevent an expanded scan from flooding sites or the search index.
+        queries = 0
+        for offer in (qualified[:limits.candidates_to_validate] if validation == 'market' else []):
+            if assess(offer, pool).status != 'unconfirmed':
+                continue
             identifiers = offer.reading.identifiers
             query = ' '.join(filter(None, [identifiers.get('brand', ''), identifiers.get('mpn', '')]))
-            if not identifiers.get('mpn'):
-                query = offer.reading.title
+            query = query if identifiers.get('mpn') else offer.reading.title
             for domain in domains:
-                if domain == offer.domain or domain in stopped or coverage[domain].comparison_pages >= self.limits.comparisons_per_store:
+                if (domain == offer.domain or domain in stopped or queries >= limits.comparison_queries
+                        or coverage[domain].comparison_pages >= limits.comparisons_per_store):
                     continue
+                # Existing comparable pages suffice; avoid unnecessary network calls.
+                if any(p.domain == domain and comparable(offer, p) for p in pool):
+                    continue
+                queries += 1
                 urls = await discover(domain, query)
-                for url in urls[:self.limits.comparisons_per_store - coverage[domain].comparison_pages]:
+                for url in urls[:min(2, limits.comparisons_per_store - coverage[domain].comparison_pages)]:
                     pool.extend(await read(url, domain, comparison=True))
-
         comparable_pool = [o for o in pool if not size or size in o.available_sizes]
-        results = [compare_offer(o, comparable_pool) for o in qualified[:3]]
-        return DealReport(results, list(coverage.values()), discount, category.key, cep, True, pool, category.title, size)
+        unconfirmed = not_advantageous = 0
+        if validation == 'market':
+            evaluated = []
+            for cov in coverage.values():
+                cov.qualifying = cov.excluded = 0
+            for offer in comparable_pool:
+                if not valid_price(offer.reading.price) or offer.reading.stock != 'in_stock':
+                    continue
+                history = None
+                db = getattr(self.monitor, 'db', None)
+                if db is not None and callable(getattr(db, 'observed_history', None)):
+                    import sqlite3
+                    try:
+                        history = db.observed_history(offer.url, offer.reading)
+                    except sqlite3.Error:
+                        history = None
+                evidence = assess(offer, comparable_pool, history=history)
+                if evidence.status == 'unconfirmed':
+                    unconfirmed += 1
+                elif evidence.status not in ('verified', 'history_only'):
+                    not_advantageous += 1
+                if meets_filter(evidence, discount, offer.reading.price):
+                    coverage[offer.domain].qualifying += 1
+                    result = compare_offer(offer, comparable_pool)
+                    result.evidence = evidence
+                    evaluated.append(result)
+                else:
+                    coverage[offer.domain].excluded += 1
+            # Show the real advantage, not the retailer's claimed percentage.
+            results = []
+            for result in sorted(evaluated, key=lambda r: r.evidence.saving, reverse=True):
+                if not any(model_relation(result.offer, old.offer) is True for old in results):
+                    results.append(result)
+                if len(results) == 3:
+                    break
+        else:
+            results = [compare_offer(o, comparable_pool) for o in qualified[:3]]
+        return DealReport(results, list(coverage.values()), discount, category.key, cep, True, pool,
+                          category.title, size, validation, unconfirmed, not_advantageous, depth or 'quick')
 
 
 def eligible(offer, discount):

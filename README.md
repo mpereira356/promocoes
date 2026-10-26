@@ -1,4 +1,6 @@
-**Versão atual: `2026.10.25-exact-search.1`.** Envie **/start** ou **/menu** para usar a central de botões: buscas, promoções, monitoramentos e dinheiro emprestado. Veja [MENU-TELEGRAM.md](MENU-TELEGRAM.md).
+**Versão atual: `2026.10.25-market-evidence.1`.** Envie **/start** ou **/menu** para usar a central de botões: buscas, promoções, monitoramentos e dinheiro emprestado. Veja [MENU-TELEGRAM.md](MENU-TELEGRAM.md).
+
+Promocoes agora exigem evidencia de preco comparado ou queda no historico observado. O percentual anunciado pela loja e apenas informativo. Veja [COMPARACAO-DE-PRECOS.md](COMPARACAO-DE-PRECOS.md).
 
 Loja oficial Brastemp, Shopee, Magalu e Frigelar: comandos, validacao real e limitacoes em [LOJAS-FREEZERS.md](LOJAS-FREEZERS.md). Brastemp e Frigelar retornaram precos em testes reais; Shopee ainda sem leitura real validada e Magalu bloqueada na amostra.
 
@@ -289,7 +291,7 @@ O serviço permite escrita somente em `data`. A operação HTTP não precisa de 
 
 ## Validação
 
-Veja `VALIDACAO.md`. A suíte atual tem **92 testes aprovados**, cobrindo comparação, falhas, fila, IDs, abrangência, persistência, autorização, identidade de modelo e medalhas. Três testes usam snapshots reduzidos reais de metadados KaBuM; os demais usam dados simulados. Preços e envios Telegram dos testes são simulados. Não se executou um ciclo real de cinco horas nem o serviço Debian. Nenhuma mensagem real foi enviada durante o desenvolvimento.
+Veja `VALIDACAO.md` e `COMPARACAO-DE-PRECOS.md`. A suite atual tem **600 testes aprovados**, incluindo cenarios de mercado simulados e capturas publicas reais reduzidas. Os testes nao garantem precos atuais, acesso futuro a todas as lojas ou operacao na VPS. Nenhuma mensagem Telegram real foi enviada nestes testes.
 
 Sondagem de busca sem credenciais: `python -m scripts.probe_search b550`. Sondagem de ofertas: `python -m scripts.probe_stores`. Relatórios ficam em `data` e não são incluídos no pacote. Não confundem compatibilidade parcial com integração de alertas completa.
 

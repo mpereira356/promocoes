@@ -19,11 +19,11 @@ def test_audit_includes_every_default_store_and_survives_one_failure(monkeypatch
         mocked = AsyncMock(side_effect=diagnose)
         monkeypatch.setattr('scripts.diagnose_all_stores.diagnose', mocked)
         report = await audit(config)
-        assert len(report['stores']) == 13
-        assert mocked.await_count == 13
+        assert len(report['stores']) == len(QUERIES)
+        assert mocked.await_count == len(QUERIES)
         assert next(s for s in report['stores'] if s['domain'] == 'magazineluiza.com.br')['status'] == 'RuntimeError'
         assert 'secret' not in str(report)
-        assert len(config.domains) == 13
+        assert len(config.domains) == len(QUERIES)
     asyncio.run(run())
 
 

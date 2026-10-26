@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from fractions import Fraction
 import re
+import time
 from ..models import Reading
 
 
@@ -52,6 +53,7 @@ class DealOffer:
     notes: list[str] = field(default_factory=list)
     available_sizes: list[str] = field(default_factory=list)
     color: str = ''
+    observed_at: float = field(default_factory=time.time)
 
     @property
     def ratio(self):
@@ -87,6 +89,7 @@ class Coverage:
     missing_reference: int = 0
     unavailable: int = 0
     sources: list[str] = field(default_factory=list)
+    comparison_prices: int = 0
 
 
 @dataclass
@@ -96,6 +99,7 @@ class DealResult:
     comparison: str
     lowest: DealOffer | None = None
     totals_with_shipping: bool = False
+    evidence: object | None = None
 
 
 @dataclass
@@ -109,6 +113,10 @@ class DealReport:
     examined: list[DealOffer] = field(default_factory=list)
     category_title: str = ''
     size: str = ''
+    validation: str = 'announced'
+    unconfirmed: int = 0
+    not_advantageous: int = 0
+    depth: str = 'quick'
 
 
 def parse_size(text):

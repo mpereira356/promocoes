@@ -1,5 +1,7 @@
 # Lacoste Brasil
 
+Na versão `2026.10.25-market-evidence.1`, Promoções exige comparação de preço ou queda no histórico observado. Ler um “de/por” da Lacoste não basta. Dados ausentes, inclusive condição, impedem comprovar equivalência. Veja [COMPARACAO-DE-PRECOS.md](COMPARACAO-DE-PRECOS.md).
+
 No Telegram, use `/promocoes lacoste`, escolha a categoria e siga os botões:
 
 1. Desconto anunciado: botões **Maior que 20%**, **Maior que 30%**, **Maior que 40%**, **Maior que 50%**, **Maior que 60%**, **Maior que 70%** e **Maior que 80%**. Não é necessário digitar expressões.

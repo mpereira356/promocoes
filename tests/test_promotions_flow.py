@@ -71,7 +71,8 @@ def test_telegram_complete_computers_flow_no_implicit_stores_or_external_search(
             await click('Placas-mãe')
             markup = reply.await_args.kwargs['reply_markup']
             labels = [b.text for row in markup.inline_keyboard for b in row if b.callback_data.startswith('promo:')]
-            assert labels == [f'Maior que {n}%' for n in range(20, 81, 10)]
+            assert labels == [f'Maior que {n}%' for n in (5, 10, 20, 30, 40, 50, 60, 70, 80)]
+            controller.session.validation = 'announced'  # This test exercises navigation/extraction, not market proof.
             await click('Maior que 30%')
             assert not controller.session.stores
             await click('🔎 Pesquisar agora')
@@ -118,7 +119,7 @@ def test_all_computers_reads_a_fair_sample_of_actual_subcategories(monkeypatch):
         monkeypatch.setattr('monitor.deals.service.Search.links', search)
         try:
             selection = c.scope(('Computadores',), config.domains)
-            report = await deals.run(selection, DiscountFilter.parse('>30'), config.domains)
+            report = await deals.run(selection, DiscountFilter.parse('>30'), config.domains, validation='announced')
             read_codes = {int(call.args[0].split('/produto/')[1].split('/')[0]) for call in monitor.read_snapshot.await_args_list}
             assert read_codes == {1, 4, 7}
             assert len(report.results) == 3
@@ -151,7 +152,7 @@ def test_blocked_promotions_stop_the_store_and_do_not_claim_success():
         deals = Deals(monitor)
         deals.catalog = catalog()
         try:
-            report = await deals.run(deals.catalog.scope(('Computadores',), config.domains), DiscountFilter.parse('>30'), config.domains)
+            report = await deals.run(deals.catalog.scope(('Computadores',), config.domains), DiscountFilter.parse('>30'), config.domains, validation='announced')
             assert fetcher.html.await_count == 1
             monitor.read_snapshot.assert_not_awaited()
             output = list(messages(report))

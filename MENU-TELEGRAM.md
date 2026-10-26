@@ -58,3 +58,6 @@ No menu principal: **💸 Dinheiro emprestado**. Atalho: `/emprestimos`.
   Pagos não recebem novos avisos. Manter pendente não repete lembretes diariamente.
 - Para atualizar os atalhos abaixo do campo de mensagem, envie `/start` novamente.
 
+
+
+Promocoes agora usa evidencia de mercado ou historico observado, com filtros de 5% a 80% e busca rapida/ampliada. O botao nao usa o desconto riscado como prova de economia. Consulte `/lojas` para ver acesso e pausas por loja.

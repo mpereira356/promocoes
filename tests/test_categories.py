@@ -136,7 +136,7 @@ def test_custom_query_reads_prices_without_database_or_scheduling(monkeypatch):
         monkeypatch.setattr('monitor.deals.service.Search.links',search)
         deals=Deals(monitor)
         request=deals.catalog.request('brinquedos',fetcher)
-        report=await deals.run(request,DiscountFilter.parse('>=30'),config.domains)
+        report=await deals.run(request,DiscountFilter.parse('>=30'),config.domains, validation='announced')
         assert len(report.results)==1 and report.coverage[0].category_pages==0
         assert report.coverage[0].product_pages==1 and 'termo' in report.coverage[0].notices[0]
         assert 'brinquedos' in '\n'.join(messages(report))

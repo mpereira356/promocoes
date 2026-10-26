@@ -13,7 +13,7 @@ from .models import DiscountFilter, parse_size
 from .formatting import messages
 
 PAGE_SIZE = 8
-DISCOUNTS = tuple(range(20, 81, 10))
+DISCOUNTS = (5, 10, *range(20, 81, 10))
 
 
 @dataclass
@@ -32,6 +32,8 @@ class Session:
     size: str = ''
     path: tuple[str, ...] = ()
     branches: list[tuple[str, ...]] = field(default_factory=list)
+    depth: str = 'expanded'
+    validation: str = 'market'
 
 
 class PromotionsTelegram:
@@ -48,7 +50,7 @@ class PromotionsTelegram:
         return [d for d in ADAPTERS if d in self.config.domains]
 
     def new_session(self):
-        self.session = Session()
+        self.session = Session(depth=getattr(self.config, 'promotions_depth', 'expanded'))
         return self.session
 
     @property
@@ -80,7 +82,7 @@ class PromotionsTelegram:
                 session.discount = DiscountFilter.parse(args)
                 if session.discount.inclusive or session.discount.less:
                     session.discount = None
-                    raise ValueError('Escolha um botão de Maior que 20% a Maior que 80%.')
+                    raise ValueError('Escolha um botão de Maior que 5% a Maior que 80%.')
                 return await self.after_discount(reply)
             if name == '/tamanhopromo' and session.stage in ('size', 'stores'):
                 session.size = parse_size(args)
@@ -172,7 +174,7 @@ class PromotionsTelegram:
         session.size = ''
         session.category, session.stage = category, 'filter'
         session.stores.intersection_update(self.store_choices)
-        return await reply(f'🏷️ {category.title}\n\nEscolha o desconto anunciado.\n“Maior que 30%” exclui exatamente 30%.\nSó entram ofertas com preço anterior verificável e estoque disponível.\nDepois você escolherá as lojas. Esta consulta não cria alertas.', reply_markup=self.keyboard([(f'Maior que {value}%', f'gt{value}') for value in DISCOUNTS]))
+        return await reply(f'🏷️ {category.title}\n\nEscolha a economia mínima.\nComparo o mesmo modelo e condições em pelo menos duas outras lojas. Sem isso, só aceito queda registrada no histórico do robô. O “de/por” do anúncio não basta.\n“Maior que 5%” exclui exatamente 5%. Depois escolha as lojas para pesquisar e comparar.', reply_markup=self.keyboard([(f'Maior que {value}%', f'gt{value}') for value in DISCOUNTS]))
 
     async def after_discount(self, reply):
         if self.store_choices == ['lacoste.com']:
@@ -194,6 +196,7 @@ class PromotionsTelegram:
         if 'lacoste.com' in self.session.stores:
             buttons.append(('Tamanho: ' + (self.session.size or 'todos') + ' — alterar', 'sizes'))
         buttons += [('TODAS', 'all'), ('Limpar seleção', 'none'), ('🔎 Pesquisar agora', 'run'), ('↩️ Trocar desconto', 'filterback'), ('↩️ Trocar categoria', 'home')]
+        buttons.insert(-3, ('Busca: ' + ('Ampliada (48 produtos/loja)' if self.session.depth == 'expanded' else 'Rápida (12 produtos/loja)'), 'depth'))
         title = self.session.category.title if self.session.category else 'Categoria não selecionada'
         return await reply(f'🏷️ {title}\n\nSelecione as lojas e toque em Pesquisar agora.\nSelecionadas: {len(self.session.stores)} de {len(available)}.\nTODAS marca somente as lojas com categoria mapeada para esta escolha.\nNenhuma loja é marcada automaticamente.', reply_markup=self.keyboard(buttons))
 
@@ -288,6 +291,9 @@ class PromotionsTelegram:
         if action == 'all':
             session.stores = set(self.store_choices)
             return await self.show_stores(reply)
+        if action == 'depth':
+            session.depth = 'quick' if session.depth == 'expanded' else 'expanded'
+            return await self.show_stores(reply)
         if action == 'none':
             session.stores.clear()
             return await self.show_stores(reply)
@@ -310,15 +316,17 @@ class PromotionsTelegram:
             await reply(
                 f'🔎 Pesquisando promoções…\n\n'
                 f'🏷️ {session.category.title}\n'
-                f'📉 Desconto: {session.discount}\n'
+                f'📉 Economia mínima: {session.discount}\n'
                 f'🏪 Lojas selecionadas: {len(session.stores)}\n\n'
-                '⏳ Aguarde enquanto consulto as ofertas. Avisarei quando terminar.'
+                '⏳ Vou ler e comparar preços. A busca ampliada pode levar alguns minutos. Avisarei quando terminar.'
             )
 
     async def execute(self, session):
         try:
             try:
-                kwargs = {'size': session.size} if session.size else {}
+                kwargs = {'depth': session.depth, 'validation': session.validation}
+                if session.size:
+                    kwargs['size'] = session.size
                 report = await self.deals.run(session.category, session.discount, sorted(session.stores), session.cep, **kwargs)
                 output = list(messages(report))
             except Exception as exc:

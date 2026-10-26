@@ -54,11 +54,15 @@ class ExternalMarketSearch:
                     return CachedCandidates(cached[1], domain)
                 raise ReadError('external_search_limited')
             async with httpx.AsyncClient(timeout=40, follow_redirects=False) as client:
+                api_key = getattr(self.fetcher.config, 'tavily_key', '')
+                headers = ({'Authorization': 'Bearer ' + api_key} if api_key else
+                           {'X-Tavily-Access-Mode': 'keyless'})
+                headers['X-Client-Source'] = 'price-monitor'
                 for attempt in range(3):
                     try:
                         response = await client.post(
                             'https://api.tavily.com/search',
-                            headers={'X-Tavily-Access-Mode': 'keyless', 'X-Client-Source': 'price-monitor'},
+                            headers=headers,
                             json={'query': lookup + ' site:' + domain + ({
                                       'amazon.com.br': ' inurl:dp', 'shopee.com.br': ' inurl:-i.',
                                       'magazineluiza.com.br': ' inurl:/p/', 'frigelar.com.br': ' inurl:/p/',

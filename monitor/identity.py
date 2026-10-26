@@ -62,6 +62,14 @@ def logitech_part_number(text):
     return '920-' + match[1] if match else ''
 
 
+def part_number_key(value):
+    return normalize(value).replace(' ', '')
+
+
+def specific_part_number(value):
+    return bool(value) and not re.fullmatch(r'(?:[abxyz]\d{3}[a-z]?|ddr\d+)', normalize(value))
+
+
 def search_terms(title, identifiers=None):
     """Consulta curta para descoberta; nunca transforma título em identidade verificada."""
     identifiers = identifiers or {}
@@ -172,17 +180,17 @@ def same_product(seed, candidate):
         if left.get(key) and right.get(key) and left[key] != right[key]:
             return False
     def specific_mpn(value):
-        return bool(value) and not re.fullmatch(r'[bxyz]\d{3}[a-z]?', normalize(value))
+        return specific_part_number(value)
     left_mpn, right_mpn = left.get('mpn', ''), right.get('mpn', '')
     if model_conflict(left_mpn, right_mpn):
         return False
-    if specific_mpn(left_mpn) and specific_mpn(right_mpn) and left_mpn != right_mpn:
+    if specific_mpn(left_mpn) and specific_mpn(right_mpn) and part_number_key(left_mpn) != part_number_key(right_mpn):
         return False
     if left.get("gtin") and left.get("gtin") == right.get("gtin"):
         return True
     if (
         specific_mpn(left.get("mpn"))
-        and left.get("mpn") == right.get("mpn")
+        and part_number_key(left.get("mpn")) == part_number_key(right.get("mpn", ''))
         and left.get("brand")
         and left.get("brand") == right.get("brand")
     ):

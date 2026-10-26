@@ -168,7 +168,7 @@ def test_manual_run_partial_failure_no_database_and_no_future_jobs(failure, reas
         fetcher.html = html
         monitor = SimpleNamespace(config=config, fetcher=fetcher, read_snapshot=AsyncMock(return_value=([a.reading], product, a.url)))
         # Nao ha db, scheduler, send ou alertas disponiveis neste objeto.
-        report = await Deals(monitor).run('hardware/placas-mae', DiscountFilter.parse('>=30'), config.domains, '01001000')
+        report = await Deals(monitor).run('hardware/placas-mae', DiscountFilter.parse('>=30'), config.domains, '01001000', validation='announced')
         assert len(report.results) == 1
         assert report.coverage[1].failed_pages == 1
         assert any(reason in n for n in report.coverage[1].notices)
@@ -296,7 +296,7 @@ def test_query_all_qualifying_products_but_present_only_three(monkeypatch):
             return []
         monkeypatch.setattr('monitor.deals.service.Search.links', search)
         monitor = SimpleNamespace(config=config, fetcher=fetcher, read_snapshot=read_snapshot)
-        report = await Deals(monitor).run('hardware/placas-mae', DiscountFilter.parse('>30'), config.domains)
+        report = await Deals(monitor).run('hardware/placas-mae', DiscountFilter.parse('>30'), config.domains, validation='announced')
         assert queries == [] and len(report.results) == 3
         assert report.coverage[0].comparison_pages == 0
         assert any('A loja bloqueou o acesso' in n for n in report.coverage[1].notices)
@@ -311,7 +311,7 @@ def test_manual_lock_rejects_duplicate_without_extra_requests():
         deals = Deals(monitor)
         async with deals.lock:
             with pytest.raises(ValueError, match='andamento'):
-                await deals.run('hardware/placas-mae', DiscountFilter.parse('>30'), config.domains)
+                await deals.run('hardware/placas-mae', DiscountFilter.parse('>30'), config.domains, validation='announced')
     asyncio.run(scenario())
 
 
@@ -357,7 +357,7 @@ def test_marketplace_catalog_discarded_before_product_request(monkeypatch, failu
         snapshot = AsyncMock(side_effect=failure)
         monitor = SimpleNamespace(config=config, fetcher=fetcher, read_snapshot=snapshot)
         category = Deals(monitor).catalog.request('produto de teste', fetcher)
-        report = await Deals(monitor).run(category, DiscountFilter.parse('>30'), config.domains)
+        report = await Deals(monitor).run(category, DiscountFilter.parse('>30'), config.domains, validation='announced')
         snapshot.assert_awaited_once_with(individual)
         assert report.coverage[0].product_pages == 1
         assert any('catálogo' in n for n in report.coverage[0].notices)

@@ -69,7 +69,7 @@ class Monitor:
         return (await self.read_snapshot(url))[0]
 
     async def read_snapshot(self, url):
-        """Leituras e HTML da mesma consulta, sem gravar anuncios ou historico."""
+        """Leituras da consulta; observações não criam monitoramentos ou alertas."""
         url, _ = self.fetcher.canonical(url)
         task = self.snapshot_inflight.get(url)
         if task is None:
@@ -81,7 +81,15 @@ class Monitor:
                 if not completed.cancelled():
                     completed.exception()
             task.add_done_callback(done)
-        return await asyncio.shield(task)
+        result = await asyncio.shield(task)
+        if self.db is not None and callable(getattr(self.db, 'observe_prices', None)):
+            import sqlite3
+            import logging
+            try:
+                self.db.observe_prices(result[2], result[0])
+            except sqlite3.Error:
+                logging.getLogger(__name__).warning('price_observation_write_failed')
+        return result
 
     async def _load_snapshot(self, url):
         url, domain = self.fetcher.canonical(url)

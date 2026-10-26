@@ -23,6 +23,7 @@ def build_package(output=None):
         "MENU-TELEGRAM.md",
         "LACOSTE.md",
         "AUDITORIA-LOJAS.md",
+        "COMPARACAO-DE-PRECOS.md",
         ".env.example",
         "requirements.txt",
         "requirements.lock.txt",

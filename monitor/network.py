@@ -30,9 +30,18 @@ class Fetcher:
         self.access_paused = {}
         self.rate_paused = {}
         self.page_access = {}
+        from .network_state import BackoffState
+        self.backoff = BackoffState(config)
+        self.access_paused.update(self.backoff.restore('access'))
+        self.rate_paused.update(self.backoff.restore('rate'))
 
     def pause_access(self, domain):
         self.access_paused[domain] = time.monotonic() + 900
+        self.backoff.pause('access', domain, 900)
+
+    def pause_rate(self, domain, seconds):
+        self.rate_paused[domain] = time.monotonic() + seconds
+        self.backoff.pause('rate', domain, seconds)
 
     def uses_browser(self, domain):
         return getattr(self.config, "browser", False) and domain in (
@@ -176,7 +185,7 @@ class Fetcher:
                             pass
                 if wait > 60:
                     if response is not None and response.status_code == 429:
-                        self.rate_paused[domain] = time.monotonic() + wait
+                        self.pause_rate(domain, wait)
                     raise ReadError('rate_limit_deferred' if response is not None and response.status_code == 429
                                     else 'store_retry_deferred')
                 if attempt == 2:
@@ -184,7 +193,7 @@ class Fetcher:
                         retry_reason = ('rate_limit_deferred' if response.status_code == 429
                                         else 'store_temporarily_unavailable')
                         if response.status_code == 429:
-                            self.rate_paused[domain] = time.monotonic() + max(60, wait)
+                            self.pause_rate(domain, max(60, wait))
                     raise ReadError(retry_reason)
                 await asyncio.sleep(wait)
             if urlsplit(url).path == '/robots.txt':

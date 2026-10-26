@@ -1,3 +1,9 @@
+# Evidencia de preco 2026.10.25-market-evidence.1
+
+Promocoes agora usa comparacao de mercado e observacoes historicas, sem aceitar o preco riscado como prova. O exemplo R$ 45 contra R$ 42 e descartado; R$ 42 contra R$ 45/46 tem vantagem de 6,67%. Evidencia de mercado exige duas outras lojas com produto e condicoes comparaveis. Queda historica sem comparacao suficiente recebe rotulo proprio e precisa de observacoes anteriores validas, com intervalo minimo de 24h.
+
+Busca ampliada de 48 produtos/loja, ate tres lojas em paralelo, orcamentos de comparacao e pausas de acesso persistentes. Patoloco foi adicionada com leitura real de preco e Pix/boleto; condicao ausente nao foi presumida. Testes: 600 aprovados. A leitura real foi da nova fonte; a validacao dos cenarios de mercado usa respostas simuladas, sem afirmar precos atuais ou acesso irrestrito a todas as lojas. Detalhes em [COMPARACAO-DE-PRECOS.md](COMPARACAO-DE-PRECOS.md).
+
 # Promoções 2026.10.21-promotions.2
 
 Fluxo de Telegram testado com categorias/subcategorias, seleção Tudo, sete botões de desconto estrito de 20% a 80%, lojas desmarcadas e seleção restrita às categorias mapeadas. Avisos consolidados, com contagem de preços e motivo para ausência de promoções. A função continua sem gravar no banco nem criar alertas.

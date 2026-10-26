@@ -16,3 +16,6 @@ pichau_product_browser_real.html e terabyte_product_browser_real.html: recortes 
 
 
 `lacoste_product_real.html` e `lacoste_cap_real.html`: recortes reais obtidos com o Fetcher em 21/10/2026. Preservam apenas h1, Product JSON-LD, identificacao publica do produto/cor e blocos de preco. Valores historicos da amostra: camiseta Pima branca de R$ 429,00 por R$ 299,00; bone azul-marinho R$ 469,00 tamanho TU. Sem cookies, tokens, formularios ou dados de sessao. Nao comprovam acesso futuro nem disponibilidade de outros tamanhos.
+
+
+`patoloco_product_real.html`: recorte publico real de Product/Offer em 25/10/2026. Mantem nome, marca, codigo do fabricante no titulo, imagem, preco total BRL, estoque e texto de pagamento da MSI X870E Tomahawk. Sem scripts, formularios ou dados de sessao. A condicao nao foi declarada e nao foi presumida. O valor da amostra e historico, nao garantia de preco atual.

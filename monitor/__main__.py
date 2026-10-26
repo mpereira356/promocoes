@@ -37,7 +37,7 @@ Exemplos de uso
 /configurar 1 0 0 1500 — sem queda mínima, mas só alerta em uma queda que termine em até R$ 1.500,00. Não avisa apenas por já estar abaixo do alvo.
 /alertas 1 todas — volta a avisar aumentos e quedas, sem aplicar esses filtros.
 /alertas 1 quedas — volta a aplicar os filtros às quedas.
-/promocoes — botões Maior que 20%, 30%, 40%, 50%, 60%, 70% e 80%.
+/promocoes — economia comparada, de Maior que 5% até Maior que 80%.
 /descontopromo >30 — alternativa aos botões; exatamente 30% não entra.
 /tamanhopromo M — tamanho exato na busca Lacoste; use todos para ignorar.
 Use ponto para centavos em /configurar: 50.90 significa R$ 50,90. Informe todos os valores, sem R$ ou separador de milhar.
@@ -71,6 +71,7 @@ Os três filtros precisam ser atendidos. Use - para retirar o preço-alvo.
 
 /emprestimos — dinheiro emprestado e lembretes.
 /status — versão e diagnóstico.
+/lojas — acesso atual de cada loja e pausas por bloqueio.
 /cancelar — sair da entrada atual.
 
 Anúncio, oferta e monitoramento têm IDs diferentes. Use o ID solicitado.
@@ -183,8 +184,11 @@ def main():
                 )
             if name == "/status":
                 return await reply(
-                    f'ℹ️ Status do bot\n\nVersão: {VERSION}\nBusca: {config.provider}\nChromium: {"ativado" if config.browser else "desativado"}\nPichau/Terabyte: descoberta por sitemaps.\nPreço e estoque são conferidos na página da oferta. CAPTCHA e robots.txt continuam sendo respeitados.'
+                    f'ℹ️ Status do bot\n\nVersão: {VERSION}\nBusca: {config.provider}\nChromium: {"ativado" if config.browser else "desativado"}\nPromoções: preços comparados e histórico observado.\nBusca padrão: {config.promotions_depth}.\nUse /lojas para conferir o acesso de cada loja.\nCAPTCHA e robots.txt continuam sendo respeitados.'
                 )
+            if name == '/lojas':
+                from .store_status import store_status
+                return await reply(store_status(fetcher, config.domains))
             if name == "/lista":
                 return await ui.listing(update)
             if name in ("/monitorar", "/buscar", "/buscarml"):
@@ -343,6 +347,7 @@ def main():
         "cancelar",
         "ajuda",
         "status",
+        "lojas",
         "buscar",
         "buscarml",
         "monitorar",

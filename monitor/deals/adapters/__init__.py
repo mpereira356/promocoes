@@ -1,4 +1,5 @@
 from .lacoste import LacosteCategories
+from .patoloco import PatolocoCategories
 from .kabum import KabumCategories
 from .pichau import PichauCategories
 from .terabyte import TerabyteCategories
@@ -8,7 +9,7 @@ from .chairs import SensetupCategories, ElementsCategories, FlexformCategories
 from .appliances import ShopeeCategories, MagaluCategories, FrigelarCategories
 from .brastemp import BrastempCategories
 
-ADAPTERS = {a.domain: a() for a in (LacosteCategories, KabumCategories, PichauCategories, TerabyteCategories, AmazonCategories, MercadoLivreCategories, SensetupCategories, ElementsCategories, FlexformCategories, ShopeeCategories, MagaluCategories, FrigelarCategories, BrastempCategories)}
+ADAPTERS = {a.domain: a() for a in (LacosteCategories, PatolocoCategories, KabumCategories, PichauCategories, TerabyteCategories, AmazonCategories, MercadoLivreCategories, SensetupCategories, ElementsCategories, FlexformCategories, ShopeeCategories, MagaluCategories, FrigelarCategories, BrastempCategories)}
 from ..catalog import CategoryCatalog
 
 _catalog = CategoryCatalog()

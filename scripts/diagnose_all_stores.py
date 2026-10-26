@@ -11,6 +11,7 @@ from monitor.version import VERSION
 from scripts.diagnose_stores import diagnose
 
 QUERIES = {
+    'patoloco.com.br': 'Placa mae MSI MAG X870E Tomahawk WiFi',
     'kabum.com.br': 'SSD Kingston NV3 1TB',
     'pichau.com.br': 'Gigabyte B550 Aorus Elite V2',
     'terabyteshop.com.br': 'Gigabyte B550 Aorus Elite V2',
@@ -64,6 +65,7 @@ def main():
         delay=max(1, float(os.getenv('REQUEST_DELAY', '3'))),
         mercadolivre_token=os.getenv('MERCADOLIVRE_ACCESS_TOKEN', '').strip(),
         mercadolivre_discovery=os.getenv('MERCADOLIVRE_DISCOVERY', 'external'),
+        tavily_key=os.getenv('TAVILY_API_KEY', '').strip(),
     )
     report = asyncio.run(audit(config, args.timeout))
     output = Path(args.output)
