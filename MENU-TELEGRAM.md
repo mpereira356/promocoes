@@ -8,6 +8,8 @@ Envie **/start** para ativar os atalhos fixos do teclado e abrir a central. **/m
 
 ## Central de ofertas
 
+- **📍 Supermercados: localização e entrega:** abre `/mercados`, com os botões Posso ir à loja e Preciso de entrega. O primeiro é o padrão e não exige entrega, mas não garante preço ou estoque no balcão. Alterar localização recebe o CEP na mensagem seguinte. As preferências ficam salvas após reiniciar.
+
 - **🔎 Buscar produto:** toque e digite o nome ou link na próxima mensagem, sem escrever `/buscar`.
 - **🏷️ Promoções:** escolha categoria e subcategoria, ou Tudo nesta categoria. Use os botões Maior que 20% até Maior que 80%, marque as lojas e pesquise. Nenhuma loja começa selecionada; TODAS marca somente as compatíveis com a categoria escolhida.
 - **🔔 Meus monitoramentos:** lista paginada de seis itens, com situação ativa/pausada. Toque no produto para abrir suas ações.

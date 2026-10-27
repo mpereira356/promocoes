@@ -19,6 +19,17 @@ class GroceryPrices:
         self.clients = {}
         self.boa_operations = None
 
+    @property
+    def mode(self):
+        return getattr(getattr(self.fetcher, 'config', None), 'grocery_mode', 'delivery')
+
+    def for_visit(self, reading):
+        if self.mode == 'visit':
+            reading.identifiers.update(shopping_mode='visit', region_verified='true',
+                                       price_verified='true', physical_stock='unknown', delivery_verified='unknown')
+            reading.seller = reading.seller.replace(' · CEP ', ' · visita à loja · CEP ', 1)
+        return reading
+
     async def close(self):
         if self.extra_api is not None:
             await self.extra_api.close()
@@ -48,7 +59,8 @@ class GroceryPrices:
     async def extra_store(self, cep):
         if not re.fullmatch(r'[0-9]{8}', cep):
             raise ReadError('regional_request_not_allowed')
-        cached = self.regions.get(('extra', cep))
+        key = ('extra', cep, self.mode)
+        cached = self.regions.get(key)
         if cached and cached[0] > time.monotonic():
             return cached[1]
         response = await self.extra_json('/ex/delivery-v2/ecom/deliveryOptions?zipCode=' + cep)
@@ -56,11 +68,11 @@ class GroceryPrices:
         if not isinstance(options, list):
             raise ReadError('regional_response_invalid')
         delivery = next((item for item in options if isinstance(item, dict)
-                         and item.get('type') == 'normal' and type(item.get('storeid')) is int
+                         and (self.mode == 'visit' or item.get('type') == 'normal') and type(item.get('storeid')) is int
                          and item['storeid'] > 0 and item.get('storeName')), None)
         if delivery is None:
             raise ReadError('regional_delivery_unavailable')
-        self.regions[('extra', cep)] = (time.monotonic() + 300, delivery)
+        self.regions[key] = (time.monotonic() + 300, delivery)
         return delivery
 
     async def discover_extra(self, query, cep):
@@ -151,12 +163,19 @@ class GroceryPrices:
                           storage.capitalize() + ' · preço por kg', '', price, stock,
                           image=product_image('https://static.extramercado.com.br' + str(product.get('thumbPath', '')), url),
                           identifiers=ids)
-        if stock != 'in_stock':
+        reading.identifiers['delivery_verified'] = ('true' if stock == 'in_stock' and delivery.get('type') == 'normal' else 'unknown')
+        self.for_visit(reading)
+        address = delivery.get('address')
+        if isinstance(address, dict):
+            # This is the public store address in the delivery option, never the shopper's address.
+            reading.identifiers['store_address'] = ', '.join(str(address[k]) for k in
+                ('street', 'addressNumber', 'neighborhood', 'city', 'state') if address.get(k))
+        if stock != 'in_stock' and not reading.visit_listing:
             reading.price = None
             reading.identifiers.update(regional_price_pending='true',
                 regional_reason='Estoque regional não confirmado para este produto e CEP; sem preço para acompanhar.')
         self.status[parser.domain] = {'postal_code': cep, 'store': str(delivery['storeName']),
-                                      'stock': stock, 'price_unit': 'kg'}
+                                      'stock': stock, 'price_unit': 'kg', 'mode': self.mode}
         return [reading]
 
     async def boa_query(self, operation, variables):
@@ -317,26 +336,29 @@ class GroceryPrices:
             slas = logistics.get(index, {}).get('slas', [])
             unit_price = (item.get('priceDefinition') or {}).get('pricePerUnit')
             if (str(item.get('id')) != sku or item.get('seller') != requested[index]
-                    or item.get('requestIndex') != index or item.get('availability') != 'available'
+                    or item.get('requestIndex') != index
                     or item.get('measurementUnit') != 'kg' or item.get('unitMultiplier') != 1
                     or type(unit_price) is not int or unit_price <= 0
                     or unit_price != item.get('sellingPrice') or item.get('priceTags')
-                    or not isinstance(slas, list)
-                    or not any(isinstance(sla, dict) and sla.get('deliveryChannel') == 'delivery' for sla in slas)
                     or not storage):
                 continue
+            deliverable = (item.get('availability') == 'available' and isinstance(slas, list)
+                           and any(isinstance(sla, dict) and sla.get('deliveryChannel') == 'delivery' for sla in slas))
+            if not deliverable and self.mode != 'visit':
+                continue
+            stock = {'available': 'in_stock', 'withoutStock': 'out_of_stock'}.get(item.get('availability'), 'unknown')
             source = readings[0]
             ids = dict(source.identifiers)
             ids.pop('regional_price_pending', None)
             ids.update(postal_code=cep, price_unit='kg', price_basis='regional_public_unit',
                        store_id=item['seller'], grocery_product_id=sku,
-                       delivery_verified='true', storage=storage)
-            result.append(Reading(source.title + ' [preço por kg]',
+                       delivery_verified='true' if deliverable else 'unknown', storage=storage)
+            result.append(self.for_visit(Reading(source.title + ' [preço por kg]',
                 parser.name + ' · ' + sellers[item['seller']] + ' · CEP ' + cep[:5] + '-' + cep[5:],
-                storage.capitalize() + ' · preço por kg', '', unit_price, 'in_stock',
-                image=source.image, identifiers=ids))
+                storage.capitalize() + ' · preço por kg', '', unit_price, stock,
+                image=source.image, identifiers=ids)))
         self.status[parser.domain] = {'postal_code': cep, 'checked_stores': len(requested),
-                                     'stock': 'in_stock' if result else 'unverified_delivery_or_stock'}
+                                     'stock': result[0].stock if result else 'unverified_delivery_or_stock', 'mode': self.mode}
         if result:
             return result
         for reading in readings:
@@ -349,7 +371,7 @@ class GroceryPrices:
         from bs4 import BeautifulSoup
         if not re.fullmatch(r'[0-9]{8}', cep):
             raise ReadError('regional_request_not_allowed')
-        key = (parser.domain, cep)
+        key = (parser.domain, cep, self.mode)
         if key not in self.clients:
             if len(self.clients) >= 4:
                 oldest = next(iter(self.clients))
@@ -366,7 +388,7 @@ class GroceryPrices:
                 response = json.loads(text)['result']
                 if (str(response.get('postalCode', '')).replace('-', '') != cep
                         or not response.get('regionId')
-                        or response.get('regionContextProps', {}).get('deliveryType') != 'residential'):
+                        or (self.mode != 'visit' and response.get('regionContextProps', {}).get('deliveryType') != 'residential')):
                     raise ValueError()
             except (ValueError, TypeError, KeyError):
                 raise ReadError('regional_delivery_unavailable') from None
@@ -421,9 +443,10 @@ class GroceryPrices:
         reading = Reading(title + ' [preço por kg]', str(seller['sellerName']) + ' · CEP ' + cep[:5] + '-' + cep[5:],
             storage.capitalize() + ' · preço por kg', '', price, stock,
             image=product_image(schema.get('image'), url), identifiers=ids)
-        if stock != 'in_stock':
+        self.for_visit(reading)
+        if stock != 'in_stock' and not reading.visit_listing:
             reading.price = None
             reading.identifiers.update(regional_price_pending='true',
                 regional_reason='Produto sem estoque no catálogo regional consultado; sem preço para acompanhar.')
-        self.status[parser.domain] = {'postal_code': cep, 'store': str(seller['sellerName']), 'stock': stock}
+        self.status[parser.domain] = {'postal_code': cep, 'store': str(seller['sellerName']), 'stock': stock, 'mode': self.mode}
         return [reading]

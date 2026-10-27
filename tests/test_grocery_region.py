@@ -189,12 +189,12 @@ def packed_router(data):
     return '<script>window.router.enqueue(' + json.dumps(json.dumps(graph)) + ')</script>'
 
 
-def carrefour_html(cep=CEP, unit_price=100, printed='100,00'):
+def carrefour_html(cep=CEP, unit_price=100, printed='100,00', quantity=5):
     data = {'zipCode': cep, 'schema': {'sku': '123', 'offers': {'priceCurrency': 'BRL', 'price': 150}},
             'product': {'productName': 'Picanha resfriada Maturatta', 'items': [
                 {'measurementUnit': 'kg', 'sellers': [{'sellerDefault': True, 'sellerId': '1',
                  'sellerName': 'Carrefour', 'commertialOffer': {'Price': unit_price,
-                  'calculatedPrice': 150, 'AvailableQuantity': 5, 'teasers': [], 'GiftSkuIds': [], 'BuyTogether': []}}]}]}}
+                  'calculatedPrice': 150, 'AvailableQuantity': quantity, 'teasers': [], 'GiftSkuIds': [], 'BuyTogether': []}}]}]}}
     return ('<div><div><h1 data-testid="pdp-product-name">Picanha resfriada Maturatta</h1></div>'
             '<span>R$ ' + printed + ' / kg</span></div>' + packed_router(data))
 
@@ -272,3 +272,137 @@ def test_public_router_payload_is_data_and_never_executed():
                    '<script>x.enqueue("[{\\"_99\\":2}]")</script>']:
         with pytest.raises(ReadError):
             router_data(script)
+
+
+def test_visit_preference_survives_restart(tmp_path):
+    from monitor.grocery_profile import save_mode
+    path = str(tmp_path / 'visit.sqlite')
+    config = SimpleNamespace(grocery_mode='delivery', grocery_postal_code='')
+    db = DB(path)
+    save_mode(db, config, 'visit')
+    db.conn.close()
+    db = DB(path)
+    config.grocery_mode = 'delivery'
+    load_profile(db, config)
+    assert config.grocery_mode == 'visit'
+    with pytest.raises(ValueError):
+        save_mode(db, config, 'all-stores-without-location')
+    db.conn.close()
+
+
+def test_extra_visit_keeps_published_price_without_delivery_or_online_stock():
+    async def run():
+        response = sample()
+        response['content']['sellInfos'][0].update(stock=False, stockQuantity=0)
+        obj = reader(response, deliveries=[{'type': 'pickup', 'storeid': 7, 'storeName': 'Loja de teste',
+            'address': {'street': 'Rua da loja', 'city': 'São Paulo'}}])
+        obj.fetcher.config.grocery_mode = 'visit'
+        reading, = await obj.read(adapter('extramercado.com.br'), '', URL, CEP)
+        assert reading.price == 10000 and reading.comparable and reading.visit_listing
+        assert reading.stock == 'out_of_stock'
+        assert reading.identifiers['physical_stock'] == 'unknown'
+        assert reading.identifiers['delivery_verified'] == 'unknown'
+        from monitor.presentation import offer_text
+        text = offer_text(reading, 'Extra Mercado')
+        assert 'entrega não exigida' in text and 'Estoque físico não confirmado' in text
+        assert 'Preço do site pode ser diferente no balcão' in text
+        assert 'Rua da loja' in text and 'visita à loja' in reading.seller
+    asyncio.run(run())
+
+
+def test_visit_does_not_relax_unit_or_region_validation():
+    async def run():
+        response = sample()
+        response['content']['sellInfos'][0]['comparativePrice'] = '1 embalagem - R$ 150,00'
+        obj = reader(response)
+        obj.fetcher.config.grocery_mode = 'visit'
+        with pytest.raises(ReadError, match='regional_unit_unverified'):
+            await obj.read(adapter('extramercado.com.br'), '', URL, CEP)
+    asyncio.run(run())
+
+
+def test_visit_alerts_describe_public_price_not_physical_stock_and_isolate_modes(tmp_path):
+    async def run():
+        obj = reader()
+        delivery, = await obj.read(adapter('extramercado.com.br'), '', URL, CEP)
+        obj.fetcher.config.grocery_mode = 'visit'
+        visit = obj.for_visit(replace(delivery, identifiers=dict(delivery.identifiers),
+                                      price=9000, stock='unknown'))
+        db = DB(str(tmp_path / 'alerts.sqlite'))
+        config = SimpleNamespace(minimum=0, percent=Decimal('0'), target=None, interval=18000)
+        pid = db.add('Picanha Maturatta', config)
+        candidate = db.candidate(pid, URL, 'Extra Mercado')
+        db.record(candidate, delivery)
+        db.run('UPDATE candidates SET confirmed=1 WHERE id=?', (candidate['id'],))
+        candidate = db.rows('SELECT * FROM candidates WHERE id=?', (candidate['id'],))[0]
+        db.record(candidate, delivery)
+        db.record(candidate, visit)
+        assert len(db.rows('SELECT * FROM alerts')) == 0
+        assert len(db.rows('SELECT * FROM series')) == 2
+        db.record(candidate, replace(visit, price=8000))
+        message = db.rows('SELECT message FROM alerts')[0]['message']
+        assert 'QUEDA DE PREÇO' in message and '/kg' in message
+        assert 'estoque físico não confirmado' in message
+        assert 'Preço do site; confirme' in message
+        assert 'Estoque: disponível' not in message
+        db.conn.close()
+    asyncio.run(run())
+
+
+def test_visit_preferences_buttons_respect_authorized_user(tmp_path):
+    from monitor.grocery_profile import preferences
+    async def run():
+        db = DB(str(tmp_path / 'profile.sqlite'))
+        config = SimpleNamespace(user=42, chat=1, grocery_postal_code=CEP, grocery_mode='delivery')
+        reply = AsyncMock()
+        query = SimpleNamespace(data='grocery:visit', answer=AsyncMock())
+        update = SimpleNamespace(callback_query=query, effective_user=SimpleNamespace(id=99),
+                                 effective_chat=SimpleNamespace(id=1), effective_message=SimpleNamespace(reply_text=reply))
+        await preferences(update, config, db)
+        assert config.grocery_mode == 'delivery' and not reply.await_count
+        update.effective_user.id = 42
+        await preferences(update, config, db)
+        assert config.grocery_mode == 'visit'
+        keyboard = reply.await_args.kwargs['reply_markup']
+        assert {button.callback_data for row in keyboard.inline_keyboard for button in row} == {
+            'grocery:visit', 'grocery:delivery', 'grocery:cep', 'ui:home'}
+        assert 'Localização de referência' in reply.await_args.args[0]
+        db.conn.close()
+    asyncio.run(run())
+
+
+def test_carrefour_visit_shows_price_when_online_quantity_is_zero():
+    async def run():
+        url = 'https://mercado.carrefour.com.br/produto/picanha-maturatta-123'
+        response = {'result': {'postalCode': CEP, 'regionId': 'region-test',
+                               'regionContextProps': {'deliveryType': 'pickup'}}}
+        f = SimpleNamespace(config=SimpleNamespace(delay=0, grocery_mode='visit'), allowed_by_robots=AsyncMock(),
+            request=AsyncMock(side_effect=[(json.dumps(response), ''), (carrefour_html(quantity=0), url)]))
+        obj = GroceryPrices(f)
+        try:
+            reading, = await obj.carrefour(adapter('mercado.carrefour.com.br'), url, CEP)
+            assert reading.price == 10000 and reading.comparable and reading.visit_listing
+            assert reading.stock == 'out_of_stock'
+        finally:
+            await obj.close()
+    asyncio.run(run())
+
+
+def test_atacadao_visit_shows_published_kg_price_without_shipping_slas():
+    async def run():
+        product = {'@type': 'Product', 'name': 'Picanha Maturatta congelada', 'sku': '123',
+                   'offers': {'@type': 'Offer', 'price': 0, 'priceCurrency': 'BRL'}}
+        html = '<script type="application/ld+json">' + json.dumps(product) + '</script>'
+        regions = [{'sellers': [{'id': 'atacadaobr7', 'name': 'Loja de teste'}]}]
+        simulation = {'items': [{'id': '123', 'seller': 'atacadaobr7', 'requestIndex': 0,
+            'availability': 'withoutStock', 'measurementUnit': 'kg', 'unitMultiplier': 1,
+            'sellingPrice': 10000, 'priceDefinition': {'pricePerUnit': 10000}, 'priceTags': []}],
+            'logisticsInfo': [{'itemIndex': 0, 'slas': []}]}
+        f = SimpleNamespace(config=SimpleNamespace(grocery_mode='visit'), allowed_by_robots=AsyncMock(),
+            request=AsyncMock(side_effect=[(json.dumps(regions), ''), (json.dumps(simulation), '')]))
+        obj = GroceryPrices(f)
+        reading, = await obj.atacadao(adapter('atacadao.com.br'), html,
+                                     'https://www.atacadao.com.br/picanha-maturatta/p', CEP)
+        assert reading.price == 10000 and reading.visit_listing and reading.comparable
+        assert reading.stock == 'out_of_stock' and reading.identifiers['delivery_verified'] == 'unknown'
+    asyncio.run(run())

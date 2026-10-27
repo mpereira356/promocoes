@@ -73,6 +73,7 @@ Os três filtros precisam ser atendidos. Use - para retirar o preço-alvo.
 /status — versão e diagnóstico.
 /lojas — acesso atual de cada loja e pausas por bloqueio.
 /cep oito números — salvar CEP dos supermercados, inclusive após reiniciar.
+/mercados — escolher localização e consultar sem exigir entrega ou somente com entrega.
 /cancelar — sair da entrada atual.
 
 Anúncio, oferta e monitoramento têm IDs diferentes. Use o ID solicitado.
@@ -112,6 +113,7 @@ def main():
             await app.bot.set_my_commands([
                 BotCommand('menu','Abrir menu de botões'), BotCommand('promocoes','Promoções por categoria'),
                 BotCommand('buscar','Buscar produto'), BotCommand('lista','Meus monitoramentos'),
+                BotCommand('mercados','Localização e entrega dos supermercados'),
                 BotCommand('emprestimos','Dinheiro emprestado e lembretes'),
                 BotCommand('ajuda','Comandos e exemplos'), BotCommand('cancelar','Sair da entrada atual'),
             ],scope=BotCommandScopeChat(config.chat))
@@ -200,8 +202,11 @@ def main():
                                        + '. Para salvar: /cep oito números.')
                 value = save_profile(db, config, ''.join(args))
                 return await reply(f'📍 CEP {value} salvo. Será mantido após reiniciar.\n'
-                                   'As próximas consultas validarão a loja que atende esse CEP. '
-                                   'Preço, estoque e entrega ainda dependem de cada produto.')
+                                   'As próximas consultas usarão essa localização de referência. '
+                                   'Use /mercados para escolher Posso ir à loja ou Preciso de entrega.')
+            if name == '/mercados':
+                from .grocery_profile import preferences
+                return await preferences(update, config, db, ''.join(args) or None)
             if name == "/lista":
                 return await ui.listing(update)
             if name in ("/monitorar", "/buscar", "/buscarml"):
@@ -351,6 +356,15 @@ def main():
         app.add_handler(CommandHandler(name, queued_handler(work,promotion_command,config)))
     app.add_handler(CallbackQueryHandler(queued_handler(work,promotion_callback,config), pattern=r'^promo:'))
     app.add_handler(CallbackQueryHandler(queued_handler(work,ui.callback,config), pattern=r'^ui:'))
+    async def grocery_callback(update, context):
+        from .grocery_profile import preferences
+        if authorized(update, config):
+            if (update.callback_query.data or '') == 'grocery:cep':
+                await update.callback_query.answer()
+                return await ui.prompt(update, 'grocerycep')
+            ui.clear()
+        await preferences(update, config, db)
+    app.add_handler(CallbackQueryHandler(queued_handler(work,grocery_callback,config), pattern=r'^grocery:'))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND,queued_handler(work,ui.text,config)))
 
     for name in (
@@ -362,6 +376,7 @@ def main():
         "status",
         "lojas",
         "cep",
+        "mercados",
         "buscar",
         "buscarml",
         "monitorar",

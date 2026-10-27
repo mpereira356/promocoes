@@ -33,6 +33,7 @@ async def diagnose(config):
                 'title': r.title, 'price_cents': r.price, 'unit': r.identifiers.get('price_unit'),
                 'stock': r.stock, 'public_unit_price': r.public_unit_price,
                 'comparable_history': r.comparable, 'reason': r.identifiers.get('regional_reason', ''),
+                'visit_listing': r.visit_listing,
             } for r in readings]
         except Exception as exc:
             result['error'] = REASONS.get(str(exc), 'Leitura regional não confirmada') if isinstance(exc, ReadError) else type(exc).__name__
@@ -51,6 +52,7 @@ def main():
     load_dotenv()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--cep', default=os.getenv('GROCERY_POSTAL_CODE', ''))
+    parser.add_argument('--mode', choices=('visit', 'delivery'), default=os.getenv('GROCERY_MODE', 'visit'))
     parser.add_argument('--output', default='data/grocery-regional-diagnostic.json')
     args = parser.parse_args()
     try:
@@ -59,7 +61,8 @@ def main():
         parser.error(str(exc))
     domains = normalize_domains(os.getenv('ALLOWED_DOMAINS', DEFAULT_DOMAINS))
     config = SimpleNamespace(domains=tuple(d for d in PRODUCTS if d in domains), browser=False,
-                             delay=max(1, float(os.getenv('REQUEST_DELAY', '3'))), grocery_postal_code=cep)
+                             delay=max(1, float(os.getenv('REQUEST_DELAY', '3'))), grocery_postal_code=cep,
+                             grocery_mode=args.mode)
     if not config.domains:
         parser.error('Nenhum dos quatro supermercados está em ALLOWED_DOMAINS.')
     result = asyncio.run(diagnose(config))

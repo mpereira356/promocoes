@@ -96,14 +96,18 @@ class BotMenu:
             text+='\n\n🔄 Uma pesquisa de promoções está em andamento. Os resultados serão enviados aqui.'
         elif self.promotions.refreshing:
             text+='\n\n🔄 O catálogo de categorias está sendo atualizado.'
-        markup=keyboard([
+        rows=[
             [('🔎 Buscar produto','search'),('🏷️ Promoções','promos')],
             [('🔔 Meus monitoramentos','list:0')],
             [('💸 Dinheiro emprestado','loans')],
             [('➕ Monitorar produto','monitor'),('🛒 Mercado Livre','ml')],
             [('🗂️ Categorias','categories'),('💡 Exemplos de filtros','examples')],
             [('❓ Ajuda','help'),('ℹ️ Status','status')],
-        ])
+        ]
+        from .search_scope import GROCERY_DOMAINS
+        if set(getattr(self.config, 'domains', ())) & set(GROCERY_DOMAINS):
+            rows.insert(1, [('📍 Supermercados: localização e entrega', 'markets')])
+        markup=keyboard(rows)
         await self.output(update,text,markup)
 
     async def prompt(self, update, kind, card=''):
@@ -117,6 +121,7 @@ class BotMenu:
             'discount': ('📣 Escolher desconto','No menu Promoções, escolha Maior que 20% até Maior que 80%.\nAlternativa por texto: >30. Exatamente 30% não entra.'),
             'size': ('Escolher tamanho', 'Digite M, G, 4 ou 42, como na loja. Digite todos para ignorar tamanho.'),
             'cep': ('📍 Informar CEP','Digite os 8 números do CEP. Exemplo: 01001000.\nO frete ainda não é cotado; os preços continuarão sem frete.'),
+            'grocerycep': ('📍 Localização dos supermercados', 'Digite os oito números do CEP de referência. A localização ficará salva para suas próximas buscas e após reiniciar.'),
         }
         title,body=prompts[kind]
         await self.output(update,title+'\n\n'+body,keyboard([[('✖️ Cancelar entrada','cancel'),('🏠 Menu','home')]]),titles=(title,))
@@ -280,9 +285,12 @@ class BotMenu:
                 parse_size(text)
             if state.kind=='cep' and (len(text.replace('-','').replace(' ',''))!=8 or not text.replace('-','').replace(' ','').isdigit()):
                 raise ValueError('Digite um CEP com 8 números, como 01001000.')
+            if state.kind=='grocerycep':
+                from .grocery_profile import postal_code
+                text = postal_code(text.replace(' ', ''))
         except ValueError as exc:
             return await send_text(update.effective_message.reply_text,str(exc),reply_markup=keyboard([[('✖️ Cancelar','cancel')]]))
-        command={'search':'/buscar','ml':'/buscarml','monitor':'/monitorar','category':'/categoria','discount':'/descontopromo','cep':'/ceppromo','size':'/tamanhopromo'}[state.kind]
+        command={'search':'/buscar','ml':'/buscarml','monitor':'/monitorar','category':'/categoria','discount':'/descontopromo','cep':'/ceppromo','grocerycep':'/cep','size':'/tamanhopromo'}[state.kind]
         self.clear()
         if state.kind in ('category','discount','cep','size'):
             await self.promotions.command(update,context,name=command,args=text.split())
@@ -294,6 +302,9 @@ class BotMenu:
             return await self.loans.action(update, action)
         if action in ('home','cancel'):return await self.home(update,context)
         if action=='list':return await self.listing(update)
+        if action=='markets':
+            self.clear()
+            return await self.dispatch(update,context,name='/mercados',args=[])
         if action in ('search','ml','monitor'):return await self.prompt(update,action)
         if action in ('promos','categories'):
             self.clear()

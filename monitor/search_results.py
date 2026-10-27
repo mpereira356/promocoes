@@ -167,6 +167,8 @@ async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketpla
             if getattr(config, 'grocery_postal_code', ''):
                 status += ('\nCEP configurado. Somente produtos com preço regional validado podem ser monitorados.'
                            '\nLinks sem preço confirmado não geram alertas.')
+                if getattr(config, 'grocery_mode', 'delivery') == 'visit':
+                    status += '\nModo Posso ir à loja: entrega não exigida; confirme preço e estoque no balcão.'
             else:
                 status += ('\nSupermercados: configure o CEP com /cep e oito números para validar preços locais.'
                            '\nLinks sem preço confirmado não geram alertas.')

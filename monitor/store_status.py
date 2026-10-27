@@ -9,6 +9,8 @@ def store_status(fetcher, domains):
     cep = getattr(getattr(fetcher, 'config', None), 'grocery_postal_code', '')
     if cep:
         lines += ['CEP dos supermercados: ' + cep[:5] + '-' + cep[5:] + '.', '']
+        if getattr(getattr(fetcher, 'config', None), 'grocery_mode', 'delivery') == 'visit':
+            lines += ['Modo Posso ir à loja: entrega não exigida; estoque físico precisa de confirmação.', '']
     now = time.monotonic()
     for domain in domains:
         pause = max(fetcher.access_paused.get(domain, 0), fetcher.rate_paused.get(domain, 0))

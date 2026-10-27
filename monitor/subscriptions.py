@@ -116,4 +116,7 @@ async def handle_subscription(update, config, db, bot, send, on_confirm):
         await send('Este acompanhamento registra o preço público por kg da loja e do CEP exibidos. '
                    'Pagamento, frete e total da peça não estão confirmados. '
                    f'Para receber apenas quedas: /alertas {pid} quedas.')
+    if reading.visit_listing:
+        await send('Modo Posso ir à loja: acompanha o preço publicado mesmo sem entrega ou estoque físico confirmado. '
+                   'Confirme o preço e a disponibilidade no balcão antes de ir.')
     on_confirm(pid)

@@ -71,7 +71,16 @@ def offer_text(reading, store="", rank=None, provisional=False, ad_id=None):
         parts.append('Vendedor: ' + reading.seller[:100])
     if reading.condition:
         parts.append('📦 ' + condition)
-    parts.append(stock)
+    if reading.visit_listing:
+        availability = {'in_stock': 'disponível', 'out_of_stock': 'indisponível',
+                        'unknown': 'não confirmada'}.get(reading.stock, 'não confirmada')
+        parts += ['📍 Consulta para ir à loja; entrega não exigida.',
+                  'Disponibilidade no site: ' + availability + '.',
+                  'Estoque físico não confirmado. Preço do site pode ser diferente no balcão.']
+        if reading.identifiers.get('store_address'):
+            parts.append('Endereço informado da loja: ' + reading.identifiers['store_address'][:200])
+    else:
+        parts.append(stock)
     if reading.identifiers.get('generation'):
         parts.append('Modelo: ' + reading.identifiers['generation'])
     parts.append('🚚 Frete não incluído.')

@@ -37,17 +37,27 @@ class Reading:
     starting_price_url: str = ""
 
     @property
-    def public_unit_price(self):
-        """Explicit regional public metric, never a payment-specific comparison."""
+    def regional_unit_context(self):
         ids = self.identifiers
         return bool(ids.get('price_basis') == 'regional_public_unit'
                     and ids.get('price_unit') == 'kg'
                     and re.fullmatch(r'[0-9]{8}', ids.get('postal_code', ''))
                     and ids.get('store_id') and ids.get('grocery_product_id')
-                    and ids.get('delivery_verified') == 'true'
                     and ids.get('storage') in ('resfriada', 'congelada')
-                    and re.sub(r'\D', '', self.seller).endswith(ids.get('postal_code', ''))
-                    and self.stock == 'in_stock')
+                    and re.sub(r'\D', '', self.seller).endswith(ids.get('postal_code', '')))
+
+    @property
+    def visit_listing(self):
+        """Published regional price; physical stock/collection is not promised."""
+        ids = self.identifiers
+        return bool(self.regional_unit_context and ids.get('shopping_mode') == 'visit'
+                    and ids.get('region_verified') == 'true' and ids.get('price_verified') == 'true')
+
+    @property
+    def public_unit_price(self):
+        """Explicit regional public metric, never a payment-specific comparison."""
+        return bool(self.regional_unit_context and (self.visit_listing or (
+            self.identifiers.get('delivery_verified') == 'true' and self.stock == 'in_stock')))
 
     # Payment-specific offers require complete terms. Regional public unit rates
     # form a separate, explicitly labelled metric for the same store and CEP.

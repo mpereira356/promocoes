@@ -28,6 +28,25 @@ def click(update,data):
     update.callback_query=SimpleNamespace(data=data,answer=AsyncMock(),edit_message_text=AsyncMock())
 
 
+def test_grocery_location_button_and_plain_postal_code_entry(setup):
+    db,config,ui,dispatch,update=setup
+    async def scenario():
+        config.domains=('extramercado.com.br',)
+        await ui.home(update)
+        keyboard=update.effective_message.reply_text.await_args.kwargs['reply_markup']
+        assert any(button.callback_data=='ui:markets' for row in keyboard.inline_keyboard for button in row)
+        click(update,'ui:markets')
+        await ui.callback(update,None)
+        assert dispatch.await_args.kwargs['name']=='/mercados'
+        await ui.prompt(update,'grocerycep')
+        update.callback_query=None
+        update.effective_message.text='01001-000'
+        await ui.text(update,SimpleNamespace())
+        assert dispatch.await_args.kwargs=={'name':'/cep','args':['01001000']}
+        assert ui.pending is None
+    asyncio.run(scenario())
+
+
 def test_start_menu_shortcuts_and_unauthorized_access(setup):
     db,config,ui,dispatch,update=setup
     async def scenario():

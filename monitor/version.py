@@ -1,1 +1,1 @@
-VERSION = "2026.10.27-grocery-region.1"
+VERSION = "2026.10.27-store-visit.1"
