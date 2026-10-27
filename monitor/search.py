@@ -61,6 +61,11 @@ class Search:
             async with self.lock:
                 return await DirectSearch(self.config, self.fetcher).links(query)
         async with self.lock:
+            from .search_scope import search_domains
+            domains = search_domains(query, self.config.domains)
+            if not domains:
+                from .discovery import SearchLinks
+                return SearchLinks(notices=['Nenhuma loja compatível com carnes está habilitada nesta configuração.'])
             async with httpx.AsyncClient(timeout=30) as client:
                 for attempt in range(3):
                     try:
@@ -73,7 +78,7 @@ class Search:
                             params={
                                 "q": query
                                 + " ("
-                                + " OR ".join("site:" + d for d in self.config.domains)
+                                + " OR ".join("site:" + d for d in domains)
                                 + ")",
                                 "count": 20,
                             },
@@ -97,6 +102,8 @@ class Search:
         for item in data.get("web", {}).get("results", []):
             try:
                 url, domain = self.fetcher.canonical(item["url"])
+                if domain not in domains:
+                    continue
                 from .adapters import adapter
                 checker = getattr(adapter(domain), 'is_product_url', None)
                 if domain != 'mercadolivre.com.br' and checker and not checker(url):

@@ -56,7 +56,7 @@ async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketpla
             if known:
                 urls = SearchLinks(list(urls) + known, candidates=getattr(urls, 'candidates', {}))
                 notices.append(f'Reutilizados {len(known)} links de anúncios já consultados e salvos no SQLite. Preço e estoque serão lidos novamente nas lojas.')
-        if not urls:
+        if not urls and not notices:
             await send('Não encontramos ofertas nesta consulta.')
         offers = []
         for url in urls:
@@ -85,6 +85,12 @@ async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketpla
                     raise ReadError('structured_product_missing_or_ambiguous')
                 if not query.startswith('https://') and any(not reading_relevance(query, r) for r in readings):
                     raise ReadError('different_model')
+                if all(getattr(r, 'identifiers', {}).get('regional_price_pending') for r in readings):
+                    from .discovery import LinkCandidate
+                    unverified_links.append((LinkCandidate(url, readings[0].title),
+                        'Preço regional pendente de validar CEP, loja e unidade de venda; sem alertas'))
+                    unverified += 1
+                    continue
                 _, domain = fetcher.canonical(url)
                 offers.extend((r, url, adapter(domain).name) for r in readings)
             except Exception as exc:
@@ -152,6 +158,16 @@ async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketpla
             status += '\nUma falha interrompeu a consulta.'
         elif failed or unverified or notices or save_failed or delivery_failed or report_failed or (sent and not priced):
             status += '\nAlgumas ofertas ou lojas não puderam ser verificadas.'
+        from .search_scope import is_meat_query, GROCERY_DOMAINS
+        config = getattr(monitor, 'config', getattr(fetcher, 'config', None))
+        grocery_pending = is_meat_query(query) and (
+            bool(set(getattr(config, 'domains', ())) & set(GROCERY_DOMAINS))
+            or any('preços regionais ainda não disponíveis' in n for n in notices))
+        if grocery_pending:
+            status += ('\nSupermercados: preços e alertas ainda indisponíveis; falta validar CEP e loja de atendimento.'
+                       '\nOs links encontrados não confirmam desconto ou disponibilidade na sua região.')
+        if not sent and (notices or failed or unverified or interrupted):
+            status += '\nNenhuma oferta pôde ser confirmada. Isso não significa que o produto esteja esgotado.'
         extra = ''
         if save_failed or delivery_failed or report_failed:
             extra = (f'\nAnúncios não salvos por falha: {save_failed}'
@@ -175,7 +191,7 @@ def grouped_unverified(entries):
         groups.setdefault(domain, []).append((candidate, reason))
     for domain, candidates in groups.items():
         text = (f'🔎 {adapter(domain).name} — links sem preço confirmado\n\n'
-            'Links de busca externa, sem oferta ou preço verificado. Não geram alertas.\n\n')
+            'Links para conferência, sem oferta ou preço verificado. Não geram alertas.\n\n')
         text += '\n\n'.join(f'{i}. {c.title[:200]}\n{c.url}' for i, (c, _) in enumerate(candidates, 1))
         text += '\n\nMotivo: ' + '; '.join(dict.fromkeys(short_reason(reason) for _, reason in candidates)) + '.'
         yield text

@@ -41,7 +41,7 @@ class GroceryAdapter(PublicStoreAdapter):
 
 class AtacadaoAdapter(GroceryAdapter):
     domain = 'atacadao.com.br'
-    name = 'Atacad?o'
+    name = 'Atacadão'
     product_path = r'/[^/]+/p/?'
 
 
@@ -55,6 +55,14 @@ class CarrefourMercadoAdapter(GroceryAdapter):
     domain = 'mercado.carrefour.com.br'
     name = 'Carrefour Mercado'
     product_path = r'/produto/[^/]+-\d+/?'
+
+    def discovery_url(self, query):
+        from ..models import normalize
+        words = set(normalize(query).split())
+        if words & {'picanha', 'picanhas'}:
+            return ('https://mercado.carrefour.com.br/categoria/'
+                    'acougue-e-peixaria/carnes-bovinas/picanha/')
+        return None
 
 
 class BoaSupermercadosAdapter(GroceryAdapter):

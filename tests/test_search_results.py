@@ -267,9 +267,9 @@ def test_failed_warning_does_not_suppress_summary_or_escape(caplog):
     from monitor.discovery import SearchLinks
     async def run():
         m=SimpleNamespace(search=SimpleNamespace(links=AsyncMock(return_value=SearchLinks([],['Aviso teste']))))
-        send=AsyncMock(side_effect=[None,RuntimeError('SECRET-MARKER'),None])
+        send=AsyncMock(side_effect=[RuntimeError('SECRET-MARKER'),None])
         await deliver_search(m,None,None,None,1,'Aspirador',send)
-        assert send.await_count==3
+        assert send.await_count==2
         assert 'Avisos com entrega n\u00e3o confirmada: 1' in send.await_args_list[-1].args[0]
         assert 'SECRET-MARKER' not in caplog.text
     asyncio.run(run())

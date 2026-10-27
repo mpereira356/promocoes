@@ -138,7 +138,10 @@ class PromotionsTelegram:
         if page + 1 < pages:
             buttons.append(('Próxima ➡️', f'groups{page+1}'))
         buttons += [('✍️ Digitar categoria ou link', 'custom'), ('🔄 Atualizar categorias das lojas', 'refresh')]
-        return await reply(f'🏷️ Busca pontual de promoções\n\nEscolha uma categoria — página {page+1}/{pages}.\nTambém pode digitar /categoria notebooks, /categoria pets ou /categoria https://link-da-categoria.\nO catálogo contém links observados nas lojas; acesso e preços serão conferidos na pesquisa.', reply_markup=self.keyboard(buttons))
+        from ..search_scope import GROCERY_DOMAINS
+        regional = ('\n\nSupermercados ainda sem Promoções e alertas regionais: falta validar CEP e loja de atendimento.'
+                    if set(self.config.domains) & set(GROCERY_DOMAINS) else '')
+        return await reply(f'🏷️ Busca pontual de promoções\n\nEscolha uma categoria — página {page+1}/{pages}.\nTambém pode digitar /categoria notebooks, /categoria pets ou /categoria https://link-da-categoria.\nO catálogo contém links observados nas lojas; acesso e preços serão conferidos na pesquisa.' + regional, reply_markup=self.keyboard(buttons))
 
     async def show_choices(self, reply, page=0):
         session = self.session

@@ -15,11 +15,13 @@ def short_reason(text):
 
 
 def summarize_notices(notices):
-    missing, limited, other = [], [], []
+    missing, limited, other, regional = [], [], [], []
     for text in notices:
         plain = normalize(text)
         name, separator, body = text.partition(':')
-        if 'nao aplicavel' in plain:
+        if 'precos regionais ainda nao disponiveis' in plain:
+            regional.append(name)
+        elif 'nao aplicavel' in plain:
             continue
         if 'modelo solicitado nao encontrado' in plain:
             missing.append(name)
@@ -33,4 +35,11 @@ def summarize_notices(notices):
             other.append(name + ': ' + short_reason(body.strip()) + '.' if separator else short_reason(text))
     if missing: other.append('Sem resultado nesta consulta: ' + ', '.join(dict.fromkeys(missing)) + '.')
     if limited: other.append('Busca limitada: ' + ', '.join(dict.fromkeys(limited)) + '.')
+    if regional:
+        names = set(regional)
+        # The final summary explains the common regional limitation once.
+        other = [text for text in other if not text.startswith('Busca limitada: ')] + (
+            ['Busca limitada: ' + ', '.join(dict.fromkeys(n for n in limited if n not in names)) + '.']
+            if any(n not in names for n in limited) else [])
+        other.append('Preços regionais pendentes: ' + ', '.join(dict.fromkeys(regional)) + '.')
     return list(dict.fromkeys(other))

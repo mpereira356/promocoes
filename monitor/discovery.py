@@ -44,6 +44,19 @@ def relevance(query, title):
         return {aliases.get(word, word) for word in text.split()} | appliance_model_aliases(text)
     wanted = terms(query) - stop
     found = terms(title)
+    if wanted & {'picanha', 'picanhas'}:
+        if not found & {'picanha', 'picanhas'}:
+            return 0
+        # A cut of meat is not a burger/flavoured snack bearing the cut's name.
+        substitutes = {'hamburguer', 'hamburgueres', 'hamburger', 'salgadinho',
+                       'tempero', 'sabor', 'pizza', 'lasanha'}
+        if (found & substitutes) - wanted:
+            return 0
+        for state in ('congelada', 'resfriada'):
+            if state in wanted and state not in found:
+                return 0
+        if 'maturatta' in wanted and 'maturatta' not in found:
+            return 0
     family = motherboard_family(query)
     if family and motherboard_family(title) != family:
         return 0
@@ -258,7 +271,11 @@ class DirectSearch:
         query = search_terms(query)
 
         links, notices, groups, details = [], [], [], {}
-        for domain in self.config.domains:
+        from .search_scope import search_domains
+        domains = search_domains(query, self.config.domains)
+        if not domains:
+            return SearchLinks(notices=['Nenhuma loja compatível com carnes está habilitada nesta configuração.'])
+        for domain in domains:
             factory = ADAPTERS.get(domain)
             if not factory:
                 notices.append(
@@ -267,7 +284,7 @@ class DirectSearch:
                 continue
             store = factory()
             if hasattr(store, "product_path"):
-                notices.append(f"{store.name}: integra??o inicial de links; pre?o e alertas dependem de validar CEP, loja e unidade de venda.")
+                notices.append(f"{store.name}: preços regionais ainda não disponíveis; falta validar CEP, loja e unidade de venda.")
             if hasattr(store, 'supports_query') and not store.supports_query(query):
                 notices.append(f'{store.name}: busca de hardware não aplicável ao adaptador de cadeiras e móveis.')
                 continue
@@ -277,6 +294,16 @@ class DirectSearch:
                     candidates = await discover(query, self.config.mercadolivre_token, self.fetcher)
                 elif domain == 'mercadolivre.com.br' and getattr(self.config, 'mercadolivre_discovery', 'external') == 'external':
                     candidates = await self.external_candidates(query, domain)
+                elif getattr(store, 'discovery_url', lambda q: None)(query):
+                    # Observed public category: does not spend the external index quota.
+                    url = store.discovery_url(query)
+                    html, final = await self.fetcher.html(url)
+                    _, final_domain = self.fetcher.canonical(final)
+                    if final_domain != domain:
+                        raise ReadError('redirect_changed_store')
+                    candidates = store.search_links(html, final)
+                    if not any(candidate_relevance(query, c) for c in candidates):
+                        candidates = await self.external_candidates(query, domain)
                 elif getattr(store, 'external_discovery', False):
                     candidates = await self.external_candidates(query, domain)
                 elif store.sitemap_urls:
