@@ -42,14 +42,19 @@ class GroceryAdapter(PublicStoreAdapter):
 class AtacadaoAdapter(GroceryAdapter):
     domain = 'atacadao.com.br'
     name = 'Atacadão'
+    external_discovery = False
     product_path = r'/[^/]+/p/?'
+    sitemap_urls = ('https://www.atacadao.com.br/sitemap.xml',)
+    sitemap_index_keywords = ('/product-',)
+
+    def sitemap_title(self, url):
+        return urlsplit(url).path.strip('/').split('/')[0].replace('-', ' ')
 
 
 class ExtraMercadoAdapter(GroceryAdapter):
     domain = 'extramercado.com.br'
     name = 'Extra Mercado'
     product_path = r'/produto/\d+/[^/]+/?'
-
 
 class CarrefourMercadoAdapter(GroceryAdapter):
     domain = 'mercado.carrefour.com.br'

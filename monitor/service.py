@@ -98,6 +98,23 @@ class Monitor:
         if final_domain != domain:
             raise ReadError("redirect_changed_store")
         parser = adapter(final_domain)
+        if hasattr(parser, 'product_path') and getattr(self.config, 'grocery_postal_code', ''):
+            from .grocery_prices import GroceryPrices
+            if self.fetcher.grocery_prices is None:
+                self.fetcher.grocery_prices = GroceryPrices(self.fetcher)
+            try:
+                readings = await self.fetcher.grocery_prices.read(
+                    parser, html, final, self.config.grocery_postal_code)
+                return readings, html, final
+            except ReadError as exc:
+                if str(exc) not in ('regional_delivery_unavailable', 'regional_unit_unverified',
+                                    'regional_terms_unverified', 'regional_response_invalid'):
+                    raise
+                readings = parser.parse(html, final)
+                for reading in readings:
+                    reading.identifiers['postal_code'] = self.config.grocery_postal_code
+                    reading.identifiers['regional_reason'] = REASONS.get(str(exc), 'Preço regional não confirmado.')
+                return readings, html, final
         try:
             readings = parser.parse(html, final)
             if final_domain == 'amazon.com.br' and all(r.price is None for r in readings):

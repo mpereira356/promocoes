@@ -54,6 +54,8 @@ def offer_text(reading, store="", rank=None, provisional=False, ad_id=None):
         "DamagedCondition": "⚠️ DANIFICADO",
     }.get(reading.condition, "❓ Não declarada pela página")
     parts = [reading.title[:350], '']
+    if reading.public_unit_price:
+        condition = reading.condition
     if rank in MEDALS:
         parts.insert(0, f"{MEDALS[rank]} {rank}º na lista por preço")
         parts.insert(1, '⚠️ Condição não informada; confira na loja.' if provisional else
@@ -62,6 +64,9 @@ def offer_text(reading, store="", rank=None, provisional=False, ad_id=None):
         parts.append('🏪 ' + store[:80])
     payment = ' · ' + reading.payment[:80] if reading.payment else ''
     parts.append(f'💰 {price}{payment}')
+    if reading.identifiers.get('price_basis') == 'regional_public_unit':
+        parts += ['Preço público por kg; o total da peça depende da pesagem.',
+                  'Pagamento não confirmado. Alertas acompanham esse preço público, sem comprovar promoção.']
     if reading.seller and normalize(reading.seller) != normalize(store):
         parts.append('Vendedor: ' + reading.seller[:100])
     if reading.condition:

@@ -72,6 +72,7 @@ Os três filtros precisam ser atendidos. Use - para retirar o preço-alvo.
 /emprestimos — dinheiro emprestado e lembretes.
 /status — versão e diagnóstico.
 /lojas — acesso atual de cada loja e pausas por bloqueio.
+/cep oito números — salvar CEP dos supermercados, inclusive após reiniciar.
 /cancelar — sair da entrada atual.
 
 Anúncio, oferta e monitoramento têm IDs diferentes. Use o ID solicitado.
@@ -84,6 +85,8 @@ def main():
     # Bibliotecas HTTP podem registrar URL do Telegram contendo token.
     logging.basicConfig(level=logging.CRITICAL)
     db = DB(config.db)
+    from .grocery_profile import load_profile
+    load_profile(db, config)
     fetcher = Fetcher(config)
     tasks = set()
     work = WorkQueue()
@@ -189,6 +192,16 @@ def main():
             if name == '/lojas':
                 from .store_status import store_status
                 return await reply(store_status(fetcher, config.domains))
+            if name == '/cep':
+                from .grocery_profile import save_profile
+                if not args:
+                    value = getattr(config, 'grocery_postal_code', '')
+                    return await reply('CEP dos supermercados: ' + (value or 'não configurado')
+                                       + '. Para salvar: /cep oito números.')
+                value = save_profile(db, config, ''.join(args))
+                return await reply(f'📍 CEP {value} salvo. Será mantido após reiniciar.\n'
+                                   'As próximas consultas validarão a loja que atende esse CEP. '
+                                   'Preço, estoque e entrega ainda dependem de cada produto.')
             if name == "/lista":
                 return await ui.listing(update)
             if name in ("/monitorar", "/buscar", "/buscarml"):
@@ -348,6 +361,7 @@ def main():
         "ajuda",
         "status",
         "lojas",
+        "cep",
         "buscar",
         "buscarml",
         "monitorar",

@@ -96,6 +96,8 @@ async def handle_subscription(update, config, db, bot, send, on_confirm):
     reading = Reading(**json.loads(ad['reading']))
     pending = []
     for field, label in (('condition', 'condição'), ('payment', 'pagamento'), ('seller', 'vendedor')):
+        if field == 'payment' and reading.public_unit_price:
+            continue
         if not getattr(reading, field):
             pending.append(label)
     if type(reading.price) is not int or reading.price <= 0 or reading.currency != 'BRL':
@@ -110,4 +112,8 @@ async def handle_subscription(update, config, db, bot, send, on_confirm):
         f"Controle: /pausar {pid} · /retomar {pid} · /historico {pid}\n\n"
         "O cadastro está ativo; dados ausentes não serão inventados."
     )
+    if reading.public_unit_price:
+        await send('Este acompanhamento registra o preço público por kg da loja e do CEP exibidos. '
+                   'Pagamento, frete e total da peça não estão confirmados. '
+                   f'Para receber apenas quedas: /alertas {pid} quedas.')
     on_confirm(pid)

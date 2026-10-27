@@ -19,7 +19,7 @@ def summarize_notices(notices):
     for text in notices:
         plain = normalize(text)
         name, separator, body = text.partition(':')
-        if 'precos regionais ainda nao disponiveis' in plain:
+        if 'precos regionais ainda nao disponiveis' in plain or 'leitura regional de precos ainda nao disponivel' in plain:
             regional.append(name)
         elif 'nao aplicavel' in plain:
             continue

@@ -30,6 +30,7 @@ class Fetcher:
         self.access_paused = {}
         self.rate_paused = {}
         self.page_access = {}
+        self.grocery_prices = None
         from .network_state import BackoffState
         self.backoff = BackoffState(config)
         self.access_paused.update(self.backoff.restore('access'))
@@ -103,7 +104,21 @@ class Fetcher:
         if not infos or any(not ipaddress.ip_address(i[4][0]).is_global for i in infos):
             raise ReadError("non_public_address")
 
-    async def request(self, url, check_robots=False, client=None):
+    async def request(self, url, check_robots=False, client=None, *, public_post=None, fresh=False):
+        if public_post is not None:
+            # Only observed anonymous regional selection / isolated simulation.
+            # No endpoint for adding items, ordering, paying or customer accounts.
+            _, post_domain = self.canonical(url)
+            path = urlsplit(url).path
+            allowed = (
+                post_domain == 'atacadao.com.br' and path == '/api/checkout/pub/orderForms/simulation'
+                or post_domain == 'mercado.carrefour.com.br' and path == '/action/set-regionalization'
+                or post_domain == 'boasupermercados.com.br' and path == '/api/graphql'
+                and public_post.get('operationName') == 'ValidateSession'
+                or post_domain == 'api.vendas.gpa.digital' and path == '/ex/search/search')
+            if not allowed or self.uses_browser(post_domain):
+                raise ReadError('regional_request_not_allowed')
+            check_robots = True
         for redirect in range(5):
             url, domain = self.canonical(url)
             if self.access_paused.get(domain, 0) > time.monotonic():
@@ -132,7 +147,15 @@ class Fetcher:
                         if self.uses_browser(domain):
                             response = await self.chromium().get(url)
                         else:
-                            response = await (client or self.client).get(url)
+                            if public_post is None:
+                                if fresh:
+                                    response = await (client or self.client).get(url, headers={'Cache-Control': 'no-cache'})
+                                else:
+                                    response = await (client or self.client).get(url)
+                            elif domain == 'mercado.carrefour.com.br':
+                                response = await (client or self.client).post(url, data=public_post)
+                            else:
+                                response = await (client or self.client).post(url, json=public_post)
                     except ReadError as exc:
                         error_type = type(exc).__name__
                         retry_reason = ('network_timeout' if str(exc) == 'browser_navigation_failed_TimeoutError'
@@ -202,6 +225,8 @@ class Fetcher:
             else:
                 self.page_access[domain].update(http_status=response.status_code)
             if response.status_code in (301, 302, 303, 307, 308):
+                if public_post is not None:
+                    raise ReadError('regional_selection_redirect')
                 url = urljoin(url, response.headers.get("location", ""))
                 continue
             if response.status_code in (403, 401):
@@ -291,6 +316,8 @@ class Fetcher:
         return response.text
 
     async def close(self):
+        if self.grocery_prices is not None:
+            await self.grocery_prices.close()
         if self.browser_transport is not None:
             await self.browser_transport.close()
         await self.client.aclose()

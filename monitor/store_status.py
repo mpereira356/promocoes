@@ -6,6 +6,9 @@ from .adapters import adapter
 
 def store_status(fetcher, domains):
     lines = ['🏪 Acesso às lojas', '']
+    cep = getattr(getattr(fetcher, 'config', None), 'grocery_postal_code', '')
+    if cep:
+        lines += ['CEP dos supermercados: ' + cep[:5] + '-' + cep[5:] + '.', '']
     now = time.monotonic()
     for domain in domains:
         pause = max(fetcher.access_paused.get(domain, 0), fetcher.rate_paused.get(domain, 0))
@@ -22,4 +25,11 @@ def store_status(fetcher, domains):
         else:
             label = 'sem página consultada nesta execução'
         lines.append(adapter(domain).name + ': ' + label + '.')
+        reader = getattr(fetcher, 'grocery_prices', None)
+        region = reader.status.get(domain) if reader else None
+        if region and region.get('postal_code') == cep:
+            if region.get('store'):
+                lines.append('  Loja regional: ' + region['store'] + '. Último produto: ' + region.get('stock', 'unknown') + '.')
+            elif region.get('stock') == 'unverified_delivery_or_stock':
+                lines.append('  Último produto sem estoque e entrega confirmados nas lojas consultadas para o CEP.')
     return '\n'.join(lines)

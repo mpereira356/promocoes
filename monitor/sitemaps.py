@@ -11,6 +11,12 @@ MAX_URLS = 50000
 CACHE_SECONDS = 18000
 
 
+class SitemapCandidates(list):
+    def __init__(self, values, store, partial):
+        super().__init__(values)
+        self.notices = [store.name + ': descoberta parcial por sitemap; nem todos os arquivos foram consultados.'] if partial else []
+
+
 def parse_sitemap(text):
     if "<!DOCTYPE" in text.upper() or "<!ENTITY" in text.upper():
         raise ReadError("invalid_sitemap")
@@ -49,6 +55,7 @@ async def sitemap_candidates(store, domain, fetcher):
     products = {}
     processed = 0
     last_error = None
+    partial = False
     while queue and len(visited) < MAX_DOCUMENTS and len(products) < MAX_URLS:
         url = queue.pop(0)
         try:
@@ -76,6 +83,10 @@ async def sitemap_candidates(store, domain, fetcher):
                 break
             continue
         if kind == "sitemapindex":
+            keywords = getattr(store, 'sitemap_index_keywords', ())
+            if keywords:
+                locations = [location for location in locations if any(word in location for word in keywords)]
+            partial = partial or len(locations) > MAX_DOCUMENTS - len(visited)
             queue = locations[: MAX_DOCUMENTS - len(visited)] + queue
             continue
         titles = {}
@@ -106,6 +117,6 @@ async def sitemap_candidates(store, domain, fetcher):
         raise last_error
     if not processed:
         raise ReadError("invalid_sitemap")
-    result = list(products.values())
+    result = SitemapCandidates(products.values(), store, partial or bool(queue))
     cache[domain] = (time.time(), result)
     return result

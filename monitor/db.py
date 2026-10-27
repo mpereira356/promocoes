@@ -8,6 +8,7 @@ from .models import normalize, qualifies
 SCHEMA = """
 PRAGMA foreign_keys=ON;
 PRAGMA journal_mode=WAL;
+CREATE TABLE IF NOT EXISTS preferences (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS products (
  id INTEGER PRIMARY KEY, query TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1,
  next_due REAL NOT NULL DEFAULT 0, minimum INTEGER NOT NULL, percent TEXT NOT NULL, target INTEGER);
@@ -326,14 +327,20 @@ class DB:
                         "📉 Queda de preço" if delta > 0 else "📈 Aumento de preço"
                     )
                     variation = "Economia" if delta > 0 else "Aumento"
+                    unit = '/kg' if reading.public_unit_price else ''
+                    payment_label = reading.payment or ('não confirmado; preço público por kg' if reading.public_unit_price else '')
                     msg = (
                         f"{'📉 QUEDA DE PREÇO' if delta > 0 else '📈 AUMENTO DE PREÇO'}\n\n{direction}: {reading.title}\nMonitoramento {candidate['product']} · Oferta {candidate['id']}\n\n🏪 Loja: {candidate['store']}\n👤 Vendedor: {reading.seller}\n"
-                        f"📦 Condição: {reading.condition}\n\n💰 Preço anterior: R$ {row['last']/100:.2f}\n💰 Preço atual: R$ {reading.price/100:.2f}\n"
+                        f"📦 Condição: {reading.condition}\n\n💰 Preço anterior: R$ {row['last']/100:.2f}{unit}\n💰 Preço atual: R$ {reading.price/100:.2f}{unit}\n"
                         f"{variation}: R$ {abs(delta)/100:.2f} ({abs(delta)/row['last']*100:.2f}%)\n"
-                        f"📉 Menor preço registrado: R$ {min(row['lowest'],reading.price)/100:.2f}\n💳 Pagamento: {reading.payment}\n"
+                        f"📉 Menor preço registrado: R$ {min(row['lowest'],reading.price)/100:.2f}{unit}\n💳 Pagamento: {payment_label}\n"
                         f"📊 Estoque: disponível segundo a página\n🚚 Frete não incluído.\n"
                         f"\nConsulta: {datetime.fromtimestamp(now,ZoneInfo('America/Sao_Paulo')).isoformat(timespec='seconds')}\n{candidate['url']}"
                     )
+                    if reading.public_unit_price:
+                        msg += ('\n\nPreço público por kg na loja e no CEP indicados. '
+                                'Pagamento não confirmado; total depende da pesagem. '
+                                'A queda observada não comprova desconto sobre o mercado.')
                     self.conn.execute(
                         "INSERT OR IGNORE INTO alerts(series,episode,message) VALUES (?,?,?)",
                         (sid, episode, msg),

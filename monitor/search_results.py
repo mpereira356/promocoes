@@ -87,8 +87,8 @@ async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketpla
                     raise ReadError('different_model')
                 if all(getattr(r, 'identifiers', {}).get('regional_price_pending') for r in readings):
                     from .discovery import LinkCandidate
-                    unverified_links.append((LinkCandidate(url, readings[0].title),
-                        'Preço regional pendente de validar CEP, loja e unidade de venda; sem alertas'))
+                    reason = readings[0].identifiers.get('regional_reason') or 'Preço regional pendente de validar CEP, loja e unidade de venda; sem alertas'
+                    unverified_links.append((LinkCandidate(url, readings[0].title), reason))
                     unverified += 1
                     continue
                 _, domain = fetcher.canonical(url)
@@ -164,8 +164,12 @@ async def deliver_search(monitor, fetcher, db, bot, chat, query, send, marketpla
             bool(set(getattr(config, 'domains', ())) & set(GROCERY_DOMAINS))
             or any('preços regionais ainda não disponíveis' in n for n in notices))
         if grocery_pending:
-            status += ('\nSupermercados: preços e alertas ainda indisponíveis; falta validar CEP e loja de atendimento.'
-                       '\nOs links encontrados não confirmam desconto ou disponibilidade na sua região.')
+            if getattr(config, 'grocery_postal_code', ''):
+                status += ('\nCEP configurado. Somente produtos com preço regional validado podem ser monitorados.'
+                           '\nLinks sem preço confirmado não geram alertas.')
+            else:
+                status += ('\nSupermercados: configure o CEP com /cep e oito números para validar preços locais.'
+                           '\nLinks sem preço confirmado não geram alertas.')
         if not sent and (notices or failed or unverified or interrupted):
             status += '\nNenhuma oferta pôde ser confirmada. Isso não significa que o produto esteja esgotado.'
         extra = ''

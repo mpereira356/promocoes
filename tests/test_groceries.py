@@ -19,7 +19,7 @@ def test_registered_discovery_and_individual_pages(factory, url):
     store = adapter(factory.domain)
     assert isinstance(store, factory)
     assert factory.domain in DEFAULT_DOMAINS.split(',')
-    assert store.external_discovery
+    assert store.external_discovery or store.sitemap_urls
     assert store.is_product_url(url)
     assert not store.is_product_url('https://' + factory.domain + '/categoria/carnes')
     assert not store.is_product_url(url.replace(factory.domain, 'evil.example'))

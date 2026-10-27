@@ -1,4 +1,6 @@
-**Versão atual: `2026.10.25-market-evidence.1`.** Envie **/start** ou **/menu** para usar a central de botões: buscas, promoções, monitoramentos e dinheiro emprestado. Veja [MENU-TELEGRAM.md](MENU-TELEGRAM.md).
+**Versão atual: `2026.10.27-grocery-region.1`.** Envie **/start** ou **/menu** para usar a central de botões: buscas, promoções, monitoramentos e dinheiro emprestado. Veja [MENU-TELEGRAM.md](MENU-TELEGRAM.md).
+
+Supermercados: salve seu CEP com `/cep` e pesquise `/buscar Picanha Maturatta`. Extra e Carrefour têm leitura regional validada de preço público por kg; Atacadão exige estoque e entrega na simulação. Boa informa indisponibilidade, mas ainda não habilita alertas de preço positivo sem unidade validada. Veja [SUPERMERCADOS.md](SUPERMERCADOS.md).
 
 Promocoes agora exigem evidencia de preco comparado ou queda no historico observado. O percentual anunciado pela loja e apenas informativo. Veja [COMPARACAO-DE-PRECOS.md](COMPARACAO-DE-PRECOS.md).
 
@@ -291,7 +293,7 @@ O serviço permite escrita somente em `data`. A operação HTTP não precisa de 
 
 ## Validação
 
-Veja `VALIDACAO.md` e `COMPARACAO-DE-PRECOS.md`. A suite atual tem **600 testes aprovados**, incluindo cenarios de mercado simulados e capturas publicas reais reduzidas. Os testes nao garantem precos atuais, acesso futuro a todas as lojas ou operacao na VPS. Nenhuma mensagem Telegram real foi enviada nestes testes.
+Veja `VALIDACAO.md`, `COMPARACAO-DE-PRECOS.md` e `SUPERMERCADOS.md`. A suite atual tem **647 testes aprovados**, incluindo cenarios de mercado e de precos regionais simulados e capturas publicas reais reduzidas. Os testes nao garantem precos atuais, acesso futuro a todas as lojas ou operacao na VPS. Nenhuma mensagem Telegram real foi enviada nestes testes.
 
 Sondagem de busca sem credenciais: `python -m scripts.probe_search b550`. Sondagem de ofertas: `python -m scripts.probe_stores`. Relatórios ficam em `data` e não são incluídos no pacote. Não confundem compatibilidade parcial com integração de alertas completa.
 

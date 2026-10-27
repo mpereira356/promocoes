@@ -57,6 +57,9 @@ def relevance(query, title):
                 return 0
         if 'maturatta' in wanted and 'maturatta' not in found:
             return 0
+        for species in ({'bovina', 'bovino'}, {'suina', 'suino'}):
+            if wanted & species and not found & species:
+                return 0
     family = motherboard_family(query)
     if family and motherboard_family(title) != family:
         return 0
@@ -237,6 +240,10 @@ REASONS = {
     "browser_navigation_failed_Error": 'Não foi possível navegar no Chromium',
     "browser_resource_refused": 'Um recurso da página foi recusado por segurança ou por uma falha de rede',
     "structured_product_missing_or_ambiguous": 'A página não contém dados estruturados de um único produto',
+    'regional_delivery_unavailable': 'Nenhuma opção de entrega confirmada para o CEP nesta loja',
+    'regional_response_invalid': 'A loja não confirmou os dados regionais do produto',
+    'regional_unit_unverified': 'Não foi possível confirmar o preço por kg separadamente do total da peça',
+    'regional_terms_unverified': 'As condições do preço regional precisam de conferência; sem alertas',
     "redirect_changed_store": 'O redirecionamento para outra loja foi recusado',
     "blocked_no_bypass": 'A loja bloqueou o acesso. Nenhuma tentativa de contornar o bloqueio foi feita',
     "captcha_no_bypass": 'CAPTCHA detectado. A consulta foi interrompida',
@@ -284,12 +291,24 @@ class DirectSearch:
                 continue
             store = factory()
             if hasattr(store, "product_path"):
-                notices.append(f"{store.name}: preços regionais ainda não disponíveis; falta validar CEP, loja e unidade de venda.")
+                cep = getattr(self.config, 'grocery_postal_code', '')
+                if not cep:
+                    notices.append(f"{store.name}: preços regionais ainda não disponíveis; configure /cep para validar loja e unidade de venda.")
             if hasattr(store, 'supports_query') and not store.supports_query(query):
                 notices.append(f'{store.name}: busca de hardware não aplicável ao adaptador de cadeiras e móveis.')
                 continue
             try:
-                if domain == 'mercadolivre.com.br' and getattr(self.config, 'mercadolivre_token', ''):
+                if domain == 'extramercado.com.br' and getattr(self.config, 'grocery_postal_code', ''):
+                    from .grocery_prices import GroceryPrices
+                    if self.fetcher.grocery_prices is None:
+                        self.fetcher.grocery_prices = GroceryPrices(self.fetcher)
+                    candidates = await self.fetcher.grocery_prices.discover_extra(query, self.config.grocery_postal_code)
+                elif domain == 'boasupermercados.com.br' and getattr(self.config, 'grocery_postal_code', ''):
+                    from .grocery_prices import GroceryPrices
+                    if self.fetcher.grocery_prices is None:
+                        self.fetcher.grocery_prices = GroceryPrices(self.fetcher)
+                    candidates = await self.fetcher.grocery_prices.discover_boa(query, self.config.grocery_postal_code)
+                elif domain == 'mercadolivre.com.br' and getattr(self.config, 'mercadolivre_token', ''):
                     from .mercadolivre_api import discover
                     candidates = await discover(query, self.config.mercadolivre_token, self.fetcher)
                 elif domain == 'mercadolivre.com.br' and getattr(self.config, 'mercadolivre_discovery', 'external') == 'external':

@@ -24,6 +24,7 @@ def build_package(output=None):
         "LACOSTE.md",
         "AUDITORIA-LOJAS.md",
         "COMPARACAO-DE-PRECOS.md",
+        "SUPERMERCADOS.md",
         ".env.example",
         "requirements.txt",
         "requirements.lock.txt",

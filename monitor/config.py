@@ -44,6 +44,7 @@ class Config:
     mercadolivre_discovery: str = 'external'
     tavily_key: str = ''
     promotions_depth: str = 'expanded'
+    grocery_postal_code: str = ''
 
     @classmethod
     def load(cls):
@@ -77,9 +78,11 @@ class Config:
             os.getenv('MERCADOLIVRE_DISCOVERY', 'external').strip().lower(),
             os.getenv('TAVILY_API_KEY', '').strip(),
             os.getenv('PROMOTIONS_DEPTH', 'expanded').strip().lower(),
+            os.getenv('GROCERY_POSTAL_CODE', '').strip().replace('-', ''),
         )
         if (
-            c.promotions_depth not in ('quick', 'expanded')
+            (c.grocery_postal_code and not re.fullmatch(r'[0-9]{8}', c.grocery_postal_code))
+            or c.promotions_depth not in ('quick', 'expanded')
             or
             c.mercadolivre_discovery not in ('external', 'site')
             or c.user <= 0

@@ -139,7 +139,8 @@ class PromotionsTelegram:
             buttons.append(('Próxima ➡️', f'groups{page+1}'))
         buttons += [('✍️ Digitar categoria ou link', 'custom'), ('🔄 Atualizar categorias das lojas', 'refresh')]
         from ..search_scope import GROCERY_DOMAINS
-        regional = ('\n\nSupermercados ainda sem Promoções e alertas regionais: falta validar CEP e loja de atendimento.'
+        regional = ('\n\nPromoções por percentual dos supermercados ainda não estão neste menu. '
+                    'Use /cep para salvar sua região e /buscar Picanha Maturatta para consultar preços por kg.'
                     if set(self.config.domains) & set(GROCERY_DOMAINS) else '')
         return await reply(f'🏷️ Busca pontual de promoções\n\nEscolha uma categoria — página {page+1}/{pages}.\nTambém pode digitar /categoria notebooks, /categoria pets ou /categoria https://link-da-categoria.\nO catálogo contém links observados nas lojas; acesso e preços serão conferidos na pesquisa.' + regional, reply_markup=self.keyboard(buttons))
 

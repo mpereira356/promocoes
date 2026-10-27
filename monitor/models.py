@@ -36,7 +36,21 @@ class Reading:
     starting_price: int | None = None
     starting_price_url: str = ""
 
-    # Somente comparar quando a pagina identifica todos esses campos.
+    @property
+    def public_unit_price(self):
+        """Explicit regional public metric, never a payment-specific comparison."""
+        ids = self.identifiers
+        return bool(ids.get('price_basis') == 'regional_public_unit'
+                    and ids.get('price_unit') == 'kg'
+                    and re.fullmatch(r'[0-9]{8}', ids.get('postal_code', ''))
+                    and ids.get('store_id') and ids.get('grocery_product_id')
+                    and ids.get('delivery_verified') == 'true'
+                    and ids.get('storage') in ('resfriada', 'congelada')
+                    and re.sub(r'\D', '', self.seller).endswith(ids.get('postal_code', ''))
+                    and self.stock == 'in_stock')
+
+    # Payment-specific offers require complete terms. Regional public unit rates
+    # form a separate, explicitly labelled metric for the same store and CEP.
     @property
     def comparable(self):
         return (
@@ -46,7 +60,7 @@ class Reading:
             and self.currency == "BRL"
             and bool(self.seller)
             and bool(self.condition)
-            and bool(self.payment)
+            and (bool(self.payment) or self.public_unit_price)
         )
 
 

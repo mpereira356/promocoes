@@ -1,4 +1,8 @@
-# Evidencia de preco 2026.10.25-market-evidence.1
+# Preços regionais 2026.10.27-grocery-region.1
+
+CEP persistente pelo comando `/cep`. Consulta real ao mesmo CEP confirmou preço público por kg e estoque informado no Extra e no Carrefour; Atacadão sem oferta com estoque e entrega confirmados nas lojas consultadas; Boa com produto indisponível e preço zero. Boa ainda recusa preços positivos sem unidade validada. Isso não equivale a promoção comprovada sobre o mercado nem garante acesso futuro. **647 testes aprovados**; detalhes e limites em [SUPERMERCADOS.md](SUPERMERCADOS.md).
+
+# Evidência anterior de preço 2026.10.25-market-evidence.1
 
 Promocoes agora usa comparacao de mercado e observacoes historicas, sem aceitar o preco riscado como prova. O exemplo R$ 45 contra R$ 42 e descartado; R$ 42 contra R$ 45/46 tem vantagem de 6,67%. Evidencia de mercado exige duas outras lojas com produto e condicoes comparaveis. Queda historica sem comparacao suficiente recebe rotulo proprio e precisa de observacoes anteriores validas, com intervalo minimo de 24h.
 
