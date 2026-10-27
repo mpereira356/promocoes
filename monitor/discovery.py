@@ -266,6 +266,8 @@ class DirectSearch:
                 )
                 continue
             store = factory()
+            if hasattr(store, "product_path"):
+                notices.append(f"{store.name}: integra??o inicial de links; pre?o e alertas dependem de validar CEP, loja e unidade de venda.")
             if hasattr(store, 'supports_query') and not store.supports_query(query):
                 notices.append(f'{store.name}: busca de hardware não aplicável ao adaptador de cadeiras e móveis.')
                 continue

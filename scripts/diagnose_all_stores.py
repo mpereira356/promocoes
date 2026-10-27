@@ -11,6 +11,7 @@ from monitor.version import VERSION
 from scripts.diagnose_stores import diagnose
 
 QUERIES = {
+    **{domain: 'Picanha Maturatta' for domain in ('atacadao.com.br', 'extramercado.com.br', 'mercado.carrefour.com.br', 'boasupermercados.com.br')},
     'patoloco.com.br': 'Placa mae MSI MAG X870E Tomahawk WiFi',
     'kabum.com.br': 'SSD Kingston NV3 1TB',
     'pichau.com.br': 'Gigabyte B550 Aorus Elite V2',

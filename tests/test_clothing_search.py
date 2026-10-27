@@ -36,12 +36,13 @@ def test_lacoste_brand_can_come_from_official_store_and_product():
 
 
 @pytest.mark.parametrize('domains,upgraded', [
-    (DEFAULT_DOMAINS.rsplit(',', 1)[0], True),
-    (DEFAULT_DOMAINS.rsplit(',', 1)[0].replace('amazon.com.br', 'www.amazon.com.br'), True),
+    (','.join(DEFAULT_DOMAINS.split(',')[:14]), True),
+    (','.join(DEFAULT_DOMAINS.split(',')[:14]).replace('amazon.com.br', 'www.amazon.com.br'), True),
     ('kabum.com.br,pichau.com.br,terabyteshop.com.br', True),
     ('amazon.com.br,lacoste.com', False),
     ('amazon.com.br', False),
     (DEFAULT_DOMAINS, False),
+    (','.join(DEFAULT_DOMAINS.split(',')[:17]), False),
 ])
 def test_real_installer_migration_preserves_custom_lists(tmp_path, domains, upgraded, monkeypatch):
     script = Path('deploy/install-kali.sh').read_text(encoding='utf-8')

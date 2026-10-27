@@ -1,3 +1,4 @@
+from .groceries import AtacadaoAdapter, ExtraMercadoAdapter, CarrefourMercadoAdapter, BoaSupermercadosAdapter
 from .lacoste import LacosteAdapter
 from .patoloco import PatolocoAdapter
 from .base import StructuredAdapter
@@ -15,6 +16,7 @@ from .frigelar import FrigelarAdapter
 from .brastemp import BrastempAdapter
 
 ADAPTERS = {
+    **{a.domain: a for a in (AtacadaoAdapter, ExtraMercadoAdapter, CarrefourMercadoAdapter, BoaSupermercadosAdapter)},
     "patoloco.com.br": PatolocoAdapter,
     "lacoste.com": LacosteAdapter,
     "kabum.com.br": KabumAdapter,
