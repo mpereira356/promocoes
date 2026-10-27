@@ -49,7 +49,8 @@ def relevance(query, title):
             return 0
         # A cut of meat is not a burger/flavoured snack bearing the cut's name.
         substitutes = {'hamburguer', 'hamburgueres', 'hamburger', 'salgadinho',
-                       'tempero', 'sabor', 'pizza', 'lasanha'}
+                       'tempero', 'sabor', 'pizza', 'lasanha', 'sanduiche', 'sanduiches',
+                       'sandwich', 'lanche'}
         if (found & substitutes) - wanted:
             return 0
         for state in ('congelada', 'resfriada'):

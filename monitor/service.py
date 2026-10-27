@@ -110,7 +110,10 @@ class Monitor:
                 if str(exc) not in ('regional_delivery_unavailable', 'regional_unit_unverified',
                                     'regional_terms_unverified', 'regional_response_invalid'):
                     raise
-                readings = parser.parse(html, final)
+                try:
+                    readings = parser.parse(html, final)
+                except ReadError:
+                    raise exc
                 for reading in readings:
                     reading.identifiers['postal_code'] = self.config.grocery_postal_code
                     reading.identifiers['regional_reason'] = REASONS.get(str(exc), 'Preço regional não confirmado.')

@@ -131,6 +131,21 @@ class BotMenu:
         if authorized(update,self.config):
             await self.prompt(update,kind)
 
+    async def require_grocery_region(self, update, query, command='/buscar'):
+        from .search_scope import GROCERY_DOMAINS, is_meat_query
+        from urllib.parse import urlsplit
+        if not authorized(update, self.config) or getattr(self.config, 'grocery_postal_code', ''):
+            return False
+        domains = set(getattr(self.config, 'domains', ())) & set(GROCERY_DOMAINS)
+        host = (urlsplit(query).hostname or '').removeprefix('www.') if query.startswith('https://') else ''
+        if not domains or not (is_meat_query(query) or host in domains):
+            return False
+        await self.prompt(update, 'grocerycep')
+        self.pending.values = [command, query]
+        await send_text(update.effective_message.reply_text,
+            'Sua busca foi guardada. Envie o CEP na próxima mensagem; vou salvar a localização e retomar a pesquisa automaticamente.')
+        return True
+
     async def listing(self, update, page=0):
         self.clear()
         count=self.db.rows('SELECT COUNT(*) AS n FROM products')[0]['n']
@@ -292,6 +307,9 @@ class BotMenu:
             return await send_text(update.effective_message.reply_text,str(exc),reply_markup=keyboard([[('✖️ Cancelar','cancel')]]))
         command={'search':'/buscar','ml':'/buscarml','monitor':'/monitorar','category':'/categoria','discount':'/descontopromo','cep':'/ceppromo','grocerycep':'/cep','size':'/tamanhopromo'}[state.kind]
         self.clear()
+        if state.kind == 'grocerycep' and len(state.values) == 2:
+            await self.dispatch(update,context,name='/cep',args=text.split())
+            return await self.dispatch(update,context,name=state.values[0],args=state.values[1].split())
         if state.kind in ('category','discount','cep','size'):
             await self.promotions.command(update,context,name=command,args=text.split())
         else:await self.dispatch(update,context,name=command,args=text.split())

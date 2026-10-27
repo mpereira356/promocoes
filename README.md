@@ -1,4 +1,6 @@
-**Versão atual: `2026.10.27-store-visit.1`.** Envie **/start** ou **/menu** para usar a central de botões: buscas, promoções, monitoramentos e dinheiro emprestado. Veja [MENU-TELEGRAM.md](MENU-TELEGRAM.md).
+**Versão atual: `2026.10.27-grocery-setup.1`.** Envie **/start** ou **/menu** para usar a central de botões: buscas, promoções, monitoramentos e dinheiro emprestado. Veja [MENU-TELEGRAM.md](MENU-TELEGRAM.md).
+
+Busca de carnes sem CEP salvo pede a localização e retoma a pesquisa após cadastrar. `/status` mostra se o CEP está configurado no bot do servidor.
 
 Supermercados: escolha localização e modo em `/mercados` ou pelo botão do menu. **Posso ir à loja** mostra preços publicados sem exigir entrega, com aviso para confirmar preço e estoque físico. **Preciso de entrega** mantém a validação regional. Pesquise `/buscar Picanha Maturatta`. Extra, Carrefour e Atacadão têm leitura validada de preço publicado/kg; Boa ainda não habilita alertas de preço positivo sem unidade validada. Veja [SUPERMERCADOS.md](SUPERMERCADOS.md).
 
@@ -293,7 +295,7 @@ O serviço permite escrita somente em `data`. A operação HTTP não precisa de 
 
 ## Validação
 
-Veja `VALIDACAO.md`, `COMPARACAO-DE-PRECOS.md` e `SUPERMERCADOS.md`. A suite atual tem **655 testes aprovados**, incluindo cenarios de mercado e de precos regionais simulados e capturas publicas reais reduzidas. Os testes nao garantem precos atuais, acesso futuro a todas as lojas ou operacao na VPS. Nenhuma mensagem Telegram real foi enviada nestes testes.
+Veja `VALIDACAO.md`, `COMPARACAO-DE-PRECOS.md` e `SUPERMERCADOS.md`. A suite atual tem **659 testes aprovados**, incluindo cenarios de mercado e de precos regionais simulados e capturas publicas reais reduzidas. Os testes nao garantem precos atuais, acesso futuro a todas as lojas ou operacao na VPS. Nenhuma mensagem Telegram real foi enviada nestes testes.
 
 Sondagem de busca sem credenciais: `python -m scripts.probe_search b550`. Sondagem de ofertas: `python -m scripts.probe_stores`. Relatórios ficam em `data` e não são incluídos no pacote. Não confundem compatibilidade parcial com integração de alertas completa.
 

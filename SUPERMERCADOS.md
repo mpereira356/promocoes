@@ -1,6 +1,8 @@
 # Supermercados e preço público por quilo
 
-Versão `2026.10.27-store-visit.1`.
+Versão `2026.10.27-grocery-setup.1`.
+
+Se uma busca de carnes for iniciada sem CEP salvo, o bot pede os oito números e retoma a mesma busca automaticamente após cadastrar a localização. Não é preciso reenviar o produto. `/status` informa se o CEP está configurado. Informar um CEP em uma conversa de suporte não altera a configuração do bot instalado no servidor.
 
 ## Uso no Telegram
 
@@ -38,4 +40,4 @@ O menu **Promoções por percentual dos supermercados ainda não está habilitad
 
 Listas padrão do instalador incluem os quatro mercados; listas personalizadas são preservadas. As rotas públicas respeitam robots.txt, recusas de acesso, limites e pausas do Fetcher. Os POSTs ficam restritos a seleção regional, validação de sessão, busca pública e simulação isolada; não permitem publicar pedidos ou pagamentos. A busca HTML do Extra é proibida por robots.txt e não é utilizada; a API pública tem suas próprias regras verificadas.
 
-Os testes sintéticos cobrem região divergente, persistência do CEP/modo, botões e entrada de localização, preço/kg versus total, produto errado, estoque, entrega, mudança de série por região/modo e alertas sem pagamento ou disponibilidade física inventados. A suíte tem 655 testes aprovados. Consulte a [referência oficial do Checkout VTEX](https://developers.vtex.com/docs/api-reference/checkout-api) e a [referência dos campos e unidades](https://developers.vtex.com/docs/guides/orderform-fields).
+Os testes sintéticos cobrem região divergente, persistência do CEP/modo, botões e entrada de localização, retomada da busca após cadastrar CEP, preço/kg versus total, produto errado (incluindo sanduíche X-Picanha), estoque, entrega, mudança de série por região/modo e alertas sem pagamento ou disponibilidade física inventados. A suíte tem 659 testes aprovados. Consulte a [referência oficial do Checkout VTEX](https://developers.vtex.com/docs/api-reference/checkout-api) e a [referência dos campos e unidades](https://developers.vtex.com/docs/guides/orderform-fields).

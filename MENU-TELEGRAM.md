@@ -8,6 +8,8 @@ Envie **/start** para ativar os atalhos fixos do teclado e abrir a central. **/m
 
 ## Central de ofertas
 
+Ao buscar carnes sem CEP salvo, o bot abre a entrada de localização e guarda a consulta. Depois de receber um CEP válido, salva a preferência e retoma a busca automaticamente. Uma entrada inválida mantém a busca aguardando correção.
+
 - **📍 Supermercados: localização e entrega:** abre `/mercados`, com os botões Posso ir à loja e Preciso de entrega. O primeiro é o padrão e não exige entrega, mas não garante preço ou estoque no balcão. Alterar localização recebe o CEP na mensagem seguinte. As preferências ficam salvas após reiniciar.
 
 - **🔎 Buscar produto:** toque e digite o nome ou link na próxima mensagem, sem escrever `/buscar`.

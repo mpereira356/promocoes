@@ -350,6 +350,7 @@ class GroceryPrices:
             source = readings[0]
             ids = dict(source.identifiers)
             ids.pop('regional_price_pending', None)
+            ids.pop('regional_reason', None)
             ids.update(postal_code=cep, price_unit='kg', price_basis='regional_public_unit',
                        store_id=item['seller'], grocery_product_id=sku,
                        delivery_verified='true' if deliverable else 'unknown', storage=storage)

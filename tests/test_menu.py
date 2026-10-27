@@ -47,6 +47,38 @@ def test_grocery_location_button_and_plain_postal_code_entry(setup):
     asyncio.run(scenario())
 
 
+def test_meat_search_requests_missing_cep_and_resumes_same_query(setup):
+    db,config,ui,dispatch,update=setup
+    async def scenario():
+        config.domains=('extramercado.com.br',)
+        config.grocery_postal_code=''
+        assert await ui.require_grocery_region(update,'picanha Maturatta')
+        assert ui.pending.kind=='grocerycep'
+        assert not dispatch.await_count
+        update.effective_message.text='inválido'
+        await ui.text(update,None)
+        assert ui.pending.kind=='grocerycep' and not dispatch.await_count
+        update.effective_message.text='01001-000'
+        await ui.text(update,None)
+        calls=dispatch.await_args_list
+        assert [(call.kwargs['name'],call.kwargs['args']) for call in calls] == [
+            ('/cep',['01001000']),('/buscar',['picanha','Maturatta'])]
+        assert ui.pending is None
+    asyncio.run(scenario())
+
+
+def test_grocery_setup_does_not_interrupt_configured_or_unrelated_searches(setup):
+    db,config,ui,dispatch,update=setup
+    async def scenario():
+        config.domains=('extramercado.com.br','kabum.com.br')
+        config.grocery_postal_code=''
+        assert not await ui.require_grocery_region(update,'SSD Kingston 1TB')
+        config.grocery_postal_code='01001000'
+        assert not await ui.require_grocery_region(update,'picanha')
+        assert ui.pending is None
+    asyncio.run(scenario())
+
+
 def test_start_menu_shortcuts_and_unauthorized_access(setup):
     db,config,ui,dispatch,update=setup
     async def scenario():

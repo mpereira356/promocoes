@@ -1,4 +1,8 @@
-# Consulta para visita à loja 2026.10.27-store-visit.1
+# Configuração guiada 2026.10.27-grocery-setup.1
+
+Busca de carnes sem CEP salvo pede a localização e retoma a consulta após cadastro. `/status` explicita CEP ausente. A reprodução real de `/buscar picanha` com CEP configurado leu quatro preços no Extra/Carrefour, preservando limitações das demais ofertas. Sanduíche X-Picanha não é aceito como corte de carne. **659 testes aprovados.** Sem alegar coleta no servidor do usuário.
+
+# Evidência anterior: consulta para visita à loja 2026.10.27-store-visit.1
 
 Modo padrão **Posso ir à loja**, com localização por CEP e alternativa **Preciso de entrega** no menu `/mercados`. Preço publicado positivo pode ser mostrado e acompanhado sem entrega ou estoque físico confirmado, com os avisos correspondentes. Consulta real no modo de visita confirmou preço publicado/kg no Extra, Carrefour e Atacadão; Boa permaneceu sem preço válido. Os preços do site não garantem preço ou estoque no balcão. **655 testes aprovados**, incluindo botões de localização, persistência, isolamento de histórico entre modos e ausência de falsa disponibilidade. Veja [SUPERMERCADOS.md](SUPERMERCADOS.md).
 

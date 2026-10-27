@@ -246,6 +246,8 @@ def test_atacadao_requires_stock_delivery_and_unit_independently(availability, s
                                      'https://www.atacadao.com.br/picanha-maturatta/p', CEP)
         assert reading.comparable is valid
         assert reading.price == (10000 if valid else None)
+        if valid:
+            assert 'regional_reason' not in reading.identifiers
         assert f.request.await_args.kwargs['public_post']['postalCode'] == CEP
     asyncio.run(run())
 

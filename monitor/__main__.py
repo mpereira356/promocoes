@@ -188,8 +188,12 @@ def main():
                     + ("\n\n" + search_error_message(error) if error else "")
                 )
             if name == "/status":
+                cep = getattr(config, 'grocery_postal_code', '')
+                grocery_status = ('Supermercados: CEP ' + cep[:5] + '-' + cep[5:] + '.' if cep else
+                                  'Supermercados: CEP não configurado; a busca pedirá a localização antes de consultar preços.')
                 return await reply(
                     f'ℹ️ Status do bot\n\nVersão: {VERSION}\nBusca: {config.provider}\nChromium: {"ativado" if config.browser else "desativado"}\nPromoções: preços comparados e histórico observado.\nBusca padrão: {config.promotions_depth}.\nUse /lojas para conferir o acesso de cada loja.\nCAPTCHA e robots.txt continuam sendo respeitados.'
+                    + '\n' + grocery_status
                 )
             if name == '/lojas':
                 from .store_status import store_status
@@ -224,6 +228,9 @@ def main():
                             search_error_message(error)
                             + "\nNenhum novo cadastro foi criado."
                         )
+
+                if name != '/buscarml' and await ui.require_grocery_region(update, query, name):
+                    return
 
                 async def search_send():
                     await deliver_search(

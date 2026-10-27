@@ -29,13 +29,14 @@ class GroceryAdapter(PublicStoreAdapter):
         if len(products) != 1:
             raise ReadError('structured_product_missing_or_ambiguous')
         # A public default price is not evidence of the shopper's delivery region.
-        # No regional session has been configured for these integrations yet.
+        # This parser sees unregionalized HTML; GroceryPrices validates the CEP.
         # Never seed a price history/alert with a default store's price.
         for reading in readings:
             reading.price = None
             reading.payment = ''
             reading.stock = 'unknown'
             reading.identifiers['regional_price_pending'] = 'true'
+            reading.identifiers['regional_reason'] = 'CEP não configurado no bot. Envie /cep com oito números ou use /mercados.'
         return readings
 
 

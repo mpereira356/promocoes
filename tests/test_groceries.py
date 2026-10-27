@@ -56,11 +56,18 @@ def test_meat_routing_preserves_general_search_and_prioritizes_groceries():
 
 
 @pytest.mark.parametrize('title', ['Hambúrguer de Picanha Maturatta 180g',
+                                  'Sanduíche Congelado X-Picanha Seara Hot Hit Pacote 145g',
                                   'Tempero sabor picanha Maturatta',
                                   'Picanha congelada Maturatta 1kg'])
 def test_meat_search_rejects_substitutes_and_wrong_storage(title):
     from monitor.discovery import relevance
     assert not relevance('Picanha resfriada Maturatta', title)
+
+
+def test_generic_picanha_search_rejects_the_actual_reported_sandwich():
+    from monitor.discovery import relevance
+    assert not relevance('picanha', 'Sanduíche Congelado X-Picanha Seara Hot Hit Pacote 145g')
+    assert relevance('sanduiche picanha', 'Sanduíche Congelado X-Picanha Seara Hot Hit Pacote 145g')
 
 
 def test_native_carrefour_discovery_does_not_require_external_quota():
