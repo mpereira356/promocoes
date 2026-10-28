@@ -64,6 +64,7 @@ class DB:
                 ("scope", "TEXT NOT NULL DEFAULT 'legacy'"),
                 ("seed_ad", "INTEGER"),
                 ("alert_mode", "TEXT NOT NULL DEFAULT 'all'"),
+                ("interval_seconds", "REAL"),
             ],
             "candidates": [("ad_id", "INTEGER")],
         }.items():
@@ -108,6 +109,27 @@ class DB:
     def get_ad(self, ad_id):
         rows = self.rows("SELECT * FROM ads WHERE id=?", (ad_id,))
         return rows[0] if rows else None
+
+    def expand_monitor(self, pid):
+        """Widen an existing monitor without replacing its ID/history or model."""
+        with self.conn:
+            products = self.rows('SELECT * FROM products WHERE id=?', (pid,))
+            if not products:
+                return 'missing', pid
+            product = products[0]
+            if product['scope'] == 'all':
+                return 'already', pid
+            ad = self.get_ad(product['seed_ad']) if product['seed_ad'] else None
+            if not ad:
+                return 'seed_missing', pid
+            existing = self.rows("SELECT product FROM subscriptions WHERE ad=? AND scope='all'", (ad['id'],))
+            if existing and existing[0]['product'] != pid:
+                return 'existing', existing[0]['product']
+            self.conn.execute("UPDATE products SET scope='all',query=?,next_due=CASE WHEN active=1 THEN 0 ELSE next_due END WHERE id=?",
+                              (ad['title'], pid))
+            self.conn.execute("UPDATE subscriptions SET scope='all' WHERE product=? AND ad=?", (pid, ad['id']))
+            self.conn.execute("INSERT OR IGNORE INTO subscriptions(ad,scope,product) VALUES (?,'all',?)", (ad['id'], pid))
+            return 'expanded', pid
 
     def request_scope(self, ad_id):
         import uuid

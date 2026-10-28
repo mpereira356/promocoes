@@ -12,7 +12,7 @@ def ad_fingerprint(ad):
     ).hexdigest()[:20]
 
 
-async def ask_scope(bot, chat, db, ad_id):
+async def ask_scope(bot, chat, db, ad_id, interval_seconds=18000):
     ad = db.get_ad(ad_id)
     if ad is None:
         await send_text(
@@ -21,6 +21,7 @@ async def ask_scope(bot, chat, db, ad_id):
         )
         return
     token = db.request_scope(ad_id)
+    frequency = f'{interval_seconds / 3600:g} horas' if interval_seconds >= 3600 else f'{interval_seconds / 60:g} minutos'
     markup = InlineKeyboardMarkup(
         [
             [
@@ -40,7 +41,7 @@ async def ask_scope(bot, chat, db, ad_id):
         lambda text, **kwargs: bot.send_message(chat, text, **kwargs),
         f"🆔 ID do anúncio: {ad_id}\n{ad['title'][:500]}\n{ad['url']}\n"
         "Onde deseja acompanhar este produto?\n\n"
-        "🔎 Verificarei o preço a cada 5 horas, sem data para encerrar. Avisarei quando houver uma mudança comparável.\n"
+        f"🔎 Verificarei o preço a cada {frequency}, sem data para encerrar. Avisarei quando houver uma mudança comparável.\n"
         "• Em outras lojas, a comparação considera somente o mesmo modelo; resultados ambíguos exigem confirmação.\n"
         "• Bloqueios das lojas ou dados insuficientes podem impedir comparações.",
         reply_markup=markup, bold_lines=(ad['title'][:500],),
@@ -59,7 +60,7 @@ async def handle_subscription(update, config, db, bot, send, on_confirm):
     parts = (query.data or "").split(":")
     if len(parts) == 2 and parts[0] == "watch" and parts[1].isdigit():
         await query.answer()
-        await ask_scope(bot, config.chat, db, int(parts[1]))
+        await ask_scope(bot, config.chat, db, int(parts[1]), config.interval)
         return
     if len(parts) != 3 or parts[0] != "scope" or parts[2] not in ("site", "all"):
         await query.answer("Essa escolha não é válida. Inicie novamente com /monitorar ID_DO_ANUNCIO.", show_alert=True)

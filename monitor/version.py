@@ -1,1 +1,1 @@
-VERSION = "2026.10.27-grocery-setup.1"
+VERSION = "2026.10.27-monitor-scope.1"

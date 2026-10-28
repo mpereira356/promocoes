@@ -58,6 +58,8 @@ MONITORAMENTO
 /monitorar ID, nome ou link — iniciar acompanhamento.
 /lista — ver seus monitoramentos.
 /verificar ID — consultar agora.
+/abrangencia ID todas — ampliar o mesmo monitoramento para outras lojas.
+/intervalo ID MINUTOS — frequência deste monitoramento, de 15 a 1440 minutos.
 /opcoes ID — escolher ofertas do monitoramento.
 /confirmar OFERTA_ID — aprovar uma oferta.
 /historico ID — ver preços registrados.
@@ -218,7 +220,7 @@ def main():
                 if not query or len(query) > 600:
                     return await reply('Informe um nome ou link com até 600 caracteres.')
                 if name == "/monitorar" and query.isdigit():
-                    return await ask_scope(app.bot, config.chat, db, int(query))
+                    return await ask_scope(app.bot, config.chat, db, int(query), config.interval)
                 if "://" in query:
                     query, _ = fetcher.canonical(query)
                 else:
@@ -268,6 +270,32 @@ def main():
             elif name == "/verificar":
                 await reply(f'🔎 Verificação do monitoramento {pid} iniciada. Avisarei quando a consulta terminar.')
                 background(check_send(pid))
+            elif name == '/abrangencia':
+                if len(args) != 2 or args[1].lower() != 'todas':
+                    return await reply('Use /abrangencia ID todas. O mesmo modelo será procurado nas lojas habilitadas.')
+                status, target = db.expand_monitor(pid)
+                if status == 'existing':
+                    return await reply(f'O monitoramento {target} já acompanha esse anúncio em outras lojas. Nenhum histórico foi alterado. Consulte /lista.')
+                if status == 'seed_missing':
+                    return await reply('Falta o anúncio de origem para preservar o modelo exato. Busque o produto e escolha Outras lojas também no anúncio correto.')
+                await reply(f'🔔 Monitoramento {pid}: mesmo modelo nas lojas habilitadas.\n'
+                            'ID, histórico, ofertas confirmadas e filtros preservados.\n'
+                            'Novas ofertas só entram nas comparações quando a identidade for confirmada. '
+                            'Bloqueios ou dados insuficientes serão informados; não há garantia de acesso a toda loja.')
+                if products[0]['active']:
+                    background(check_send(pid))
+            elif name == '/intervalo':
+                if len(args) != 2:
+                    return await reply('Use /intervalo ID MINUTOS. Exemplo: /intervalo 10 30.')
+                minutes = float(args[1].replace(',', '.'))
+                if not 15 <= minutes <= 1440:
+                    return await reply('Escolha entre 15 e 1440 minutos. A consulta também depende da fila e dos limites das lojas.')
+                from time import time
+                next_limit = time() + minutes * 60
+                db.run('UPDATE products SET interval_seconds=?,next_due=CASE WHEN active=1 AND next_due>? THEN ? ELSE next_due END WHERE id=?',
+                       (minutes * 60, next_limit, next_limit, pid))
+                await reply(f'Consultas do monitoramento {pid} configuradas a cada {minutes:g} minutos.\n'
+                            'O aviso ocorre após uma consulta confirmar mudança comparável; não é detecção em tempo real.')
             elif name == "/pausar":
                 db.run("UPDATE products SET active=0 WHERE id=?", (pid,))
                 await reply(
@@ -394,6 +422,8 @@ def main():
         "retomar",
         "remover",
         "verificar",
+        "abrangencia",
+        "intervalo",
         "confirmar",
         "configurar",
         "alertas",

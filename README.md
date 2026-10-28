@@ -1,4 +1,6 @@
-**Versão atual: `2026.10.27-grocery-setup.1`.** Envie **/start** ou **/menu** para usar a central de botões: buscas, promoções, monitoramentos e dinheiro emprestado. Veja [MENU-TELEGRAM.md](MENU-TELEGRAM.md).
+**Versão atual: `2026.10.27-monitor-scope.1`.** Envie **/start** ou **/menu** para usar a central de botões: buscas, promoções, monitoramentos e dinheiro emprestado. Veja [MENU-TELEGRAM.md](MENU-TELEGRAM.md).
+
+Monitoramentos existentes podem ser ampliados pelo botão **Outras lojas também** ou `/abrangencia ID todas`, preservando ID, histórico e filtros. `/intervalo ID MINUTOS` configura de 15 a 1440 minutos para aquele monitoramento, sem alterar os outros. O cartão distingue oferta confirmada de histórico de preço e informa a última gravação. Alertas dependem de nova leitura válida; não são notificações em tempo real.
 
 Busca de carnes sem CEP salvo pede a localização e retoma a pesquisa após cadastrar. `/status` mostra se o CEP está configurado no bot do servidor.
 
@@ -295,7 +297,7 @@ O serviço permite escrita somente em `data`. A operação HTTP não precisa de 
 
 ## Validação
 
-Veja `VALIDACAO.md`, `COMPARACAO-DE-PRECOS.md` e `SUPERMERCADOS.md`. A suite atual tem **659 testes aprovados**, incluindo cenarios de mercado e de precos regionais simulados e capturas publicas reais reduzidas. Os testes nao garantem precos atuais, acesso futuro a todas as lojas ou operacao na VPS. Nenhuma mensagem Telegram real foi enviada nestes testes.
+Veja `VALIDACAO.md`, `COMPARACAO-DE-PRECOS.md` e `SUPERMERCADOS.md`. A suite atual tem **666 testes aprovados**, incluindo cenarios de mercado e de precos regionais simulados e capturas publicas reais reduzidas. Os testes nao garantem precos atuais, acesso futuro a todas as lojas ou operacao na VPS. Nenhuma mensagem Telegram real foi enviada nestes testes.
 
 Sondagem de busca sem credenciais: `python -m scripts.probe_search b550`. Sondagem de ofertas: `python -m scripts.probe_stores`. Relatórios ficam em `data` e não são incluídos no pacote. Não confundem compatibilidade parcial com integração de alertas completa.
 

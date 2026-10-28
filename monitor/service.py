@@ -185,7 +185,7 @@ class Monitor:
             notes = []
             query = monitoring_search_terms(seed_reading.title, seed_reading.identifiers) if seed_reading else monitoring_search_terms(p['query'])
             try:
-                if p["query"].startswith("https://"):
+                if p["query"].startswith("https://") and p['scope'] != 'all':
                     urls = [p["query"]]
                 else:
                     try:
@@ -343,7 +343,7 @@ class Monitor:
             finally:
                 self.db.run(
                     "UPDATE products SET next_due=? WHERE id=?",
-                    (time.time() + self.config.interval, pid),
+                    (time.time() + (p['interval_seconds'] or self.config.interval), pid),
                 )
             return (f"🔎 Verificação do monitoramento {pid}\nVocê acompanha: {p['query'][:300]}\n\n"
                     + "\n\n".join(notes))

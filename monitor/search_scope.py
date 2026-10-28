@@ -21,6 +21,12 @@ def is_meat_query(query):
 
 
 def search_domains(query, domains):
+    from .identity import motherboard_family
+    text = normalize(query)
+    if 'placa mae' in text or 'placas mae' in text or motherboard_family(query):
+        incompatible = {*GROCERY_DOMAINS, 'lacoste.com', 'sensetup.com.br',
+                        'loja.elements.com.br', 'flexform.com.br', 'brastemp.com.br', 'frigelar.com.br'}
+        return tuple(d for d in domains if d not in incompatible)
     if not is_meat_query(query):
         return tuple(domains)
     # Groceries first: unrelated hardware calls must not consume the shared quota.

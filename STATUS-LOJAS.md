@@ -1,4 +1,8 @@
-# Configuração guiada 2026.10.27-grocery-setup.1
+# Abrangência e frequência 2026.10.27-monitor-scope.1
+
+Ampliação de monitoramento existente sem recriar histórico; frequência por produto; cartão com quantidade de ofertas com histórico e último preço registrado. Busca de placas-mãe usa as fontes habilitadas pertinentes e preserva o modelo X870 versus X870E. **666 testes aprovados**, com preservação de histórico, pausa, filtros e intervalo; duplicidade de abrangência não é fundida automaticamente. Esta verificação de código não atesta execução ou cobertura na VPS do usuário. `/verificar ID` e `/historico ID` mostram as leituras reais.
+
+# Evidência anterior: configuração guiada 2026.10.27-grocery-setup.1
 
 Busca de carnes sem CEP salvo pede a localização e retoma a consulta após cadastro. `/status` explicita CEP ausente. A reprodução real de `/buscar picanha` com CEP configurado leu quatro preços no Extra/Carrefour, preservando limitações das demais ofertas. Sanduíche X-Picanha não é aceito como corte de carne. **659 testes aprovados.** Sem alegar coleta no servidor do usuário.
 

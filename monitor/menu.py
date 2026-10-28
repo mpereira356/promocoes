@@ -192,6 +192,21 @@ class BotMenu:
         due=('Pausado' if not row['active'] else datetime.fromtimestamp(row['next_due'],ZoneInfo('America/Sao_Paulo')).strftime('%d/%m/%Y às %H:%M') if row['next_due'] else 'Aguardando a próxima consulta')
         scope={'site':'só esta oferta','all':'mesmo modelo nas lojas autorizadas'}.get(row['scope'],'cadastro legado; ofertas confirmadas')
         text=f'🔔 Monitoramento {row["id"]}\n\n{title}\n\n{"🟢 Ativo" if row["active"] else "⏸️ Pausado"} · {scope}\nAlertas: {"aumentos e quedas" if row["alert_mode"]=="all" else "quedas filtradas"}\nPróxima consulta: {due}'
+        seconds = row['interval_seconds'] or getattr(self.config, 'interval', 18000)
+        frequency = f'{seconds / 3600:g} horas' if seconds >= 3600 else f'{seconds / 60:g} minutos'
+        text += '\nFrequência: ' + frequency + ' (sujeita à fila e às lojas).'
+        baselines = self.db.rows('SELECT COUNT(DISTINCT CASE WHEN p.id IS NOT NULL THEN s.candidate END) AS total, MAX(p.at) AS latest FROM series s '
+            'JOIN candidates c ON c.id=s.candidate LEFT JOIN prices p ON p.series=s.id WHERE c.product=?', (row['id'],))[0]
+        text += f'\nOfertas com histórico de preço: {baselines["total"]}.'
+        if not baselines['total']:
+            text += '\nAinda sem preço inicial comparável; os alertas de preço aguardam uma leitura válida.'
+        elif baselines['latest']:
+            text += '\nÚltimo preço registrado: ' + datetime.fromtimestamp(baselines['latest'],ZoneInfo('America/Sao_Paulo')).strftime('%d/%m às %H:%M') + '.'
+        if row['scope'] == 'all':
+            from .search_scope import search_domains
+            from .adapters import adapter
+            names = [adapter(d).name for d in search_domains(title, getattr(self.config, 'domains', ()))]
+            text += '\nLojas habilitadas para busca: ' + ', '.join(names) + '.\nEssa lista não comprova leitura em todas; confira /verificar ' + str(row['id']) + '.'
         candidates=self.db.rows('SELECT * FROM candidates WHERE product=? ORDER BY id',(row['id'],))
         pending=sum(not c['confirmed'] for c in candidates)
         text+=f'\n\n{len(candidates)-pending} oferta(s) confirmada(s) · {pending} pendente(s)'
@@ -200,13 +215,16 @@ class BotMenu:
         action='pause' if row['active'] else 'resume'
         label='⏸️ Pausar' if row['active'] else '▶️ Retomar'
         def card(action):return 'card:'+token+':'+action
-        await self.output(update,text,keyboard([
+        rows=[
             [('🔎 Verificar agora',card('check')),('📊 Histórico',card('history'))],
             [(label,card(action)),('⚙️ Alertas e filtros',card('settings'))],
             [('🖼️ Ofertas para escolher',card('options'))],
             [('🗑️ Remover',card('delete'))],
             [('⬅️ Meus monitoramentos','list:0'),('🏠 Menu','home')],
-        ]),titles=(title,))
+        ]
+        if row['scope'] != 'all':
+            rows.insert(0, [('🌐 Outras lojas também', card('expand'))])
+        await self.output(update,text,keyboard(rows),titles=(title,))
 
     async def expired(self,update):
         self.clear()
@@ -376,10 +394,15 @@ class BotMenu:
             self.pending=Input('remove',card=token)
             return await self.output(update,f'🗑️ Remover monitoramento {row["id"]}?\n\n{self.title(row)}\n\nIsso exclui o histórico e os alertas associados. Confirme abaixo.',keyboard([[('🗑️ Confirmar remoção','remove:'+self.pending.token)],[('Manter produto','card:'+token+':view')]]))
         commands={'pause':('/pausar',[]),'resume':('/retomar',[]),'check':('/verificar',[]),
-            'history':('/historico',[]),'options':('/opcoes',[]),'all':('/alertas',['todas']),'drops':('/alertas',['quedas'])}
+            'history':('/historico',[]),'options':('/opcoes',[]),'all':('/alertas',['todas']),'drops':('/alertas',['quedas']),
+            'expand':('/abrangencia',['todas'])}
         if action in commands:
             self.clear()
             name,args=commands[action]
             await self.dispatch(update,context,name=name,args=[str(row['id'])]+args)
             if action in ('all','drops'):await self.settings(update,token)
             elif action in ('pause','resume'):await self.detail(update,token)
+            elif action == 'expand':
+                fresh = self.db.rows('SELECT * FROM products WHERE id=?', (row['id'],))
+                if fresh:
+                    await self.detail(update,self.card_token(fresh[0]))

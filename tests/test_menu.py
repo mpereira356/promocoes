@@ -79,6 +79,27 @@ def test_grocery_setup_does_not_interrupt_configured_or_unrelated_searches(setup
     asyncio.run(scenario())
 
 
+def test_monitor_card_does_not_confuse_confirmed_model_with_price_history(setup):
+    db,config,ui,dispatch,update=setup
+    async def scenario():
+        from monitor.models import Reading
+        reading=Reading('MSI MAG X870 Tomahawk WiFi','KaBuM','','',200000)
+        ad=db.save_ad('https://www.kabum.com.br/produto/123/msi', 'KaBuM', reading)
+        pid,_=db.subscribe(db.request_scope(ad['id']),'site',config)
+        row=db.rows('SELECT * FROM products WHERE id=?',(pid,))[0]
+        await ui.detail(update,ui.card_token(row))
+        text=update.effective_message.reply_text.await_args.args[0]
+        assert '1 oferta(s) confirmada(s)' in text
+        assert 'Ofertas com histórico de preço: 0' in text
+        assert 'Ainda sem preço inicial comparável' in text
+        buttons=update.effective_message.reply_text.await_args.kwargs['reply_markup']
+        expand=next(b for r in buttons.inline_keyboard for b in r if b.callback_data.endswith(':expand'))
+        click(update,expand.callback_data)
+        await ui.callback(update,None)
+        assert dispatch.await_args.kwargs=={'name':'/abrangencia','args':[str(pid),'todas']}
+    asyncio.run(scenario())
+
+
 def test_start_menu_shortcuts_and_unauthorized_access(setup):
     db,config,ui,dispatch,update=setup
     async def scenario():

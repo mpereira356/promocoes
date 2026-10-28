@@ -8,6 +8,14 @@ Envie **/start** para ativar os atalhos fixos do teclado e abrir a central. **/m
 
 ## Central de ofertas
 
+O cartão de monitoramento mostra abrangência, frequência, quantidade de ofertas com histórico de preço e data do último preço registrado. **Oferta confirmada** significa aprovação da identidade do produto; não garante que houve preço comparável lido. Sem histórico, o cartão avisa que os alertas ainda aguardam um preço inicial válido.
+
+**Outras lojas também** amplia o monitoramento existente, preservando ID, histórico, ofertas confirmadas e filtros. Alternativa: `/abrangencia ID todas`. Não retoma um monitoramento pausado. Se o mesmo anúncio já tiver outro monitoramento com essa abrangência, o bot informa o ID existente sem fundir nem excluir históricos. O modelo continua exato: MSI MAG X870 Tomahawk WiFi não é substituído por X870E ou kit.
+
+`/intervalo ID MINUTOS` define a frequência desse monitoramento (15 a 1440 minutos), mantida após reiniciar. A agenda considera o fim da consulta, a fila e limites das lojas; não representa detecção instantânea. O comando não altera a frequência dos outros produtos. `/verificar ID` solicita consulta manual; `/historico ID` permite conferir os preços efetivamente registrados.
+
+Para placas-mãe, a descoberta considera fontes autorizadas pertinentes: KaBuM, Pichau, Terabyte, Patoloco, Amazon Brasil, Mercado Livre, Magalu e Shopee quando habilitadas. Não desperdiça consultas em supermercados, roupas ou móveis. Novas fontes autorizadas não são excluídas por desconhecimento de categoria. Lista de lojas habilitadas não comprova leitura de preço nelas: bloqueios, falta de estoque ou dados incompletos podem impedir alertas, e ofertas de identidade ambígua continuam exigindo confirmação.
+
 Ao buscar carnes sem CEP salvo, o bot abre a entrada de localização e guarda a consulta. Depois de receber um CEP válido, salva a preferência e retoma a busca automaticamente. Uma entrada inválida mantém a busca aguardando correção.
 
 - **📍 Supermercados: localização e entrega:** abre `/mercados`, com os botões Posso ir à loja e Preciso de entrega. O primeiro é o padrão e não exige entrega, mas não garante preço ou estoque no balcão. Alterar localização recebe o CEP na mensagem seguinte. As preferências ficam salvas após reiniciar.

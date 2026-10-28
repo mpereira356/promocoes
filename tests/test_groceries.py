@@ -51,7 +51,7 @@ def test_meat_routing_preserves_general_search_and_prioritizes_groceries():
                            'mercado.carrefour.com.br', 'boasupermercados.com.br')
     assert 'kabum.com.br' not in selected
     assert search_domains('faca para picanha', configured) == tuple(configured)
-    assert search_domains('placa mãe AM5', configured) == tuple(configured)
+    assert search_domains('SSD Kingston 1TB', configured) == tuple(configured)
     assert search_domains('picanha', ('kabum.com.br',)) == ()
 
 
