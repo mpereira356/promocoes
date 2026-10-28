@@ -65,6 +65,7 @@ class DB:
                 ("seed_ad", "INTEGER"),
                 ("alert_mode", "TEXT NOT NULL DEFAULT 'all'"),
                 ("interval_seconds", "REAL"),
+                ("monitor_policy", "TEXT NOT NULL DEFAULT 'strict'"),
             ],
             "candidates": [("ad_id", "INTEGER")],
         }.items():
@@ -113,23 +114,47 @@ class DB:
     def expand_monitor(self, pid):
         """Widen an existing monitor without replacing its ID/history or model."""
         with self.conn:
-            products = self.rows('SELECT * FROM products WHERE id=?', (pid,))
-            if not products:
+            return self._expand_monitor(pid)
+
+    def _expand_monitor(self, pid):
+        products = self.rows('SELECT * FROM products WHERE id=?', (pid,))
+        if not products:
+            return 'missing', pid
+        product = products[0]
+        if product['scope'] == 'all':
+            return 'already', pid
+        ad = self.get_ad(product['seed_ad']) if product['seed_ad'] else None
+        if not ad:
+            return 'seed_missing', pid
+        existing = self.rows("SELECT product FROM subscriptions WHERE ad=? AND scope='all'", (ad['id'],))
+        if existing and existing[0]['product'] != pid:
+            return 'existing', existing[0]['product']
+        self.conn.execute("UPDATE products SET scope='all',query=?,next_due=CASE WHEN active=1 THEN 0 ELSE next_due END WHERE id=?",
+                          (ad['title'], pid))
+        self.conn.execute("UPDATE subscriptions SET scope='all' WHERE product=? AND ad=?", (pid, ad['id']))
+        self.conn.execute("INSERT OR IGNORE INTO subscriptions(ad,scope,product) VALUES (?,'all',?)", (ad['id'], pid))
+        return 'expanded', pid
+
+    def configure_watch(self, pid, minutes=30):
+        from decimal import Decimal, InvalidOperation
+        try:
+            minutes = Decimal(str(minutes))
+            if not minutes.is_finite() or not 15 <= minutes <= 1440:
+                raise ValueError()
+        except (ValueError, InvalidOperation):
+            raise ValueError('Use entre 15 e 1440 minutos. Exemplo: /vigiar 10 15.') from None
+        with self.conn:
+            rows = self.rows('SELECT * FROM products WHERE id=?', (pid,))
+            if not rows:
                 return 'missing', pid
-            product = products[0]
-            if product['scope'] == 'all':
-                return 'already', pid
-            ad = self.get_ad(product['seed_ad']) if product['seed_ad'] else None
-            if not ad:
+            if not rows[0]['seed_ad'] or not self.get_ad(rows[0]['seed_ad']):
                 return 'seed_missing', pid
-            existing = self.rows("SELECT product FROM subscriptions WHERE ad=? AND scope='all'", (ad['id'],))
-            if existing and existing[0]['product'] != pid:
-                return 'existing', existing[0]['product']
-            self.conn.execute("UPDATE products SET scope='all',query=?,next_due=CASE WHEN active=1 THEN 0 ELSE next_due END WHERE id=?",
-                              (ad['title'], pid))
-            self.conn.execute("UPDATE subscriptions SET scope='all' WHERE product=? AND ad=?", (pid, ad['id']))
-            self.conn.execute("INSERT OR IGNORE INTO subscriptions(ad,scope,product) VALUES (?,'all',?)", (ad['id'], pid))
-            return 'expanded', pid
+            status, target = self._expand_monitor(pid)
+            if status not in ('expanded', 'already'):
+                return status, target
+            self.conn.execute("UPDATE products SET active=1,scope='all',alert_mode='all',interval_seconds=?,"
+                              "monitor_policy='listing_price',next_due=0 WHERE id=?", (float(minutes * 60), pid))
+            return 'configured', pid
 
     def request_scope(self, ad_id):
         import uuid
@@ -287,7 +312,9 @@ class DB:
                     'O título da oferta mudou. É necessária uma nova confirmação com /confirmar %s'
                     % candidate["id"]
                 )
-            if not reading.comparable:
+            policy = self.rows('SELECT monitor_policy FROM products WHERE id=?', (candidate['product'],))[0]['monitor_policy']
+            published = policy == 'listing_price' and reading.listing_price_complete
+            if not reading.comparable and not published:
                 missing = []
                 if not reading.seller:
                     missing.append('vendedor')
@@ -351,11 +378,12 @@ class DB:
                     variation = "Economia" if delta > 0 else "Aumento"
                     unit = '/kg' if reading.public_unit_price else ''
                     payment_label = reading.payment or ('não confirmado; preço público por kg' if reading.public_unit_price else '')
+                    condition_label = reading.condition or 'não declarada pela loja; preço publicado deste anúncio'
                     stock_label = ('estoque físico não confirmado; consulta sem exigir entrega'
                                    if reading.visit_listing else 'disponível segundo a página')
                     msg = (
                         f"{'📉 QUEDA DE PREÇO' if delta > 0 else '📈 AUMENTO DE PREÇO'}\n\n{direction}: {reading.title}\nMonitoramento {candidate['product']} · Oferta {candidate['id']}\n\n🏪 Loja: {candidate['store']}\n👤 Vendedor: {reading.seller}\n"
-                        f"📦 Condição: {reading.condition}\n\n💰 Preço anterior: R$ {row['last']/100:.2f}{unit}\n💰 Preço atual: R$ {reading.price/100:.2f}{unit}\n"
+                        f"📦 Condição: {condition_label}\n\n💰 Preço anterior: R$ {row['last']/100:.2f}{unit}\n💰 Preço atual: R$ {reading.price/100:.2f}{unit}\n"
                         f"{variation}: R$ {abs(delta)/100:.2f} ({abs(delta)/row['last']*100:.2f}%)\n"
                         f"📉 Menor preço registrado: R$ {min(row['lowest'],reading.price)/100:.2f}{unit}\n💳 Pagamento: {payment_label}\n"
                         f"📊 Estoque: {stock_label}\n🚚 Frete não incluído.\n"
@@ -367,6 +395,8 @@ class DB:
                                 'A queda observada não comprova desconto sobre o mercado.')
                     if reading.visit_listing:
                         msg += '\nPreço do site; confirme se a oferta vale na loja física antes de ir.'
+                    if published:
+                        msg += '\nCondição não declarada. Variação do preço publicado no mesmo anúncio; não é comparação entre produtos novos e usados ou entre lojas.'
                     self.conn.execute(
                         "INSERT OR IGNORE INTO alerts(series,episode,message) VALUES (?,?,?)",
                         (sid, episode, msg),

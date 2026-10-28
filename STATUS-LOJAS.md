@@ -1,4 +1,10 @@
-# Abrangência e frequência 2026.10.27-monitor-scope.1
+# Vigilância persistente 2026.10.27-continuous-watch.1
+
+`/vigiar ID MINUTOS` configura ativação, abrangência, aumentos/quedas, preço publicado e intervalo em uma transação. Suíte completa: **692 testes aprovados**. Casos incluem autorização, configuração inválida sem alterações parciais, reversão transacional em falha, conservação de histórico, condição desconhecida sem inventar Novo, preço inicial sem retroatividade, aumento/queda e repetição, demais campos ausentes, retomada após reinício e supressão de consulta duplicada da fila.
+
+Leitura pública real da KaBuM /produto/636779 em 27/10/2026 confirmou R$ 2.399,99 no Pix e condição ausente. Diagnóstico local em SQLite de memória confirmou que o modo estrito não criava série; o modo explícito de preço publicado criou uma base sem preencher a condição. Isso não prova que o bot do servidor já recebeu o comando nem que todas as lojas foram acessadas. O histórico de preços foi simplificado para deixar essa diferença visível.
+
+# Evidência anterior: abrangência e frequência 2026.10.27-monitor-scope.1
 
 Ampliação de monitoramento existente sem recriar histórico; frequência por produto; cartão com quantidade de ofertas com histórico e último preço registrado. Busca de placas-mãe usa as fontes habilitadas pertinentes e preserva o modelo X870 versus X870E. **666 testes aprovados**, com preservação de histórico, pausa, filtros e intervalo; duplicidade de abrangência não é fundida automaticamente. Esta verificação de código não atesta execução ou cobertura na VPS do usuário. `/verificar ID` e `/historico ID` mostram as leituras reais.
 

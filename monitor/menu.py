@@ -195,6 +195,8 @@ class BotMenu:
         seconds = row['interval_seconds'] or getattr(self.config, 'interval', 18000)
         frequency = f'{seconds / 3600:g} horas' if seconds >= 3600 else f'{seconds / 60:g} minutos'
         text += '\nFrequência: ' + frequency + ' (sujeita à fila e às lojas).'
+        if row['monitor_policy'] == 'listing_price':
+            text += '\nModalidade: preço publicado por anúncio; condição ausente não é presumida como novo.'
         baselines = self.db.rows('SELECT COUNT(DISTINCT CASE WHEN p.id IS NOT NULL THEN s.candidate END) AS total, MAX(p.at) AS latest FROM series s '
             'JOIN candidates c ON c.id=s.candidate LEFT JOIN prices p ON p.series=s.id WHERE c.product=?', (row['id'],))[0]
         text += f'\nOfertas com histórico de preço: {baselines["total"]}.'

@@ -8,6 +8,18 @@ Envie **/start** para ativar os atalhos fixos do teclado e abrir a central. **/m
 
 ## Central de ofertas
 
+### Vigilância em um comando
+
+`/vigiar ID MINUTOS` configura o monitoramento existente sem recriar ID ou histórico. Exemplo: `/vigiar 10 15`. Sem minutos, usa 30. Aceita de 15 a 1440 minutos.
+
+O comando ativa inclusive um monitoramento pausado, amplia para outras lojas habilitadas, habilita avisos de aumentos e quedas do preço publicado em cada anúncio confirmado, salva o intervalo e agenda uma consulta imediata. Preserva filtros para eventual uso posterior no modo de quedas. Todas as preferências são gravadas atomicamente: uma falha não deve ampliar o escopo deixando o restante pela metade. Se já houver outro monitor para o mesmo anúncio em todas as lojas, informa o ID sem fundir históricos nem alterar qualquer um deles.
+
+**Condição desconhecida permanece desconhecida.** No modo de vigilância, o bot pode registrar o preço publicado de um anúncio com condição ausente, desde que modelo confirmado, título, vendedor, pagamento, moeda e disponibilidade sejam válidos. A série pertence ao mesmo anúncio, vendedor, condição e pagamento. Se a condição for posteriormente declarada, começa outra série, sem transformar essa troca em desconto. Avisos desse modo não comprovam produto novo nem vantagem sobre preços de outras lojas. A opção Promoções mantém sua validação estrita; o modo padrão dos outros monitoramentos continua exigindo condição declarada.
+
+Não se usam leituras antigas para fabricar um preço inicial. Quando não existe uma série válida, a primeira leitura após configurar registra a base; as seguintes podem gerar alertas. Séries válidas já existentes são preservadas. O histórico mostra valores formatados e distingue consultas recebidas de preços efetivamente inseridos nas séries, sem despejar o JSON do leitor.
+
+A configuração e o próximo agendamento sobrevivem ao reinício. Uma consulta atrasada executa uma vez, sem tentar recuperar todos os intervalos perdidos. O agendador revalida a data antes de executar um trabalho que ficou na fila, para não repetir uma consulta manual recém-concluída. O próximo agendamento é calculado após o fim da leitura, e fila, limites e bloqueios podem atrasar o acesso. É acompanhamento periódico, sem data para encerrar; não é detecção em tempo real ou garantia de cobertura de toda loja.
+
 O cartão de monitoramento mostra abrangência, frequência, quantidade de ofertas com histórico de preço e data do último preço registrado. **Oferta confirmada** significa aprovação da identidade do produto; não garante que houve preço comparável lido. Sem histórico, o cartão avisa que os alertas ainda aguardam um preço inicial válido.
 
 **Outras lojas também** amplia o monitoramento existente, preservando ID, histórico, ofertas confirmadas e filtros. Alternativa: `/abrangencia ID todas`. Não retoma um monitoramento pausado. Se o mesmo anúncio já tiver outro monitoramento com essa abrangência, o bot informa o ID existente sem fundir nem excluir históricos. O modelo continua exato: MSI MAG X870 Tomahawk WiFi não é substituído por X870E ou kit.

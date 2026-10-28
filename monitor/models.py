@@ -73,6 +73,13 @@ class Reading:
             and (bool(self.payment) or self.public_unit_price)
         )
 
+    @property
+    def listing_price_complete(self):
+        """For explicit per-monitor published-price policy only, not market proof."""
+        return bool(not self.condition and type(self.price) is int and self.price > 0
+                    and self.currency == 'BRL' and self.seller and self.payment
+                    and self.stock == 'in_stock')
+
 
 def qualifies(old, new, minimum=0, percent=0, target=None):
     if old is None or new >= old:

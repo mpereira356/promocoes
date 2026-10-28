@@ -2,6 +2,8 @@
 
 ## O que o bot considera evidência
 
+**Vigilância de preço publicado:** `/vigiar ID MINUTOS` é uma modalidade separada para acompanhar variações do preço divulgado em cada anúncio confirmado. Pode trabalhar com condição ausente, que permanece desconhecida, sem presumir Novo. Vendedor, pagamento, moeda, disponibilidade e identidade do produto continuam necessários. Esse modo não altera a validação abaixo: condição ausente não comprova equivalência comercial entre lojas, e não entra automaticamente como promoção comprovada. Os monitoramentos comuns mantêm a regra estrita até uma escolha explícita por `/vigiar`.
+
 A opção Promoções usa `validation=market`. O preço riscado e o percentual do anúncio não determinam se a oferta é boa.
 
 Para validar vantagem de mercado, o bot precisa ler a oferta e o mesmo produto em **duas outras lojas**, com identificadores fortes, mesma variante, condição e pagamento, requisitos de cupom/assinatura compatíveis e estoque disponível. Dados sem condição, vendedor ou pagamento não comprovam equivalência. As leituras usadas têm até quinze minutos; resultado de índice de busca nunca serve de preço.

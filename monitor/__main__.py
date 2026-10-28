@@ -1,7 +1,5 @@
 import asyncio
 import logging
-from datetime import datetime
-from zoneinfo import ZoneInfo
 from telegram import BotCommand, BotCommandScopeChat
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters
 from .config import Config
@@ -60,6 +58,7 @@ MONITORAMENTO
 /verificar ID — consultar agora.
 /abrangencia ID todas — ampliar o mesmo monitoramento para outras lojas.
 /intervalo ID MINUTOS — frequência deste monitoramento, de 15 a 1440 minutos.
+/vigiar ID MINUTOS — ativar outras lojas, aumentos e quedas e frequência em um comando.
 /opcoes ID — escolher ofertas do monitoramento.
 /confirmar OFERTA_ID — aprovar uma oferta.
 /historico ID — ver preços registrados.
@@ -115,6 +114,7 @@ def main():
             await app.bot.set_my_commands([
                 BotCommand('menu','Abrir menu de botões'), BotCommand('promocoes','Promoções por categoria'),
                 BotCommand('buscar','Buscar produto'), BotCommand('lista','Meus monitoramentos'),
+                BotCommand('vigiar','Ativar vigilância em outras lojas'),
                 BotCommand('mercados','Localização e entrega dos supermercados'),
                 BotCommand('emprestimos','Dinheiro emprestado e lembretes'),
                 BotCommand('ajuda','Comandos e exemplos'), BotCommand('cancelar','Sair da entrada atual'),
@@ -213,6 +213,13 @@ def main():
             if name == '/mercados':
                 from .grocery_profile import preferences
                 return await preferences(update, config, db, ''.join(args) or None)
+            if name == '/vigiar':
+                error = monitor.search.configuration_error()
+                if error:
+                    return await reply(search_error_message(error))
+                from .watch import configure_watch
+                return await configure_watch(update, config, db, args,
+                    lambda pid: background(check_send(pid)))
             if name == "/lista":
                 return await ui.listing(update)
             if name in ("/monitorar", "/buscar", "/buscarml"):
@@ -343,30 +350,8 @@ def main():
                     '✅ Filtros atualizados. O modo de alertas está definido como somente quedas. Para receber avisos de qualquer alteração, use /alertas ID todas.'
                 )
             elif name == "/historico":
-                rows = db.rows(
-                    """SELECT h.at,h.status,h.detail,c.id AS cid FROM checks h JOIN candidates c ON c.id=h.candidate
-                    WHERE c.product=? ORDER BY h.id DESC LIMIT 30""",
-                    (pid,),
-                )
-                import json
-
-                lines = []
-                for r in rows:
-                    when = datetime.fromtimestamp(
-                        r["at"], ZoneInfo("America/Sao_Paulo")
-                    ).isoformat(timespec="seconds")
-                    detail = json.loads(r["detail"]) if r["detail"] else {}
-                    lines.append(
-                        f"🕒 {when}\nOferta {r['cid']} · Status: {r['status']}\nDetalhes: {detail}\n"
-                    )
-                for s in db.rows(
-                    "SELECT s.* FROM series s JOIN candidates c ON c.id=s.candidate WHERE c.product=?",
-                    (pid,),
-                ):
-                    lines.append(
-                        f"📊 Oferta {s['candidate']}\nVendedor: {s['seller']} · Condição: {s['condition']}\nPagamento: {s['payment']}\nÚltimo preço: R$ {s['last']/100:.2f} · Menor registrado: R$ {s['lowest']/100:.2f}\n"
-                    )
-                await reply("\n".join(lines) or 'Ainda não há histórico para este produto.')
+                from .history import history_text
+                await reply(history_text(db, pid))
         except Exception:
             await reply(
                 '⚠️ Comando ou configuração inválida. Consulte /ajuda. Uma falha de leitura nunca é tratada como preço zero.'
@@ -424,6 +409,7 @@ def main():
         "verificar",
         "abrangencia",
         "intervalo",
+        "vigiar",
         "confirmar",
         "configurar",
         "alertas",

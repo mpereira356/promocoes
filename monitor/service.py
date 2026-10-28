@@ -301,6 +301,8 @@ class Monitor:
                                 info = 'Menor registrado:' + info.split('Menor registrado:', 1)[-1]
                             elif info.startswith('Nova oferta ou condição:'):
                                 info = 'Preço inicial registrado.'
+                            if p['monitor_policy'] == 'listing_price' and not reading.condition and reading.listing_price_complete:
+                                info += ' Condição não declarada: acompanha somente o preço publicado deste anúncio.'
                             notes.append(f"🆔 Anúncio {ad['id']} · Oferta {candidate['id']}\n{reading.title}\n\n"
                                          f"🏪 {candidate['store']} · {price} · {reading.payment or 'pagamento não informado'}\n"
                                          f"{stock}\n{info}\n{candidate['url']}")
@@ -371,7 +373,7 @@ class Monitor:
 
         async def active_check(pid):
             # A situacao pode mudar enquanto o agendamento aguarda na fila.
-            if self.db.rows('SELECT id FROM products WHERE id=? AND active=1', (pid,)):
+            if self.db.rows('SELECT id FROM products WHERE id=? AND active=1 AND next_due<=?', (pid,time.time())):
                 await self.check(pid)
         # next_due persistido: atrasados rodam uma vez ao reiniciar, sem tempestade de catch-up.
         while True:
